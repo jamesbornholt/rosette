@@ -37,7 +37,8 @@
         (parameterize ([current-custodian cust])
           (define-values (p p-out p-in p-err) (initializer))
           (set!-values (server out in) (values p p-out p-in))
-          (thread (thunk (let loop () (stderr-handler p-err) (loop)))))))
+          (unless (false? p-err)
+            (thread (thunk (let loop () (stderr-handler p-err) (loop))))))))
     
     ; Shuts down the current process, if any.
     (define/public (shutdown)

@@ -2,7 +2,8 @@
 
 (require "../solver.rkt" "../solution.rkt" 
          "../common/server.rkt" (only-in "../common/util.rkt" filter-asserts)
-         "../../config/log.rkt" "cmd.rkt" (rename-in "env.rkt" [env make-env]))
+         "../../config/log.rkt" "cmd.rkt" (rename-in "env.rkt" [env make-env])
+         (only-in "smtlib2.rkt" set-logic cmd))
 
 (provide smt%)
 
@@ -13,7 +14,10 @@
     
     (define server 
       (new server% 
-           [initializer (thunk (apply subprocess #f #f #f path opts))]
+           [initializer (thunk
+                         (define-values (p p-out p-in p-err) (apply subprocess #f #f 'stdout path opts))
+                         (cmd [p-in] (set-logic "QF_BV"))
+                         (values p p-out p-in p-err))]
            [stderr-handler (lambda (err)
                              (let ([expr (read err)])
                                (unless (eof-object? expr)

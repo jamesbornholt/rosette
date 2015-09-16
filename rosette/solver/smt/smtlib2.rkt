@@ -28,6 +28,8 @@
      (match (read port)
        [(list (== 'model) (list (== 'define-fun) const _ _ val) ...)
         (for/hash ([c const] [v val]) (values c v))]
+       [(list (list const val) ...)
+        (for/hash ([c const] [v val]) (values c v))]
        [other (error 'solution "expected model, given ~a" other)])]
     [(== 'unsat) (read port) #f] ; TODO: deal with cores
     [other (error 'smt-solution "unrecognized solver output: ~a" other)]))
@@ -40,7 +42,7 @@
 
 (define-syntax-rule (print-cmd arg ...)
   (begin 
-    ;(printf  arg ...)
+    ;(printf  arg ...)(newline)
     (fprintf (smt-port) arg ...)))
 
 ; Prints all SMT commands issued during the dynamic
