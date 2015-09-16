@@ -13,7 +13,10 @@
     
     (define server 
       (new server% 
-           [initializer (thunk (apply subprocess #f #f #f path opts))]
+           [initializer (thunk
+                         (let-values ([(p p-out p-in p-error) (apply subprocess #f #f #f path opts)])
+                           (fprintf p-in "(set-logic QF_BV)\n")
+                           (values p p-out p-in p-error)))]
            [stderr-handler (lambda (err)
                              (let ([expr (read err)])
                                (unless (eof-object? expr)

@@ -28,6 +28,14 @@
      (match (read port)
        [(list (== 'model) (list (== 'define-fun) const _ _ val) ...)
         (for/hash ([c const] [v val]) (values c v))]
+       [(list '= const val)
+        (let loop ([cv (hash const val)])
+          (read-line port)
+          (match (sync/timeout 0.005 (peek-bytes-evt 1 0 #f port))
+            [#f cv]
+            [else (match (read port)
+                    [(list '= const val)
+                     (loop (hash-set cv const val))])]))]
        [other (error 'solution "expected model, given ~a" other)])]
     [(== 'unsat) (read port) #f] ; TODO: deal with cores
     [other (error 'smt-solution "unrecognized solver output: ~a" other)]))
@@ -40,7 +48,7 @@
 
 (define-syntax-rule (print-cmd arg ...)
   (begin 
-    ;(printf  arg ...)
+    (printf  arg ...) (newline)
     (fprintf (smt-port) arg ...)))
 
 ; Prints all SMT commands issued during the dynamic
@@ -64,7 +72,7 @@
 
 ; Declarations and definitions
 (define (declare-const id type)
-  (print-cmd "(declare-const ~a ~a)" id type))
+  (print-cmd "(declare-fun ~a () ~a)" id type))
 
 (define (define-const id type body)
   (print-cmd "(define-fun ~a () ~a ~a)" id type body))
