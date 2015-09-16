@@ -73,6 +73,15 @@
   (define-values (id ...)
     (values (lambda e `(id ,@e)) ...)))
 
+(define-syntax-rule (define-ops-binary id ...)
+  (define-values (id ...)
+    (values
+     (letrec ([f (lambda (e)
+                   (match e
+                     [(list x1 x2) `(id ,x1 ,x2)]
+                     [l `(id ,(f (drop-right l 1)) ,(last l))]))])
+       (lambda e (f e))) ...)))
+
 ; Core theory
 (define Bool 'Bool)
 (define true 'true)
@@ -86,10 +95,16 @@
                            (bvneg `(_ ,(format-symbol "bv~a" (racket/- val)) ,size))
                            `(_ ,(format-symbol "bv~a" val) ,size)))
 (define-ops 
-  bvnot bvand bvor bvxor 
+  ;bvnot bvand bvor bvxor
+   bvnot
   bvule bvult bvuge bvugt bvsle bvslt bvsge bvsgt
-  bvneg bvadd bvsub bvmul bvsdiv bvudiv bvurem bvsrem bvsmod
+  ;bvneg bvadd bvsub bvmul bvsdiv bvudiv bvurem bvsrem bvsmod
+   bvneg       bvsub       bvsdiv bvudiv bvurem bvsrem bvsmod
   bvshl bvlshr bvashr concat) 
+
+(define-ops-binary
+  bvand bvor bvxor
+  bvadd bvmul)
 
 (define (extract i j s)
   `((_ extract ,i ,j) ,s))
