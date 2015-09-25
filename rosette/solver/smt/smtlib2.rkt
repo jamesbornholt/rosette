@@ -29,7 +29,7 @@
        [(list (== 'model) (list (== 'define-fun) const _ _ val) ...)
         (for/hash ([c const] [v val]) (values c v))]
        [other (error 'solution "expected model, given ~a" other)])]
-    [(== 'unsat) (read port) #f] ; TODO: deal with cores
+    [(== 'unsat) #f] ; TODO: deal with cores
     [other (error 'smt-solution "unrecognized solver output: ~a" other)]))
 
 ; Reads the response to get-info command from the given input port.
@@ -40,7 +40,7 @@
 
 (define-syntax-rule (print-cmd arg ...)
   (begin 
-    ;(printf  arg ...)
+    ;(printf  arg ...)(newline)
     (fprintf (smt-port) arg ...)))
 
 ; Prints all SMT commands issued during the dynamic
@@ -64,7 +64,7 @@
 
 ; Declarations and definitions
 (define (declare-const id type)
-  (print-cmd "(declare-const ~a ~a)" id type))
+  (print-cmd "(declare-fun ~a () ~a)" id type))
 
 (define (define-const id type body)
   (print-cmd "(define-fun ~a () ~a ~a)" id type body))

@@ -165,7 +165,7 @@
 (define precision-tests
   (test-suite-for "precision of bitvector operators"
    
-   ; spot check that precision w.r.t. integer division is maintained when possible 
+   ; spot check that precision w.r.t. integer division is maintained when possible
    (check-sat (unique-solution-validator (hash x 4)) (@= 2 (@* (@/ 1 2) x)))
    (check-sat (unique-solution-validator (hash x 4)) (@= 2 (@* 0.5 x))) 
    (check-sat (unique-solution-validator (hash x 15)) (@= 3 (@* (@/ 1 5) x)))

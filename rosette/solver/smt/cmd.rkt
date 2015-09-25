@@ -64,6 +64,8 @@
      (match val
        [(== true) #t]
        [(== false) #f]
+       [(== 0) #f]
+       [(== 1) #t]
        [_ (error 'decode-binding "expected 'true or 'false binding for ~a, given ~a" const val)])]
     [(== @number?) 
      (match val
