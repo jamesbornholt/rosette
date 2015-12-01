@@ -13,7 +13,10 @@
     
     (define server 
       (new server% 
-           [initializer (thunk (apply subprocess #f #f #f path opts))]
+           [initializer (thunk 
+                         (let-values ([(proc out in err) (apply subprocess #f #f #f path opts)])
+                           (init-solver in)
+                           (values proc out in err)))]
            [stderr-handler (lambda (err)
                              (let ([expr (read err)])
                                (unless (eof-object? expr)

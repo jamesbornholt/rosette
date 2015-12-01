@@ -27,7 +27,13 @@
     [(== 'sat) 
      (match (read port)
        [(list (== 'model) (list (== 'define-fun) const _ _ val) ...)
-        (for/hash ([c const] [v val]) (values c v))]
+        (for/hash ([c const] [v val])
+          (let* ([cs (symbol->string c)]
+                 [name (if (string-prefix? cs "BTOR@")
+                           (list->string (memf (compose false? char-numeric?) (string->list (substring cs 5)))) 
+                           cs)]
+                 [c (string->symbol name)])
+           (values c v)))]
        [other (error 'solution "expected model, given ~a" other)])]
     [(== 'unsat) #f] ; TODO: deal with cores
     [other (error 'smt-solution "unrecognized solver output: ~a" other)]))

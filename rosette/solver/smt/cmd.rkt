@@ -1,7 +1,7 @@
 #lang racket
 
 (require racket/syntax 
-         (only-in "smtlib2.rkt" cmd assert check-sat get-model reset read-solution true false)
+         (only-in "smtlib2.rkt" cmd assert check-sat get-model reset push pop read-solution true false)
          "env.rkt" "enc.rkt"
          "../../base/core/term.rkt" 
          (only-in "../../base/core/bool.rkt" @boolean?)
@@ -10,7 +10,7 @@
          (only-in "../../base/struct/enum.rkt" enum? enum-members)
          "../solution.rkt")
 
-(provide encode decode clear-solver)
+(provide encode decode clear-solver init-solver)
 
 ; Given an encoding environment, a list of asserts, and
 ; a solver output port, the encode procedure prints an SMT 
@@ -49,7 +49,13 @@
 ; given port.
 (define (clear-solver port)
   (cmd [port]
-    (reset)))
+    (pop 1)
+    (push 1)
+    #;(reset)))
+
+(define (init-solver port)
+  (cmd [port]
+    (push 1)))
 
 (define (default-binding const)
   (match (type-of const)
