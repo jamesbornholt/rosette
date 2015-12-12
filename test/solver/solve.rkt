@@ -224,7 +224,7 @@
     (time (run-tests div-tests))
     (time (run-tests remainder-tests))
     (time (run-tests precision-tests))
-    (time (run-tests enum-tests))
+    ;(time (run-tests enum-tests))
     (time (run-tests merge-tests))
     (time (run-tests type-tests))
     (send (current-solver) shutdown)))
