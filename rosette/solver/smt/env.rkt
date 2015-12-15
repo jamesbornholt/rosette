@@ -1,7 +1,7 @@
 #lang racket
 
 (require racket/syntax 
-         (only-in "smtlib2.rkt" Int Bool BitVec declare-const define-const assert [< Int<] [<= Int<=]) 
+         (only-in "smtlib2.rkt" Int Bool BitVec declare-const define-const assert bv bvult bvule) 
          "../../base/core/term.rkt" 
          (only-in "../../base/core/bool.rkt" @boolean?)
          (only-in "../../base/core/num.rkt" @number? current-bitwidth)
@@ -41,7 +41,7 @@
     [(== @boolean?) Bool]
     [(== @number?) (BitVec (current-bitwidth))]
     [(? bitvector? t) (BitVec (bitvector-size t))]
-    [(? enum?) Int]
+    [(and t (? enum?)) (BitVec (integer-length (enum-size t)))]
     [t (error 'smt-type "expected a type that is translatable to SMTLIB, given ~a" t)]))
 
 ; The ref! macro retrieves the SMT encoding for 
@@ -93,6 +93,7 @@
 
 (define (assert-invariant id v)
   (let ([t (type-of v)]) 
-    (when (enum? t) 
-      (assert (Int<= 0 id))
-      (assert (Int< id (enum-size t))))))
+    (when (enum? t)
+      (let ([width (integer-length (enum-size t))])
+        (assert (bvule (bv 0 width) id))
+        (assert (bvult id (bv (enum-size t) width)))))))

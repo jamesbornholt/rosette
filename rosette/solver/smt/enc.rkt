@@ -3,7 +3,7 @@
 (require (prefix-in smt/ (only-in "smtlib2.rkt" bv not and or xor => <=> ite = <))
          (except-in "smtlib2.rkt" bv not and or xor => <=> ite = <) 
          "env.rkt" "../common/enc.rkt" 
-         (only-in "../../base/core/term.rkt" expression expression? constant? get-type)
+         (only-in "../../base/core/term.rkt" expression expression? constant? get-type type-of)
          (only-in "../../base/core/polymorphic.rkt" ite =?)
          (only-in "../../base/core/bool.rkt" ! && || => <=>)
          (only-in "../../base/core/num.rkt" 
@@ -16,7 +16,7 @@
                   @bvnot @bvor @bvand @bvxor @bvshl @bvlshr @bvashr
                   @bvneg @bvadd @bvmul @bvudiv @bvsdiv @bvurem @bvsrem @bvsmod
                   @concat @extract @zero-extend @sign-extend @int->bv @bv->int @bv->nat)
-         (only-in "../../base/struct/enum.rkt" enum-literal? ordinal))
+         (only-in "../../base/struct/enum.rkt" enum-literal? ordinal enum-size))
 
 (provide enc finitize)
 
@@ -76,7 +76,7 @@
     [#f false]
     [(? number?) (smt/bv (finitize v) (current-bitwidth))]
     [(bv lit t) (smt/bv lit (bitvector-size t))]
-    [(? enum-literal?) (ordinal v)]
+    [(? enum-literal?) (smt/bv (ordinal v) (integer-length (enum-size (type-of v))))]
     [_ (error 'enc-literal "expected a boolean?, number? or enum-literal?, given ~a" v)]))
 
 (define-encoder rosette->smt 
@@ -95,7 +95,7 @@
         [@bvshl bvshl] [@bvlshr bvlshr] [@bvashr bvashr]
         [@bvneg bvneg] [@bvadd bvadd] [@bvmul bvmul] [@bvudiv bvudiv] [@bvsdiv bvsdiv]
         [@bvurem bvurem] [@bvsrem bvsrem] [@bvsmod bvsmod] [@concat concat]]
-  [#:?  [enum-comparison-op? smt/<]])
+  [#:?  [enum-comparison-op? bvult]])
 
 (define (smt/abs e)
   (smt/ite (bvslt e (smt/bv 0 (current-bitwidth))) (bvneg e) e))
