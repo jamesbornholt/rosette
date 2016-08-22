@@ -1,0 +1,23 @@
+machine:
+  environment:
+    RACKET_DIR: "$HOME/racket"
+    RACKET_URL: "https://mirror.racket-lang.org/installers/6.6/racket-6.6-x86_64-linux.sh"
+    PATH: "${RACKET_DIR}/bin:$PATH"
+
+dependencies:
+  override:
+    - if [[ ! -e "$RACKET_DIR/bin/racket" ]]; then
+        rm -rf $RACKET_DIR;
+        curl -L -o racket.sh $RACKET_URL;
+        sh ./racket.sh --in-place --dest $RACKET_DIR;
+      else echo "using racket from cache"; fi
+    - raco pkg install
+  cache_directories:
+    - "~/racket"
+
+test:
+  override:
+    - time raco make test/all-rosette-tests.rkt
+    - raco test test/all-rosette-tests.rkt
+    - time raco make test/all-sdsl-tests.rkt
+    - raco test test/all-sdsl-tests.rkt
