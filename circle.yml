@@ -8,7 +8,7 @@ dependencies:
   override:
     - if [[ ! -e "$RACKET_DIR/bin/racket" ]]; then
         rm -rf $RACKET_DIR;
-        curl -L -o racket.sh $RACKET_URL;
+        curl -s -L -o racket.sh $RACKET_URL;
         sh ./racket.sh --in-place --dest $RACKET_DIR;
       else echo "using racket from cache"; fi
     - raco pkg install
