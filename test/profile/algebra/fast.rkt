@@ -1,6 +1,7 @@
 #lang rosette
 
 (require rosette/lib/match rosette/lib/angelic)
+(provide (all-defined-out))
 
 ; ------------- List manipulation routines, optimized for symbolic reasoning ------------- 
 (define (list-set lst idx val)
@@ -177,8 +178,8 @@
     (cond [(sat? sol) (printf "Synthesized: ~a\n" (evaluate sk sol))]
           [else (printf "No solution found.\n")])))
 
-; Synthesizing programs with 2 actions, with expressions of depth 0-2, using 
-; the given tree indexes and term operators.
-(synth* 'co  (sketch '((1) (2)) '(+) 2 2) co-ex)
-(synth* 'clt (sketch '((2) (1 1) (2 1)) '(+ *) 2 2) clt-ex)
-(synth* 'mf  (sketch '((2) (1 1) (1 1 1) (1 1 2 1)) '(+ * =) 2 2) mf-ex)
+; Synthesizing programs with len actions, with expressions of depth 0-depth.
+(define (workload [depth 2] [len 2])
+  (synth* 'co  (sketch '((1) (2)) '(+) depth len) co-ex)
+  (synth* 'clt (sketch '((2) (1 1) (2 1)) '(+ *) depth len) clt-ex)
+  (synth* 'mf  (sketch '((2) (1 1) (1 1 1) (1 1 2 1)) '(+ * =) depth len) mf-ex))
