@@ -1,20 +1,15 @@
 #lang rosette
 
 (require rosette/lib/match rosette/lib/angelic)
-
+    
 ; ------------- List manipulation routines, optimized for symbolic reasoning ------------- 
-(define (list-set lst idx val)
-  (for/all ([lst lst]) 
-    (map (lambda (i v) (if (= idx i) val v))
-         (build-list (length lst) identity)
-         lst)))
+(define (list-set lst pos val)
+  (let-values ([(front back) (split-at lst pos)])
+    (append front (cons val (cdr back)))))
 
 (define (remove-at lst idx)
-  (for/all ([lst lst])
-    (let loop ([i 0] [front empty] [back lst])
-      (if (= i idx)
-          (append front (cdr back))
-          (loop (add1 i) (append front (list (car back))) (cdr back))))))
+  (define-values (front back) (split-at lst idx))
+  (append front (rest back)))
 
 
 ; ------------- Tree manipulation routines ------------- 
@@ -87,7 +82,7 @@
       (let ([left  (expr-sketch idxs ops (sub1 depth))]
             [right (expr-sketch idxs ops (sub1 depth))])
         (choose* left ; choose between the lower and current depth 
-                 ((choose* App Term) (apply choose* ops) (list left right))))))  
+                 ((choose* App Term) (apply choose* ops) (list left right))))))   
 
 ; Creates a sketch for an action program with the given 
 ; number of actions, where all expressions have up to the 
