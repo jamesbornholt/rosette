@@ -1,7 +1,8 @@
 #lang rosette
 
-(require "../bench.rkt" "actions.rkt" rosette/lib/angelic
-         rosette/lib/roseunit rackunit rackunit/text-ui)
+(require "actions.rkt" "../bench.rkt" "../bench/basic.rkt"
+         rosette/lib/angelic rosette/lib/roseunit
+         rackunit rackunit/text-ui)
   
 
 (define (test-examples [depth 2] [len 2])
@@ -62,9 +63,11 @@
    (parameterize ([variant 1])
      (test-remove-at))))
 
+(bench-apply (basic-apply))
 (time (run-tests example-tests:slow))
 (time (run-tests example-tests:fast))
 (time (run-tests list-set-tests:slow))
 (time (run-tests list-set-tests:fast))
 (time (run-tests remove-at-tests:slow))
 (time (run-tests remove-at-tests:fast))
+(basic-trace (bench-apply))
