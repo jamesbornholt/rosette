@@ -1,7 +1,9 @@
-#lang s-exp rosette
+#lang rosette
 
-(require "../fs.rkt" "../lang.rkt" "../litmus.rkt" "../verifier.rkt" "../synth.rkt" "../ext4.rkt"
-         rackunit rackunit/text-ui)
+(require "lib/fs.rkt" "lib/lang.rkt" "lib/litmus.rkt" 
+         "lib/verifier.rkt" "lib/synth.rkt" "lib/ext4.rkt"
+         "../bench.rkt"
+         rosette/lib/roseunit rackunit rackunit/text-ui)
 
 (define small? #f)
 (define block-size (if small? 64 4096))
@@ -22,18 +24,14 @@
    (fsync 0)
    (rename 0 1)))
 
-
-; SeqFS
 (define (create-rename-allow oldfs newfs)
   (define new-1 (ondisk newfs 1))
   (list (equal? new-1 #f)
         (equal? new-1 '(#t #t))))
 
-; Ext4
 (define (create-rename-fs-ext4)
   (ext4-fs #:capacity 2 #:blocksize block-size))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (test-ext4-synth)
   (define test
@@ -51,11 +49,18 @@
   (define-values (cex state) (verify-correctness test*))
   (check-true (unsat? cex)))
 
-(define create-rename-synth-tests
-  (test-suite
-   "create-rename synth test"
-   #:before (thunk (printf "-----create-rename synth-----\n"))
-   (test-ext4-synth)
-   ))
 
-(time (run-tests create-rename-synth-tests))
+(define rename-tests:slow
+  (test-suite+
+   "Create-rename ext4 tests for slow version of Ferrite"
+   (parameterize ([variant 0][merge-structs? #t])
+     (test-ext4-synth))))
+(define rename-tests:fast
+  (test-suite+
+   "Create-rename ext4 tests for fast version of Ferrite"
+   (parameterize ([variant 1][merge-structs? #f])
+     (test-ext4-synth))))
+
+
+(time (run-tests rename-tests:slow))
+(time (run-tests rename-tests:fast))

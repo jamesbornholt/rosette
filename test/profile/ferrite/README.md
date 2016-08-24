@@ -1,12 +1,11 @@
 # Crash-Consistency Verification and Synthesis
 
-This directory contains two ways to implement crash consistency verification and synthesis as described in section 6 of [our ASPLOS'16 paper][ferrite].
+This directory contains a crash consistency verification and synthesis example drawn from section 6 of [our ASPLOS'16 paper on Ferrites][ferrite].
 
-Each directory implements a model checker for crash consistency on the `ext4` file system.
+The two tests `rename.rkt` and `chrome.rkt` are different litmus tests.
 
-- `slow` contains a slow implementation.
-- `fast` contains a fast implemenation. The two differences from `slow` are
-    1. In `lang.rkt`, the `inode-op` structs that make up the DSL are opaque to Rosette to prevent merging
-    2. In `ext4.rkt`, the `size` member of the `file` struct is a mutable box, and is accessed using `for/all`.
+The slow and fast variants of this code differ in two ways:
+1. In `lang.rkt`, the `inode-op` structs are opaque in the fast variant to prevent merging
+2. In `ext4.rkt`, the `size` member of the `file` struct is a mutable box accessed using `for/all` in the fast variant
 
-Each directory contains a `tests` directory with two tests. The `create-rename` test is simpler than the `chrome` test. The slow version of the `chrome` test does not complete in under 5 minutes.
+The slow variant of `chrome.rkt` does not return in reasonable time.

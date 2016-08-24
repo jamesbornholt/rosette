@@ -1,6 +1,7 @@
-#lang s-exp rosette
+#lang rosette
 
-(require "fs.rkt" "lang.rkt" rosette/lib/match)
+(require "fs.rkt" "lang.rkt" "../../bench.rkt"
+         rosette/lib/match)
 
 (provide ext4-fs)
 
@@ -11,7 +12,7 @@
    nodelalloc?
    (for/vector #:length cap ([i cap]) (cons i #f))
    (make-vector cap 0)
-   (make-vector cap (file 0 '()))))
+   (make-vector cap (file (fsize 0) '()))))
 
 (define (roundup x BLOCK_SIZE)
   (if (= (remainder x BLOCK_SIZE) 0)
@@ -19,6 +20,7 @@
       (- (+ x BLOCK_SIZE) (remainder x BLOCK_SIZE))))
 
 (struct file (size ondisk) #:transparent)
+(bench-struct fsize (size) #:transparent)
 
 ; Implements a model of ext4, with optional delayed allocation.
 (struct Ext4FS (BLOCK_SIZE nodelalloc? dir fds files)
@@ -33,7 +35,7 @@
      (match-define (Ext4FS BLOCK_SIZE nodelalloc? dir fds files) self)
      ; Tracks the *actual* length of the file
      (define lengths (for/hash ([fd (vector-length fds)] [ino fds])
-                       (values fd (file-size (vector-ref files ino)))))
+                       (values fd (fsize-size (file-size (vector-ref files ino))))))
      ; Tracks the block length of the file -- i.e., the number of bytes allocated
      (define block-lengths (for/hash ([fd (vector-length fds)] [ino fds])
                              (values fd (length (file-ondisk (vector-ref files ino))))))
@@ -103,7 +105,7 @@
      (define (update-size fd size)
        (define ino (vector-ref fds fd))
        (match-define (file s ondisk) (vector-ref new-files ino))
-       (define newf (file size ondisk))
+       (define newf (file (fsize size) ondisk))
        (vector-set! new-files ino newf))
      
      (match call
@@ -118,7 +120,7 @@
        [(i-dir-rename name1 name2)  (unless (= name1 name2)
                                       (define new-ino (car (vector-ref dir name1)))
                                       (define old-ino (car (vector-ref dir name2)))
-                                      (vector-set! new-files old-ino (file 0 '()))
+                                      (vector-set! new-files old-ino (file (fsize 0) '()))
                                       (vector-set! new-dir name1 (cons old-ino #f))
                                       (vector-set! new-dir name2 (cons new-ino #t)))]
        [(i-swap fd enabled)  (void)])
@@ -134,7 +136,10 @@
          (begin
            (define content (file-ondisk (vector-ref files ino)))
            (define size (file-size (vector-ref files ino)))
-           (take content size))
+           (bench
+             (take content (fsize-size size))
+             (for/all ([size size])
+               (take content (fsize-size size)))))
          #f))
    
    ; Returns #t if the inode-op?s op1 and op2 are allowed to be reordered
@@ -161,9 +166,10 @@
                  (define s-file (vector-ref s-files s-ino))
                  (define o-file (vector-ref o-files o-ino))
                  (and (equal? s-exists? o-exists?)
-                      (=> s-exists? (and (equal? (file-size s-file) (file-size o-file))
+                      (=> s-exists? (and (equal? (fsize-size (file-size s-file)) (fsize-size (file-size o-file)))
                                          ; The same problem as in (ondisk ...).
-                                         (equal? (take (file-ondisk s-file) (file-size s-file))
-                                                 (take (file-ondisk o-file) (file-size s-file)))))))))
+                                         (for/all ([size (file-size s-file)])
+                                           (equal? (take (file-ondisk s-file) (fsize-size size))
+                                                   (take (file-ondisk o-file) (fsize-size size))))))))))
    ])
 

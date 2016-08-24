@@ -1,6 +1,6 @@
 #lang s-exp rosette
 
-(require "fs.rkt" "nondet.rkt")
+(require "../../bench.rkt" "fs.rkt" "nondet.rkt")
 
 (provide (all-defined-out))
 
@@ -19,13 +19,13 @@
 ; which perform poorly when all operands are symbolic.
 ; Making the structs mutable forces them to be concrete when they reach the
 ; file system's (execute ...) form.
-(struct inode-op (ino) #:transparent #:mutable)
-(struct i-dir-add inode-op (fd) #:transparent #:mutable)
-(struct i-dir-rename inode-op (dst) #:transparent #:mutable)
-(struct i-file-write inode-op (content offset) #:transparent #:mutable)
-(struct i-swap inode-op (enabled) #:transparent #:mutable)
-(struct i-file-setsize inode-op (size) #:transparent #:mutable)
-(struct i-file-extend inode-op (content offset size) #:transparent #:mutable)
+(bench-struct inode-op (ino) #:transparent)
+(bench-struct i-dir-add inode-op (fd) #:transparent)
+(bench-struct i-dir-rename inode-op (dst) #:transparent)
+(bench-struct i-file-write inode-op (content offset) #:transparent)
+(bench-struct i-swap inode-op (enabled) #:transparent)
+(bench-struct i-file-setsize inode-op (size) #:transparent)
+(bench-struct i-file-extend inode-op (content offset size) #:transparent)
 
 
 ; Test if two ops are directory ops on the same directory.
