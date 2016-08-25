@@ -55,8 +55,8 @@
      [(list x xs ...)
       (if (= pos 0) 
           (cons val xs)
-          (cons x (update lst (- pos 1) val)))])
+          (cons x (update xs (- pos 1) val)))])
    (match lst
      [(list) lst]
      [(list x xs ...)
-      (cons (if (= pos 0) val x) (update lst (- pos 1) val))])))
+      (cons (if (= pos 0) val x) (update xs (- pos 1) val))])))
