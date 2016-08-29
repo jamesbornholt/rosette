@@ -20,6 +20,6 @@
 
 (define raco-commands
   '(("symprofile"
-     rosette/profile/raco
+     rosette/lib/profile/feature/raco
      "profile Rosette symbolic execution"
      #f)))

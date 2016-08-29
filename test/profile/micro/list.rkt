@@ -2,7 +2,7 @@
 
 ; Micro-benchmarks for various list operations.
 
-(require "../bench.rkt")
+(require "../bench.rkt" rosette/lib/profile)
 (provide (all-defined-out))
 
 ; Returns a new list that updates lst[pos] with val.
@@ -48,6 +48,8 @@
 ; both the slow and fast version produce a concrete list of size N,
 ; but the symbolic value's at the ith position are of size O(i) in
 ; the slow case and O(1) in the fast case.
+; > (define-symbolic i integer?)
+; > (update '(1 2 3 4 5) i -1)
 (bench-define (update lst pos val)
   (bench
    (match lst
