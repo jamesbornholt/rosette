@@ -4,7 +4,7 @@
 (provide (all-defined-out))
 
 ; ------------- List manipulation routines ------------- 
-(bench-define (list-set lst pos val)
+(define (list-set lst pos val)
   (bench
    (let-values ([(front back) (split-at lst pos)])
      (append front (cons val (cdr back))))
@@ -13,7 +13,7 @@
          (build-list (length lst) identity)
          lst))))
 
-(bench-define (remove-at lst pos)
+(define (remove-at lst pos)
   (bench
    (let-values ([(front back) (split-at lst pos)])
      (append front (rest back)))

@@ -7,7 +7,7 @@
 
 ; Returns a new list that updates lst[pos] with val.
 ; Worst-case behavior trigerred when given a symbolic list and position.
-(bench-define (list-set lst pos val)
+(define (list-set lst pos val)
   (bench
    (let-values ([(front back) (split-at lst pos)])
      (append front (cons val (cdr back))))
@@ -18,7 +18,7 @@
 
 ; Returns a new list of the form lst[0..pos) ++ lst(pos..).
 ; Worst-case behavior trigerred when given a symbolic list and position.
-(bench-define (remove-at lst pos)
+(define (remove-at lst pos)
   (bench
    (let-values ([(front back) (split-at lst pos)])
      (append front (rest back)))
@@ -31,7 +31,7 @@
 ; Returns xs ++ ys if xs and ys have the same length;
 ; othwerwise returns xs ++ xs.  Worst-case behavior
 ; trigerred when given two symbolic lists.
-(bench-define (append-if xs ys)
+(define (append-if xs ys)
   (bench
    (if (= (length xs) (length ys))
        (append xs ys)
@@ -50,7 +50,7 @@
 ; the slow case and O(1) in the fast case.
 ; > (define-symbolic i integer?)
 ; > (update '(1 2 3 4 5) i -1)
-(bench-define (update lst pos val)
+(define (update lst pos val)
   (bench
    (match lst
      [(list) lst]

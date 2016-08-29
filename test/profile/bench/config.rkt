@@ -1,6 +1,6 @@
 #lang rosette
 
-(provide merge-structs? variant bench-apply)
+(provide merge-structs? variant)
 
 ; Setting this parameter to #t (default) ensures
 ; that all value types defined with bench-struct
@@ -17,9 +17,3 @@
 ; value of code-variant, then the default (first) expression
 ; is used.
 (define variant (make-parameter 0))
-
-; This parameter stores a procedure that takes as input
-; a procedure and a list of arguments.  It should apply
-; the given procedure to the arguments and return the result,
-; possibly also collecting statistics about the call.
-(define bench-apply (make-parameter apply))
