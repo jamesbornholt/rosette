@@ -2,4 +2,4 @@
 
 (require "profile/app.rkt")
 
-(provide #%app #%plain-app)
+(provide #%app #%plain-app profile-thunk)
