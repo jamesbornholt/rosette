@@ -26,6 +26,15 @@
 
 ;; profile entries
 (struct profile-node (location procedure inputs outputs cpu real gc children) #:transparent #:mutable)
+
+;; display a profile entry
+(define (display-profile node [level 0])
+  (match-define (profile-node _ proc _ _ _ real _ children) node)
+  (define indent (string-join (for/list ([i level]) "  ") ""))
+  (printf "~a* ~a (~v msec)\n" indent proc real)  ;├─
+  (for ([c children]) (display-profile c (add1 level))))
+
+;; profile stack
 (struct profile-stack ([frames #:mutable] root) #:transparent)
 (define (new-state)
   (let ([root (profile-node 'root #f #f #f #f #f #f '())])
@@ -40,6 +49,8 @@
         [parent (car (profile-stack-frames (profile-state)))])
     (set-profile-node-children! parent (cons entry (profile-node-children parent)))
     (set-profile-stack-frames! (profile-state) (cons entry (profile-stack-frames (profile-state))))))
+;; record a method exit
+;; (called after a procedure returns)
 (define (record-exit! out cpu real gc)
   (let ([entry (car (profile-stack-frames (profile-state)))])
     (set-profile-node-outputs! entry out)
@@ -47,14 +58,6 @@
     (set-profile-node-real! entry real)
     (set-profile-node-gc! entry gc)
     (set-profile-stack-frames! (profile-state) (cdr (profile-stack-frames (profile-state))))))
-
-;; record a method exit
-;; (called after a procedure returns)
-(define (display-profile node [level 0])
-  (match-define (profile-node _ proc _ _ _ real _ children) node)
-  (define indent (string-join (for/list ([i level]) "  ") ""))
-  (printf "~a* ~a (~v msec)\n" indent proc real)  ;├─
-  (for ([c children]) (display-profile c (add1 level))))
 
 
 ; Executes the given thunk and prints the profile data generated during
