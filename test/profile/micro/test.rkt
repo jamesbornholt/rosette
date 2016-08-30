@@ -11,8 +11,8 @@
        (hide xs xs))
     (for*/all ([xs xs][ys ys])  
      (if (= (length xs) (length ys))
-         (append xs ys)
-         (append xs xs)))))
+         (list-set xs ys)
+         (list-set xs xs)))))
 
 (define-symbolic b boolean?)
 
