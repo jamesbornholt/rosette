@@ -1,6 +1,6 @@
-#lang racket
+#lang racket/base
 
-(require compiler/compile-file (only-in racket [#%require req]))
+(require (only-in racket [#%require req]))
 (provide symbolic-profile-compile-handler)
 
 
@@ -30,7 +30,7 @@
          (mod id lang (mod-begin (req rosette/lib/profile/app) #,@body))))]
     [_ stx]))
 
-(define orig-insp (variable-reference->module-declaration-inspector (#%variable-reference)))
+;(define orig-insp (variable-reference->module-declaration-inspector (#%variable-reference)))
 
 (define (disarm stx)
   ;(printf "   INSTRUMENTING ~a\n" stx)
