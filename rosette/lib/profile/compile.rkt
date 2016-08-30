@@ -33,9 +33,6 @@
 
 (define orig-insp (variable-reference->module-declaration-inspector (#%variable-reference)))
 
-(define (app-identifier? id)
-  (or (equal? id '#%plain-app) (equal? id '#%app)))
-
 (define (disarm stx)
   ;(printf "   INSTRUMENTING ~a\n" stx)
   (syntax-disarm stx orig-insp)
