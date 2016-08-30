@@ -16,4 +16,5 @@
 
 (define-symbolic b boolean?)
 
-(profile-thunk (thunk (parameterize ([variant 1]) (append-if (if b null '(1 2 3 4)) '(4 3 2 1)))))
+(parameterize ([variant 1])
+  (append-if (if b null '(1 2 3 4)) '(4 3 2 1)))

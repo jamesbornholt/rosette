@@ -3,17 +3,23 @@
 (require racket/cmdline
          raco/command-name
          profile/raco-utils
-         "compile.rkt")
+         "compile.rkt" "tool.rkt")
 
-(define file (command-line #:program (short-program+command-name)
-                           #:args (filename)
-                           filename))
+;; raco symprofile (based on raco feature-profile)
+;; profile the main submodule (if there is one), or the top-level module
+
+(define file
+  (command-line #:program (short-program+command-name)
+                #:args (filename . rest)
+                ; pass all unused arguments to the file being run
+                (current-command-line-arguments (list->vector rest))
+                filename))
 
 (collect-garbage)
 (collect-garbage)
 (collect-garbage)
-
-;(printf "hello world!\n")
 
 (current-compile symbolic-profile-compile-handler)
-(dynamic-require (module-to-profile file) #f)
+(profile-thunk
+  (lambda ()
+    (dynamic-require (module-to-profile file) #f)))
