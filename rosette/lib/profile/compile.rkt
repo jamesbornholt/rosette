@@ -3,7 +3,6 @@
 (require compiler/compile-file (only-in racket [#%require req]))
 (provide symbolic-profile-compile-handler)
 
-(define-namespace-anchor orig-namespace)
 
 (define (make-symbolic-profile-compile-handler)
   (define orig (current-compile))
@@ -26,7 +25,7 @@
           (equal? (syntax->datum #'lang) 'rosette)
           (equal? (syntax->datum #'mod-begin) '#%module-begin))
      (let ([body (map disarm (syntax->list #'(forms ...)))])
-       ;(printf "INSTRUMENTING ~a\n" #'id)
+       (printf "INSTRUMENTING ~a\n" #'id)
        (quasisyntax/loc stx
          (mod id lang (mod-begin (req rosette/lib/profile/app) #,@body))))]
     [_ stx]))
