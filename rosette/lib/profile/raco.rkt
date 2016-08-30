@@ -13,7 +13,7 @@
 (collect-garbage)
 (collect-garbage)
 
-(printf "hello world!\n")
+;(printf "hello world!\n")
 
 (current-compile symbolic-profile-compile-handler)
 (dynamic-require (module-to-profile file) #f)
