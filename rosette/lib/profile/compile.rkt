@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require (only-in racket [#%require req]))
+(require (only-in racket [require req]))
 (provide symbolic-profile-compile-handler)
 
 
@@ -24,19 +24,12 @@
           (equal? (syntax->datum #'mod) 'module)
           (equal? (syntax->datum #'lang) 'rosette)
           (equal? (syntax->datum #'mod-begin) '#%module-begin))
-     (let ([body (map disarm (syntax->list #'(forms ...)))])
+     (begin
        (printf "INSTRUMENTING ~a\n" #'id)
        (quasisyntax/loc stx
-         (mod id lang (mod-begin (req rosette/lib/profile/app) #,@body))))]
-    [_ stx]))
-
-;(define orig-insp (variable-reference->module-declaration-inspector (#%variable-reference)))
-
-(define (disarm stx)
-  ;(printf "   INSTRUMENTING ~a\n" stx)
-  (syntax-case stx (); (syntax-disarm stx orig-insp) ()
-    [(e rest ...)
-     (quasisyntax/loc stx (#,(disarm #'e) #,@(map disarm (syntax->list #'(rest ...)))))]
+         (mod id lang
+              #,(datum->syntax #f
+                               (syntax->datum #'(mod-begin (require rosette/lib/profile/app) forms ...))))))]
     [_ stx]))
 
 
