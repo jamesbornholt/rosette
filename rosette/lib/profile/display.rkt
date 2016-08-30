@@ -5,7 +5,7 @@
 
 ;; Displays a profile entry.
 (define (display-profile node [level 0])
-  (match-define (profile-node _ proc _ _ _ real _ children) node)
+  (match-define (profile-node loc proc _ _ _ real _ children) node)
   (define indent (string-join (for/list ([i level]) "  ") ""))
-  (printf "~a* ~a (~v msec)\n" indent proc real)  ;├─
+  (printf "~a* ~a (~v msec), ~a\n" indent proc real loc)  
   (for ([c children]) (display-profile c (add1 level))))

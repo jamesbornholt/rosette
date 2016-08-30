@@ -22,14 +22,21 @@
   (syntax-case stx ()
     [(mod id lang (mod-begin forms ...))
      (and (id=? #'mod 'module) (id=? #'lang 'rosette) (id=? #'mod-begin '#%module-begin))
-     (begin
+     (with-syntax ([body (strip-context #`(mod-begin (require rosette/lib/profile/app)
+                                                     forms ...))])
        (printf "INSTRUMENTING ~a\n" #'id)
        (quasisyntax/loc stx
-         (mod id lang
-              #,(datum->syntax #f (syntax->datum #'(mod-begin (require rosette/lib/profile/app) forms ...))))))]
+         (mod id lang body)))] 
     [_ stx]))
 
-
+(define (strip-context stx)
+  (syntax-case stx ()
+    [(e0 e ...)
+     (datum->syntax #f `(,(strip-context #'e0) ,@(map strip-context (syntax->list #'(e ...)))) stx)]
+    [e
+     (identifier? #'e)
+     (datum->syntax #f (syntax-e #'e) #'e)]
+    [_ stx]))
 
 
 
