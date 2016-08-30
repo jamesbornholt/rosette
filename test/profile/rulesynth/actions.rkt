@@ -1,7 +1,7 @@
 #lang rosette
 
 (require rosette/lib/match rosette/lib/angelic "../bench.rkt")
-(provide (all-defined-out) (rename-out [list-set @list-set]))
+(provide (all-defined-out))
 
 ; ------------- List manipulation routines ------------- 
 (define (list-set lst pos val)

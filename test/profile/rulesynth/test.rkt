@@ -19,7 +19,7 @@
 
 (define (test-list-set [len 30])
   (define-symbolic* idx val integer?)
-  (@list-set (symbolic-list len) idx val)
+  (list-set (symbolic-list len) idx val)
   (void))
 
 (define (test-remove-at [len 30])
