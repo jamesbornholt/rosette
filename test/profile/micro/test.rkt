@@ -1,6 +1,6 @@
 #lang rosette
 
-(require "hide.rkt" "../bench.rkt" (only-in rosette/lib/profile profile-thunk))
+(require "hide.rkt" "../bench.rkt")
 
 
 
