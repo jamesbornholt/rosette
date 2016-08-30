@@ -1,8 +1,6 @@
 #lang racket/base
 
-(require (only-in racket [require req]))
 (provide symbolic-profile-compile-handler)
-
 
 (define (make-symbolic-profile-compile-handler)
   (define orig (current-compile))
@@ -17,19 +15,18 @@
 (define symbolic-profile-compile-handler
   (make-symbolic-profile-compile-handler))
 
+(define (id=? id name)
+  (and (identifier? id) (equal? (syntax-e id) name)))
+
 (define (insert-instrumentation stx)
   (syntax-case stx ()
     [(mod id lang (mod-begin forms ...))
-     (and (identifier? #'mod) (identifier? #'lang) (identifier? #'mod-begin)
-          (equal? (syntax->datum #'mod) 'module)
-          (equal? (syntax->datum #'lang) 'rosette)
-          (equal? (syntax->datum #'mod-begin) '#%module-begin))
+     (and (id=? #'mod 'module) (id=? #'lang 'rosette) (id=? #'mod-begin '#%module-begin))
      (begin
        (printf "INSTRUMENTING ~a\n" #'id)
        (quasisyntax/loc stx
          (mod id lang
-              #,(datum->syntax #f
-                               (syntax->datum #'(mod-begin (require rosette/lib/profile/app) forms ...))))))]
+              #,(datum->syntax #f (syntax->datum #'(mod-begin (require rosette/lib/profile/app) forms ...))))))]
     [_ stx]))
 
 
