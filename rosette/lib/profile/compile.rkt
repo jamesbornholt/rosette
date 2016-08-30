@@ -34,8 +34,7 @@
 
 (define (disarm stx)
   ;(printf "   INSTRUMENTING ~a\n" stx)
-  (syntax-disarm stx orig-insp)
-  (syntax-case (syntax-disarm stx orig-insp) ()
+  (syntax-case stx (); (syntax-disarm stx orig-insp) ()
     [(e rest ...)
      (quasisyntax/loc stx (#,(disarm #'e) #,@(map disarm (syntax->list #'(rest ...)))))]
     [_ stx]))
