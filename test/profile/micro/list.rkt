@@ -62,3 +62,20 @@
      [(list) lst]
      [(list x xs ...)
       (cons (if (= pos 0) val x) (update xs (- pos 1) val))])))
+
+
+; Simple tests for both variants of the update function.
+(define (test-update [len 10])
+  (define-symbolic* idx integer?)
+  (update (build-list len identity) idx -1)
+  (void))
+
+(profile-thunk
+  (thunk
+    (parameterize ([variant 0])
+      (test-update))))
+
+(profile-thunk
+  (thunk
+    (parameterize ([variant 1])
+      (test-update))))

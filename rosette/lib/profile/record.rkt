@@ -12,7 +12,7 @@
 
 ;; Returns a new profile stack.
 (define (make-profile-stack)
-  (let ([root (profile-node 'root #f #f #f #f #f #f '())])
+  (let ([root (profile-node 'root #f '() '() #f #f #f '())])
     (profile-stack (list root) root)))
 
 ;; A parameter that holds the current profile / call stack.
