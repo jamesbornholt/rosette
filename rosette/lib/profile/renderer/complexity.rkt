@@ -56,14 +56,17 @@
 
 ; Take a list of procedure-complexity? instances and render them as text.
 (define (render-complexity/text nodes feature)
-  (define (~f x) (~r x #:precision 3))
+  (define (~f x [p 2]) (~r x #:precision p))
   (define fname (feature-name feature))
   (define nodes* (sort (filter (lambda (n) (not (false? (procedure-complexity-a n)))) nodes)
-                       < #:key procedure-complexity-b))
-  (for ([n nodes*])
-    (match-define (procedure-complexity proc a b R2 x y) n)
-    (printf "~a: output ~a = ~a * (input ~a)^~a (R^2 = ~a)\n"
-            (object-name proc) fname (~f a) fname (~f b) (~f R2))))
+                       > #:key procedure-complexity-b))
+  (unless (null? nodes*)
+    (printf "--- Complexity profile for ~a ---\n" fname)
+    (for ([n nodes*])
+      (match-define (procedure-complexity proc a b R2 x y) n)
+      (printf "~a: output ~a = ~a * (input ~a)^~a (R^2 = ~a)\n"
+              (object-name proc) fname (~f a) fname (~f b) (~f R2 3)))
+    (printf "\n")))
 
 ; Take a list of procedure-complexity? instances and render them as a graph.
 (define (render-complexity/plot nodes feature)
