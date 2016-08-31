@@ -1,9 +1,7 @@
 #lang racket
 
-(require "record.rkt" "display.rkt" racket/pretty)
+(require "record.rkt" "renderer/complexity.rkt")
 (provide (all-defined-out))
-
-(require "renderer/complexity.rkt")
 
 ; Executes the given thunk and prints the profile data generated during execution.
 (define (profile-thunk thunk #:renderer [renderer (complexity-renderer #:plot? #t)])
@@ -15,5 +13,3 @@
 
 ;; TODO:  we probably need a version of profile-thunk etc that does
 ;; the profiling wrt a clean symbolic state (empty assertion stack, term cache etc).
-
-;; TODO:  need an interface for controlling the output of profile-thunk.
