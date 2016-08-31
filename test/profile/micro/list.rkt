@@ -65,7 +65,7 @@
 
 
 ; Simple tests for both variants of the update function.
-(define (test-update [len 10])
+(define (test-update [len 50])
   (define-symbolic* idx integer?)
   (update (build-list len identity) idx -1)
   (void))

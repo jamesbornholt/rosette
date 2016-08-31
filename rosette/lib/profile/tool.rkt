@@ -1,15 +1,16 @@
 #lang racket
 
-(require "record.rkt" "display.rkt" "complexity.rkt" racket/pretty)
+(require "record.rkt" "display.rkt" racket/pretty)
 (provide (all-defined-out))
 
+(require "renderer/complexity.rkt")
+
 ; Executes the given thunk and prints the profile data generated during execution.
-(define (profile-thunk thunk)
+(define (profile-thunk thunk #:renderer [renderer (complexity-renderer #:plot? #t)])
   (define state (make-profile-stack))
   (define ret (parameterize ([current-profile-stack state])
                 (thunk)))
-  (printf "profiled complexity:\n")
-  (pretty-print (complexity (profile-stack-root state)))
+  (renderer (profile-stack-root state))
   ret)
 
 ;; TODO:  we probably need a version of profile-thunk etc that does
