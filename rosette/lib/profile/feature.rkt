@@ -41,19 +41,23 @@
 (define expr-length-feature
   (feature
    'expr-length
-   (letrec ([expr-length
-             (lambda (e)
-               (let ([ans (match e
-                            [(expression op elts ...) (+ 1 (apply + (map expr-length elts)))]
-                            [(union : (_ v) ...) (+ 1 (apply + (map expr-length v)))] ; TODO treat guards too
-                            [(list elts ...) (apply + (map expr-length elts))]
-                            [_ 1])])
-                 ans))])
+   (let ([cache (make-hash)])
+     (letrec ([expr-length
+               (lambda (e)
+                 (if (hash-has-key? cache e)
+                     (hash-ref cache e)
+                     (let ([ans (match e
+                                  [(expression op elts ...) (+ 1 (apply + (map expr-length elts)))]
+                                  [(union : (_ v) ...) (+ 1 (apply + (map expr-length v)))] ; TODO treat guards too
+                                  [(list elts ...) (apply + (map expr-length elts))]
+                                  [_ 1])])
+                       (hash-set! cache e ans)
+                       ans)))])
      (match-lambda
        [(profile-node _ _ inputs outputs _ _ _ _)
         (cons (if (null? inputs) 1 (apply max (map expr-length inputs)))
               (if (null? outputs) 1 (apply max (map expr-length outputs))))]
-       [x (error 'expr-length-feature "Expected a profile-node?, given ~a" x)]))))
+       [x (error 'expr-length-feature "Expected a profile-node?, given ~a" x)])))))
 
 
 ; A parameter that holds a list of features to profile.
