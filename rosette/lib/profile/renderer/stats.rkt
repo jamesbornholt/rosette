@@ -12,10 +12,11 @@
   (define ∑lny (apply + (map log ys)))
   (define ∑lnxlny (apply + (for/list ([x xs][y ys]) (* (log x) (log y)))))
   (define n (length points))
-  (define b (/ (- (* n ∑lnxlny) (* ∑lnx ∑lny))
-               (- (* n ∑lnx2) (* ∑lnx ∑lnx))))
-  (define a (exp (/ (- ∑lny (* b ∑lnx)) n)))
-  (values a b))
+  (with-handlers ([exn:fail:contract:divide-by-zero? (thunk* (values 1 1))])
+    (define b (/ (- (* n ∑lnxlny) (* ∑lnx ∑lny))
+                 (- (* n ∑lnx2) (* ∑lnx ∑lnx))))
+    (define a (exp (/ (- ∑lny (* b ∑lnx)) n)))
+    (values a b)))
 
 ; Compute the R-squred goodness of fit measure for a model, expressed as a
 ; procedure f(x).

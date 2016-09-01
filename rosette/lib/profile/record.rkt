@@ -23,7 +23,7 @@
 ;; This procedure should be called after all arguments to the profiled procedure have been evaluated, but
 ;; before the procedure is invoked.
 (define (record-enter! loc proc in)
-  (let ([entry (profile-node loc proc in #f #f #f #f '())]
+  (let ([entry (profile-node loc proc in '() #f #f #f '())]
         [parent (car (profile-stack-frames (current-profile-stack)))])
     (set-profile-node-children! parent (cons entry (profile-node-children parent)))
     (set-profile-stack-frames! (current-profile-stack) (cons entry (profile-stack-frames (current-profile-stack))))))
