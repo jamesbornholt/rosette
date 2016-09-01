@@ -1,6 +1,6 @@
 #lang racket
 
-(require "profile/app.rkt" "profile/tool.rkt" "profile/compile.rkt")
+(require "profile/instrument.rkt" "profile/tool.rkt" "profile/compile.rkt")
 
 ; The symbolic profiler can be run in two ways:
 ; (1) require this module in your code, wrap the code you wish to profile in
