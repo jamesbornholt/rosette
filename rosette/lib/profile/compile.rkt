@@ -22,7 +22,7 @@
   (syntax-case stx ()
     [(mod id lang (mod-begin forms ...))
      (and (id=? #'mod 'module) (id=? #'lang 'rosette) (id=? #'mod-begin '#%module-begin))
-     (with-syntax ([body (strip-context #`(mod-begin (require rosette/lib/profile/app)
+     (with-syntax ([body (strip-context #`(mod-begin (require rosette/lib/profile/instrument)
                                                      forms ...))])
        (printf "INSTRUMENTING ~a\n" #'id)
        (quasisyntax/loc stx

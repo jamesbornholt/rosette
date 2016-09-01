@@ -2,6 +2,15 @@
 
 (provide (all-defined-out))
 
+;; Represents the global map from procedure objects to their source locations (if known).
+(define current-sources (make-parameter (make-hash)))
+
+;; Records the mapping from the given procedure object to its source info.
+;; Returns the procedure object.
+(define (record-source! proc stx)
+  (hash-set! (current-sources) proc stx)
+  proc)
+
 ;; Represents a profile entry.
 (struct profile-node (location procedure inputs outputs cpu real gc children)
   #:transparent #:mutable)
