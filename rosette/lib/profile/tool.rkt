@@ -4,7 +4,7 @@
 (provide (all-defined-out))
 
 ; Executes the given thunk and prints the profile data generated during execution.
-(define (profile-thunk thunk #:renderer [renderer (complexity-renderer #:plot? #t)])
+(define (profile-thunk thunk #:renderer [renderer (complexity-renderer #:plot? #f)])
   (define state (make-profile-stack))
   (define ret (parameterize ([current-profile-stack state])
                 (thunk)))
