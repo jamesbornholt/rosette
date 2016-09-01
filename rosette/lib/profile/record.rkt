@@ -7,8 +7,8 @@
 
 ;; Records the mapping from the given procedure object to its source info.
 ;; Returns the procedure object.
-(define (record-source! proc stx)
-  (hash-set! (current-sources) proc stx)
+(define (record-source! proc location)
+  (hash-set! (current-sources) proc location)
   proc)
 
 ;; Represents a profile entry.

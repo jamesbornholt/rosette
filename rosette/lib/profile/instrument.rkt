@@ -5,6 +5,7 @@
 
 (provide (rename-out [$app #%app] [$app #%plain-app] 
                      [$define define]
+                     [$let let]
                      [$lambda lambda]
                      ))
 
@@ -46,8 +47,18 @@
     [(_ e ...)
      (quasisyntax/loc stx
        (record-source!
-        (lambda e ...)
+        #,(quasisyntax/loc stx (lambda e ...))
         (list #,@(location stx))))]))
+
+(define-syntax ($let stx)
+  (syntax-case stx ()
+    [(_ id e ...)
+     (identifier? #'id)
+     (quasisyntax/loc stx
+       ((record-source!
+         (letrec ([id (lambda e ...)]) id)
+         (list #,@(location stx)))))]
+    [(_ e ...) (quasisyntax/loc stx (let e ...))]))
 
 
      
