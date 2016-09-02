@@ -1,15 +1,13 @@
 #lang racket
 
-(require "record.rkt" (only-in rosette union? union-contents expression union))
+(require (only-in rosette union? union-contents expression union))
 
 (provide (all-defined-out))
 
 
 
-; Stores a procedure that takes as input a profile-node
-; and outputs a pair of numbers.  The first number in the
-; pair characterizes the profiled input, and the second
-; number characterizes the output.
+; Stores a procedure that takes as input a list of values
+; and outputs a number that characterizes the cost of those values.   
 (struct feature (name procedure)
   #:property prop:procedure
   [struct-field-index procedure]
@@ -22,22 +20,15 @@
      (fprintf port "(feature ~a)" (feature-name self)))])
 
 
-; A simple feature that returns the sum of the sizes of the input unions,
-; and the sum of the sizes of the output unions.
+; A simple feature that returns the sum of the sizes of the input unions.
 (define union-size-feature
   (feature
    'union-size
-   (let ([union-sizes (lambda (xs)
-                        (for/sum ([x xs] #:when (union? x))
-                          (length (union-contents x))))])
-     (match-lambda
-       [(profile-node _ _ inputs outputs _ _ _ _)
-        (cons (union-sizes inputs)
-              (union-sizes outputs))]
-       [x (error 'union-size-feature "Expected a profile-node?, given ~a" x)]))))
+   (lambda (xs)
+     (for/sum ([x xs] #:when (union? x))
+       (length (union-contents x))))))
 
-; A simple feature that measures the maximum length of expressions in the input
-; and output arguments.
+; A simple feature that measures the maximum length of expressions in the input.
 (define expr-length-feature
   (feature
    'expr-length
@@ -53,11 +44,8 @@
                                   [_ 1])])
                        (hash-set! cache e ans)
                        ans)))])
-     (match-lambda
-       [(profile-node _ _ inputs outputs _ _ _ _)
-        (cons (if (null? inputs) 1 (apply max (map expr-length inputs)))
-              (if (null? outputs) 1 (apply max (map expr-length outputs))))]
-       [x (error 'expr-length-feature "Expected a profile-node?, given ~a" x)])))))
+       (lambda (xs)
+         (if (null? xs) 1 (apply max (map expr-length xs))))))))
 
 
 ; A parameter that holds a list of features to profile.

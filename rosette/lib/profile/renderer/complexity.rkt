@@ -35,7 +35,8 @@
   (define functions (make-hash))
   (let rec ([node profile])
     (match-let ([proc (profile-node-procedure node)]
-                [(cons x y) (feature node)])
+                [x (hash-ref (profile-node-inputs node) feature #f)]
+                [y (hash-ref (profile-node-outputs node) feature #f)])
       (unless (or (false? x) (false? y))
         (hash-update! functions proc (lambda (old) (cons (cons x y) old)) '())))
     (for ([c (profile-node-children node)])
