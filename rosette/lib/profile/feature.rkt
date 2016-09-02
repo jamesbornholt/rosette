@@ -1,6 +1,8 @@
 #lang racket
 
-(require (only-in rosette union? union-contents expression union))
+(require (only-in rosette union? union-contents expression union)
+         (only-in rosette/base/core/polymorphic guarded)
+         (only-in rosette/base/core/type get-type typed? type-deconstruct))
 
 (provide (all-defined-out))
 
@@ -47,11 +49,61 @@
        (lambda (xs)
          (if (null? xs) 1 (apply max (map expr-length xs))))))))
 
+; Updates the footprint map to contain the object graph of x.
+; The footprint is a set of key-value pairs, where the key is an
+; object (a node in the graph), and the value is the number of
+; outgoing edges.
+(define (measure! footprint x)
+  (unless (hash-has-key? footprint x)
+    (match x
+      [(or (union children)
+           (expression _ children ...)
+           (? list? children))
+       (hash-set! footprint x (length children))
+       (for ([c children])
+         (measure! footprint c))]
+      [(guarded t c)
+       (hash-set! footprint x 2)
+       (measure! footprint t)
+       (measure! footprint c)]
+      [(cons a b)
+       (hash-set! footprint x 2)
+       (measure! footprint a)
+       (measure! footprint b)]
+      [(? vector?)
+       (hash-set! footprint x (vector-length x))
+       (for ([c x])
+         (measure! footprint c))]
+      [(box c) 
+       (hash-set! footprint x 1)
+       (measure! footprint c)]
+      [(? typed?)
+       (match (type-deconstruct (get-type x) x)
+         [(list (== x)) (hash-set! footprint x 0)]
+         [children
+          (hash-set! footprint x (length children))
+          (for ([c children])
+            (measure! footprint c))])]
+      [_ (hash-set! footprint x 0)])))
+
+       
+ 
+; A simple feature that measures V + E, where V is the number of vertices and
+; E is the number of edges that make up the input object graph.
+(define heap-size-feature
+  (feature
+   'heap-size
+   (lambda (xs)
+     (define footprint (make-hash))
+     (for ([x xs]) (measure! footprint x))
+     (+ (hash-count footprint)
+        (for/sum ([v (in-hash-values footprint)]) v)))))
+   
 
 ; A parameter that holds a list of features to profile.
 (define current-features
   (make-parameter
-   (list union-size-feature expr-length-feature)
+   (list heap-size-feature union-size-feature expr-length-feature)
    (lambda (fs)
      (unless (and (list? fs) (andmap feature? fs))
        (error 'current-features "Expected a list of feature?, given ~a" fs))
