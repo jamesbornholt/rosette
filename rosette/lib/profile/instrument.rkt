@@ -27,9 +27,21 @@
          (let ([#,p proc]
                #,@(for/list ([x xs][a args] #:when (identifier? x)) #`(#,x #,a)))
            (record-enter! (list #,@pos) #,p (list #,@(for/list ([x xs] #:when (identifier? x)) x)))
-           (let-values ([(out cpu real gc) (time-apply (thunk (#%app #,p #,@xs)) null)])
-             (record-exit! out cpu real gc)
-             (apply values out)))))]))
+           ; `out` will always be a list of two values:
+           ; * If the application does not produce an exception, the first value is #f
+           ;   and the second is a list of the values returned from the application.
+           ; * If the application does produce an exception, the first value is that exception
+           ;   and the second is null.
+           ; This arrangement enables collecting timing data even from applications that
+           ; throw exceptions, which is common during symbolic evaluation.
+           ; TODO: should we annotate the profle-node somehow to indicate an exception was thrown?
+           (let-values ([(out cpu real gc)
+                         (time-apply (thunk (with-handlers ([exn? (lambda (exn) (values exn null))])
+                                              (call-with-values
+                                               (thunk (#%app #,p #,@xs))
+                                               (lambda e (values #f e))))) null)])
+             (record-exit! (cadr out) cpu real gc)
+             (if (false? (car out)) (apply values (cadr out)) (raise (car out)))))))]))
 
 (define-syntax ($define stx)
   (syntax-case stx ()
