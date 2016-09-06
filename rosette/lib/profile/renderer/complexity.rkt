@@ -1,7 +1,6 @@
 #lang racket
 
-(require plot
-         "../record.rkt" "../feature.rkt" "stats.rkt")
+(require plot "../record.rkt" "../feature.rkt" "stats.rkt" "key.rkt")
 
 (provide complexity-renderer)
 
@@ -29,12 +28,12 @@
 
 ; Analyze the complexity of all procedures in the given profile with respect
 ; to a single feature.
-(define (analyze-complexity profile feature)
+(define (analyze-complexity profile feature [key profile-node-key/srcloc])
   ; functions will map proc -> (listof pair?) -- the set of all points to
   ; consider for each procedure.
   (define functions (make-hash))
   (let rec ([node profile])
-    (match-let ([proc (profile-node-procedure node)]
+    (match-let ([proc (key node)]
                 [x (hash-ref (profile-node-inputs node) feature #f)]
                 [y (hash-ref (profile-node-outputs node) feature #f)])
       (unless (or (false? x) (false? y))
@@ -66,7 +65,7 @@
     (for ([n nodes*])
       (match-define (procedure-complexity proc a b R2 x y) n)
       (printf "~a: output ~a = ~a * (input ~a)^~a (R^2 = ~a)\n"
-              (object-name proc) fname (~f a) fname (~f b) (~f R2 3)))
+              proc fname (~f a) fname (~f b) (~f R2 3)))
     (printf "\n")))
 
 ; Take a list of procedure-complexity? instances and render them as a graph.
