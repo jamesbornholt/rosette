@@ -4,7 +4,8 @@
 
 (provide union? (rename-out [a-union union])
          union-contents union-type union-guards union-values union-filter
-         in-union in-union* in-union-guards in-union-values) 
+         in-union in-union* in-union-guards in-union-values
+         union-count union-sum) 
 
 ; Represents a symbolic union of guarded values that evaluates either to a 
 ; single value of a given type, or no value at all.  
@@ -50,18 +51,14 @@
   #:transparent
   #:property prop:procedure [struct-field-index procedure])
 
+(define union-count (make-parameter 0))
+(define union-sum (make-parameter 0))
+
 (define (make-union . vs)
+  (union-count (add1 (union-count)))
+  (union-sum (+ (length vs) (union-sum)))
   (match vs
     [(list) nil]
-    [(list (and c1 (cons g1 v1) (and c2 (cons g2 v2))))
-     (let ([vs  (if (term<? g1 g2) vs (list c2 c1))]
-           [t (type-of v1 v2)])
-       (cond [(procedure? v1)
-              (λunion vs t (type-compress (lifted-type procedure?) #t (if (procedure? v2) vs (list c1))))]
-             [(procedure? v2)
-              (λunion vs t (type-compress (lifted-type procedure?) #t (list c2)))]
-             [else
-              (union vs t)]))]
     [_ 
      (let ([vs (sort vs term<? #:key car)]
            [t (apply type-of (map cdr vs))])
