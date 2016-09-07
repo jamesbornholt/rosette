@@ -37,6 +37,33 @@
 (define (compute-features xs)
   (for/hash ([f (current-features)]) (values f (f xs))))
 
+;; Records the application of a procedure proc at a location loc to
+;; the given by-position and/or keyword arguments.
+(define record-apply!
+  (let* ([handler  (lambda (exn) (values exn null))]
+         [returner (lambda e (values #f e))]
+         [runner (lambda (loc proc in app-proc-to-in)
+                   (record-enter! loc proc in)
+                   ; `out` will always be a list of two values:
+                   ; * If the application does not produce an exception, the first value is #f
+                   ;   and the second is a list of the values returned from the application.
+                   ; * If the application does produce an exception, the first value is that exception
+                   ;   and the second is null.
+                   ; This arrangement enables collecting timing data even from applications that
+                   ; throw exceptions, which is common during symbolic evaluation.
+                   ; TODO: should we annotate the profle-node somehow to indicate an exception was thrown?
+                   (let-values ([(out cpu real gc)
+                                 (time-apply (thunk (with-handlers ([exn? handler])
+                                                      (call-with-values app-proc-to-in returner)))
+                                             null)])
+                     (record-exit! (cadr out) cpu real gc)
+                     (if (false? (car out)) (apply values (cadr out)) (raise (car out)))))])   
+  (make-keyword-procedure
+   (lambda (kws kw-args loc proc . rest) 
+     (runner loc proc (append rest kw-args) (thunk (keyword-apply proc kws kw-args rest))))
+   (lambda (loc proc . rest) 
+     (runner loc proc rest (thunk (apply proc rest)))))))
+
 ;; Records a procedure entry by pushing a fresh profile-node onto the
 ;; current-profile-stack.
 ;; This procedure should be called after all arguments to the profiled procedure have been evaluated, but
