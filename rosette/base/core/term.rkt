@@ -3,7 +3,7 @@
 (require racket/syntax (for-syntax racket racket/syntax) racket/generic "type.rkt")
 
 (provide
- term-cache clear-terms!
+ term-cache clear-terms! term-count
  term? constant? expression? 
  (rename-out [a-term term] [an-expression expression] [a-constant constant]) 
  term-type term<? sublist? @app
