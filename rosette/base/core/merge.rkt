@@ -4,7 +4,7 @@
          (only-in racket/unsafe/ops [unsafe-car car] [unsafe-cdr cdr])
          "term.rkt" "union.rkt" "bool.rkt")
 
-(provide merge merge* unsafe-merge*)
+(provide merge merge* unsafe-merge* merge-count)
 
 (define (merge b x y)
   (match* (b x y)
@@ -31,11 +31,15 @@
 (define (unsafe-merge* . ps)
   (do-merge* #t ps))
 
+(define merge-count (make-parameter 0))
+
 (define-syntax-rule (do-merge* force? ps)
-  (match (compress force? (simplify ps)) 
-    [(list (cons g v)) (assert (not (false? g))) v]
-    [(list _ (... ...) (cons #t v) _ (... ...)) v]
-    [vs (apply union vs)]))
+  (begin
+    (merge-count (add1 (merge-count)))
+    (match (compress force? (simplify ps)) 
+      [(list (cons g v)) (assert (not (false? g))) v]
+      [(list _ (... ...) (cons #t v) _ (... ...)) v]
+      [vs (apply union vs)])))
 
 (define (guard-&& a b)
   (match b  
