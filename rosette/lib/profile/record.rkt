@@ -1,6 +1,6 @@
 #lang racket
 
-(require "feature.rkt")
+(require "feature.rkt" "metrics.rkt")
 (provide (all-defined-out))
 
 ;; Represents the global map from procedure objects to their source locations (if known).
@@ -16,8 +16,11 @@
 ;; which the given procedure is invoked.  The inputs and outputs fields are
 ;; hash maps from features to numbers.  For each feature in current-features,
 ;; they store the value of that feature for the given inputs and the corresponding
-;; outputs.
-(struct profile-node (location procedure inputs outputs cpu real gc children)
+;; outputs.  The metrics field is a hash map from symbols to numbers, where each
+;; symbol describes a performance metric collected during symbolic evaluation,
+;; e.g., cpu time, real time, gc time, the number of merge invocations, the number
+;; of unions and terms created, etc.
+(struct profile-node (location procedure inputs outputs metrics children)
   #:transparent #:mutable)
 
 ;; Represents a profile stack.
@@ -26,7 +29,7 @@
 
 ;; Returns a new profile stack.
 (define (make-profile-stack)
-  (let ([root (profile-node 'root #f (hash) (hash) #f #f #f '())])
+  (let ([root (profile-node 'root #f (hash) (hash) (hash) '())])
     (profile-stack (list root) root)))
 
 ;; A parameter that holds the current profile / call stack.
@@ -69,18 +72,28 @@
 ;; This procedure should be called after all arguments to the profiled procedure have been evaluated, but
 ;; before the procedure is invoked.
 (define (record-enter! loc proc in)
-  (let ([entry (profile-node loc proc (compute-features in) (hash) #f #f #f '())]
-        [parent (car (profile-stack-frames (current-profile-stack)))])
+  (let* ([metrics (hash 'merge-count (merge-count)
+                        'union-count (union-count)
+                        'union-sum (union-sum)
+                        'term-count (term-count))]
+         [entry (profile-node loc proc (compute-features in) (hash) metrics '())]
+         [parent (car (profile-stack-frames (current-profile-stack)))])
     (set-profile-node-children! parent (cons entry (profile-node-children parent)))
     (set-profile-stack-frames! (current-profile-stack) (cons entry (profile-stack-frames (current-profile-stack))))))
+
+(define-syntax-rule (diff metrics metric)
+  (- (metric) (hash-ref metrics 'metric)))
 
 ;; Records a method exit by modifying the out, cpu, real, and gc fields
 ;; of the profile-node at the top of the current-profile-stack.
 ;; This procedure should be called after the profiled procedure call returns.
 (define (record-exit! out cpu real gc)
-  (let ([entry (car (profile-stack-frames (current-profile-stack)))])
+  (let* ([entry (car (profile-stack-frames (current-profile-stack)))]
+         [metrics (profile-node-metrics entry)])
     (set-profile-node-outputs! entry (compute-features out))
-    (set-profile-node-cpu! entry cpu)
-    (set-profile-node-real! entry real)
-    (set-profile-node-gc! entry gc)
+    (set-profile-node-metrics! entry (hash 'cpu cpu 'real real 'gc gc
+                                           'merge-count (diff metrics merge-count)
+                                           'union-count (diff metrics union-count)
+                                           'union-sum (diff metrics union-sum)
+                                           'term-count (diff metrics term-count)))
     (set-profile-stack-frames! (current-profile-stack) (cdr (profile-stack-frames (current-profile-stack))))))

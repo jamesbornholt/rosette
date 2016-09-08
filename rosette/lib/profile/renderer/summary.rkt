@@ -24,7 +24,7 @@
   (define excl (make-hash))
   ; Compute exclusive time with a bottom-up traversal
   (let rec ([node profile])
-    (define inct (profile-node-real node))
+    (define inct (hash-ref (profile-node-metrics node) 'real #f))
     (define in-child (apply + (map rec (profile-node-children node))))
     (unless (false? inct)
       (hash-update! excl (key node) (lambda (t) (+ t (- inct in-child))) 0))
@@ -32,7 +32,7 @@
   ; Compute inclusive time with a top-down traversal
   (define incl (make-hash))
   (let rec ([node profile][stack (set)])
-    (define inct (profile-node-real node))
+    (define inct (hash-ref (profile-node-metrics node) 'real #f))
     (unless (or (false? inct) (set-member? stack (key node)))
       (hash-update! incl (key node) (lambda (t) (+ t inct)) 0))
     (for ([c (profile-node-children node)]) (rec c (set-add stack (key node)))))
