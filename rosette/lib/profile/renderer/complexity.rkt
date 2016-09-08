@@ -4,6 +4,20 @@
 
 (provide complexity-renderer)
 
+(define (feature->feature feature)
+  (lambda (node) (hash-ref (profile-node-inputs node) feature #f)))
+
+(define (feature->metric feature)
+  (procedure-rename
+   (lambda (node) (hash-ref (profile-node-outputs node) feature #f))
+   (feature-name feature)))
+
+(define (name->metric name)
+  (procedure-rename
+   (lambda (node) (hash-ref (profile-node-metrics node) name #f))
+   name))
+
+(define metrics (map name->metric '(merge-count term-count union-count union-size)))
 
 ; Create a renderer that outputs information about the complexity of
 ; procedures observed in a profile. If plot? is true, the renderer will
@@ -12,11 +26,12 @@
   (lambda (profile)
     (unless (profile-node? profile)
       (raise-argument-error 'complexity-renderer "profile-node?" profile))
-    (for ([feature (current-features)])
-      (let ([result (analyze-complexity profile feature)])
-        (render-complexity/text result feature)
+    (for* ([feature (current-features)]
+           [metric (cons (feature->metric feature) metrics)])
+      (let ([result (analyze-complexity profile (feature->feature feature) metric)])
+        (render-complexity/text result feature metric)
         (when plot?
-          (render-complexity/plot result feature))))))
+          (render-complexity/plot result feature metric))))))
 
 
 ; Represents a power-law fit to the complexity of a single procedure:
@@ -27,15 +42,15 @@
 
 
 ; Analyze the complexity of all procedures in the given profile with respect
-; to a single feature.
-(define (analyze-complexity profile feature [key profile-node-key/srcloc])
+; to a single feature and metric.
+(define (analyze-complexity profile feature metric [key profile-node-key/srcloc])
   ; functions will map proc -> (listof pair?) -- the set of all points to
   ; consider for each procedure.
   (define functions (make-hash))
   (let rec ([node profile])
     (match-let ([proc (key node)]
-                [x (hash-ref (profile-node-inputs node) feature #f)]
-                [y (hash-ref (profile-node-outputs node) feature #f)])
+                [x (feature node)] 
+                [y (metric node)]) 
       (unless (or (false? x) (false? y))
         (hash-update! functions proc (lambda (old) (cons (cons x y) old)) '())))
     (for ([c (profile-node-children node)])
@@ -55,21 +70,22 @@
     (procedure-complexity proc a b r2 (map car pts) (map cdr pts))))
 
 ; Take a list of procedure-complexity? instances and render them as text.
-(define (render-complexity/text nodes feature)
+(define (render-complexity/text nodes feature metric)
   (define (~f x [p 2]) (~r x #:precision p))
   (define fname (feature-name feature))
+  (define mname (object-name metric))
   (define nodes* (sort (filter (lambda (n) (not (false? (procedure-complexity-a n)))) nodes)
                        > #:key procedure-complexity-b))
   (unless (null? nodes*)
-    (printf "--- Complexity profile for ~a ---\n" fname)
+    (printf "--- Complexity profile for (~a, ~a) ---\n" fname mname)
     (for ([n nodes*])
       (match-define (procedure-complexity proc a b R2 x y) n)
       (printf "~a: output ~a = ~a * (input ~a)^~a (R^2 = ~a)\n"
-              proc fname (~f a) fname (~f b) (~f R2 3)))
+              proc mname (~f a) fname (~f b) (~f R2 3)))
     (printf "\n")))
 
 ; Take a list of procedure-complexity? instances and render them as a graph.
-(define (render-complexity/plot nodes feature)
+(define (render-complexity/plot nodes feature metric)
   (define renderers
     (for/fold ([ret '()])
               ([n (filter (lambda (n) (not (false? (procedure-complexity-a n)))) nodes)])
@@ -80,4 +96,4 @@
                           (points (map vector x y) #:color color))))))
   (unless (null? renderers)
     (parameterize ([plot-new-window? #t])
-      (plot renderers #:title (~v (feature-name feature))))))
+      (plot renderers #:title (format "(~v, ~v)" (feature-name feature) (object-name metric))))))
