@@ -15,6 +15,12 @@
   (define (indent n)
     (string-join (for/list ([i n]) "  ") ""))
   (let rec ([node profile][level 0])
-    (printf "~a* ~a (~v ms)\n" (indent level) (key node) (hash-ref (profile-node-metrics node) 'real #f))
+    (define metrics (profile-node-metrics node))
+    (printf "~a* ~a (~v ms, ~v merges, ~v unions, ~v terms)\n"
+            (indent level) (key node)
+            (hash-ref metrics 'real #f)
+            (hash-ref metrics 'merge-count #f)
+            (hash-ref metrics 'union-count #f)
+            (hash-ref metrics 'term-count #f))
     (for ([c (reverse (profile-node-children node))])
       (rec c (add1 level)))))
