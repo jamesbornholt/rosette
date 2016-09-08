@@ -17,7 +17,7 @@
    (lambda (node) (hash-ref (profile-node-metrics node) name #f))
    name))
 
-(define metrics (map name->metric '(merge-count term-count union-count union-size)))
+(define metrics (map name->metric '(merge-count term-count union-count union-size real)))
 
 ; Create a renderer that outputs information about the complexity of
 ; procedures observed in a profile. If plot? is true, the renderer will
