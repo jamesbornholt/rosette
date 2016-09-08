@@ -1,7 +1,6 @@
 #lang racket
 
-(require (only-in rosette union? union-contents expression union)
-         (only-in rosette/base/core/polymorphic guarded)
+(require (only-in rosette union? union-contents union expression)
          (only-in rosette/base/core/type get-type typed? type-deconstruct))
 
 (provide (all-defined-out))
@@ -52,20 +51,19 @@
 ; Updates the footprint map to contain the object graph of x.
 ; The footprint is a set of key-value pairs, where the key is an
 ; object (a node in the graph), and the value is the number of
-; outgoing edges.
+; outgoing edges.  Symbolic terms, regardless of size, are treated
+; as opaque values with no outgoing edges (just like concrete constants).
 (define (measure! footprint x)
   (unless (hash-has-key? footprint x)
     (match x
-      [(or (union children)
-           (expression _ children ...)
-           (? list? children))
+      [(union gvs)
+       (hash-set! footprint x (length gvs))
+       (for ([gv gvs]) ; don't count the guards
+         (measure! footprint (cdr gv)))]
+      [(? list? children)
        (hash-set! footprint x (length children))
        (for ([c children])
          (measure! footprint c))]
-      [(guarded t c)
-       (hash-set! footprint x 2)
-       (measure! footprint t)
-       (measure! footprint c)]
       [(cons a b)
        (hash-set! footprint x 2)
        (measure! footprint a)
