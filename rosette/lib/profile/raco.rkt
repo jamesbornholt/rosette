@@ -4,7 +4,8 @@
          raco/command-name
          profile/raco-utils
          "compile.rkt" "tool.rkt"
-         "renderer/complexity.rkt" "renderer/summary.rkt" "renderer/trace.rkt")
+         "renderer/complexity.rkt" "renderer/summary.rkt" "renderer/trace.rkt"
+         "renderer/html.rkt")
 
 ;; raco symprofile (based on raco feature-profile)
 ;; profile the main submodule (if there is one), or the top-level module
@@ -20,6 +21,8 @@
                              (profile-mode 'summary)]
                 ["--trace" "Produce a complete execution trace"
                            (profile-mode 'trace)]
+                ["--html" "Produce an interactive HTML profile"
+                          (profile-mode 'html)]
                 #:once-each
                 [("-g" "--graph") "Plot graphs when available"
                                  (plot-graphs? #t)]
@@ -32,7 +35,8 @@
   (case (profile-mode)
     ['complexity (complexity-renderer #:plot? (plot-graphs?))]
     ['summary    (summary-renderer)]
-    ['trace      (trace-renderer)]))
+    ['trace      (trace-renderer)]
+    ['html       (html-renderer)]))
 
 (collect-garbage)
 (collect-garbage)
