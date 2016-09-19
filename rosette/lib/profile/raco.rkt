@@ -42,4 +42,5 @@
 (profile-thunk
   (lambda ()
     (dynamic-require (module-to-profile file) #f))
+  #:source (format "file ~a" file)
   #:renderer renderer)

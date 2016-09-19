@@ -70,12 +70,10 @@
   (update (build-list len identity) idx -1)
   (void))
 
-(profile-thunk
-  (thunk
-    (parameterize ([variant 0])
-      (test-update))))
+(profile
+ (parameterize ([variant 0])
+   (test-update)))
 
-(profile-thunk
-  (thunk
-    (parameterize ([variant 1])
-      (test-update))))
+(profile
+ (parameterize ([variant 1])
+   (test-update)))

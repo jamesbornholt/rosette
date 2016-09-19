@@ -23,9 +23,10 @@
 ; procedures observed in a profile. If plot? is true, the renderer will
 ; also produce a plot in a new window.
 (define (complexity-renderer #:plot? [plot? #f])
-  (lambda (profile)
+  (lambda (profile source)
     (unless (profile-node? profile)
       (raise-argument-error 'complexity-renderer "profile-node?" profile))
+    (printf "=== Complexity profile (source: ~v) ===\n" source)
     (for* ([feature (current-features)]
            [metric (cons (feature->metric feature) metrics)])
       (let ([result (analyze-complexity profile (feature->feature feature) metric)])

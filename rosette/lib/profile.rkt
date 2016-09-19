@@ -12,4 +12,4 @@
 
 (current-compile symbolic-profile-compile-handler)
 
-(provide #%app #%plain-app profile-thunk)
+(provide #%app #%plain-app profile-thunk profile)
