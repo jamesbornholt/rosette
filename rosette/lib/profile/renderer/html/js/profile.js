@@ -1,14 +1,20 @@
+function forEach(array, callback, scope) {
+    for (var i = 0; i < array.length; i++) {
+        callback.call(scope, array[i]);
+    }
+}
+
 function findUnique(profile, key) {
     var vals = [];
-    for (var func of profile["functions"]) {
-        for (var fcall of func["calls"]) {
-            for (var val of Object.keys(fcall[key])) {
-                if (!vals.includes(val)) {
+    forEach(profile["functions"], function(func) {
+        forEach(func["calls"], function(fcall) {
+            forEach(Object.keys(fcall[key]), function(val) {
+                if (vals.indexOf(val) == -1) {
                     vals.push(val);
                 }
-            }
-        }
-    }
+            });
+        });
+    });
     return vals;
 }
 
@@ -21,12 +27,12 @@ function init() {
     document.getElementById("form").innerHTML = profile_data.form;
 
     var updateSelect = function(select, lst) {
-        for (var x of lst) {
+        forEach(lst, function(x) {
             var opt = document.createElement("option");
             opt.value = x;
             opt.innerHTML = x;
             select.insertAdjacentElement('beforeend', opt);
-        }
+        });
     };
 
     var input_select = document.getElementById("input");
@@ -47,29 +53,29 @@ function getSelectedOption(elt) {
 
 function selectProfilePoints(data, input, output) {
     var pts = [];
-    for (var fcall of data) {
-        if (!fcall["inputs"].hasOwnProperty(input)) continue;
+    forEach(data, function(fcall) {
+        if (!fcall["inputs"].hasOwnProperty(input)) return;
         var i = fcall["inputs"][input];
         var o;
         if (fcall["outputs"].hasOwnProperty(output))
             o = fcall["outputs"][output];
         else if (fcall["metrics"].hasOwnProperty(output))
             o = fcall["metrics"][output];
-        else continue;
+        else return;
         pts.push([i, o]);
-    }
+    });
     return pts;
 }
 
 function generateProfile(input, output) {
     var entries = [];
-    for (var func of profile_data["functions"]) {
+    forEach(profile_data["functions"], function(func) {
         var pts = selectProfilePoints(func.calls, input, output);
         var reg_power = regression('power', pts);
         var reg_linear = regression('linear', pts);
         var reg_best = reg_power.r2 > reg_linear.r2 ? reg_power : reg_linear;
         entries.push({"name": func.name, "points": pts, "fit": reg_best, "calls": pts.length});
-    }
+    });
     return entries;
 }
 
@@ -108,10 +114,10 @@ function renderTable() {
 
 
     var table = document.getElementById("profile");
-    for (var node of document.querySelectorAll("table tr:not(.header)")) {
+    forEach(document.querySelectorAll("table tr:not(.header)"), function(node) {
         node.parentNode.removeChild(node);
-    }
-    for (var entry of entries) {
+    });
+    forEach(entries, function(entry) {
         var row = document.createElement("tr");
         var func = makeCell(entry.name.split(" ")[0], row);
         func.title = entry.name.indexOf(" ") > -1 ? 
@@ -125,7 +131,7 @@ function renderTable() {
         row.chartData = entry;
         row.addEventListener('click', profileEntryClick);
         table.insertAdjacentElement('beforeend', row);
-    }
+    });
 
     if (entries.length > 0) {
         renderGraph(input, output, entries[0], table.childNodes[1]);
@@ -139,9 +145,9 @@ function renderGraph(input, output, entry, row) {
 
     var data = [];
 
-    for (var pt of entry.points) {
+    forEach(entry.points, function(pt) {
         data.push({"x": pt[0], "y": pt[1]});
-    }
+    });
 
     var spec = {"data": {"values": data}, "mark": "point",
                 "width": 400, "height": 400,
@@ -149,9 +155,9 @@ function renderGraph(input, output, entry, row) {
                              "y": {"field": "y", "type": "quantitative", "axis": {"title": "output " + output}}}};
     vg.embed(graph, {mode: "vega-lite", spec: spec}, function(err, res) {});
 
-    for (var elt of document.querySelectorAll('.selected')) {
+    forEach(document.querySelectorAll('.selected'), function(elt) {
         elt.classList.remove('selected');
-    }
+    });
     row.classList.add('selected');
 
     // swap out the graph
