@@ -37,7 +37,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; The HTML renderer produces a directory containing a webpage version of a complexity profile.
-(define (html-renderer #:directory [dir (build-path (current-directory) "profiles")])
+(define (html-renderer #:directory [dir (build-path (current-directory) "profiles")]
+                       #:auto-open? [open? #t])
   (lambda (profile source)
     (unless (profile-node? profile)
       (raise-argument-error 'html-renderer "profile-node?" profile))
@@ -48,7 +49,17 @@
     (let ([out (open-output-file (build-path output-dir "data.json"))])
       (render-json entries source out)
       (close-output-port out))
-    (printf "Wrote profile to ~a\n" output-dir)))
+    (printf "Wrote profile to ~a\n" output-dir)
+    (when open?
+      (define opener
+        (match (system-type)
+          ['unix "xdg-open"]
+          ['windows "start"]
+          ['macosx "open"]
+          [_ #f]))
+      (unless (false? opener)
+        (printf "Opening profile...\n")
+        (system (format "~a ~a" opener (path->string (build-path output-dir "index.html"))))))))
 
 
 ; Aggregate profile records by procedure
