@@ -9,7 +9,8 @@ var Profile = {
         input: null,
         output: null,
         entry: null
-    }
+    },
+    sorter: null
 };
 // collate all unique entries in the profile data
 function findUnique(key) {
@@ -68,6 +69,7 @@ function init() {
     input_select.addEventListener('change', renderTable);
     output_select.addEventListener('change', renderTable);
     // render the initial table
+    Profile.sorter = new Tablesort(document.getElementById("profile"), { descending: true });
     renderTable();
 }
 function getSelectedOption(elt) {
@@ -97,8 +99,9 @@ function generateProfile(input, output) {
         var func = _a[_i];
         var pts = selectProfilePoints(func.calls, input, output);
         var reg_power = regression('power', pts);
-        var reg_linear = regression('linear', pts);
-        var reg_best = reg_power.r2 > reg_linear.r2 ? reg_power : reg_linear;
+        //let reg_linear = regression('linear', pts);
+        //let reg_best = reg_power.r2 > reg_linear.r2 ? reg_power : reg_linear;
+        var reg_best = reg_power;
         entries.push({ "name": func.name, "points": pts, "fit": reg_best, "calls": pts.length });
     }
     return entries;
@@ -136,11 +139,11 @@ function renderTable() {
             return b.fit.r2 - a.fit.r2;
     });
     // remove all table rows
-    var table = document.getElementById("profile");
-    for (var _i = 0, _a = document.querySelectorAll("table tr:not(.header)"); _i < _a.length; _i++) {
+    for (var _i = 0, _a = document.querySelectorAll("table#profile tbody tr"); _i < _a.length; _i++) {
         var node = _a[_i];
         node.parentNode.removeChild(node);
     }
+    var tbody = document.querySelectorAll("table#profile tbody")[0];
     Profile.entries = [];
     // render new table rows
     for (var _b = 0, entries_1 = entries; _b < entries_1.length; _b++) {
@@ -151,7 +154,8 @@ function renderTable() {
         func.title = entry_1.name.indexOf(" ") > -1 ?
             entry_1.name.slice(entry_1.name.indexOf(" ") + 1) :
             "<no source info>";
-        makeCell(entry_1.fit.string, row);
+        var fit = makeCell(entry_1.fit.string, row);
+        fit.dataset["sort"] = entry_1.fit.equation[1].toFixed(2);
         makeCell(isNaN(entry_1.fit.r2) ? "-" : entry_1.fit.r2.toFixed(2), row);
         makeCell(entry_1.calls, row);
         // store the entry in the profile state
@@ -160,7 +164,7 @@ function renderTable() {
         row["entry"] = entry_1;
         // set up event listener for clicks on this row to change graph
         row.addEventListener('click', profileEntryClick);
-        table.insertAdjacentElement('beforeend', row);
+        tbody.insertAdjacentElement('beforeend', row);
     }
     // maintain the selection if possible, otherwise select the
     // first element in the list
@@ -178,6 +182,8 @@ function renderTable() {
         new_selection = Profile.entries[0];
     }
     selectEntry(new_selection);
+    // sort the table
+    Profile.sorter.refresh();
 }
 function selectEntry(entry) {
     Profile.selected.entry = entry;
@@ -195,17 +201,19 @@ function renderGraph(input, output, entry) {
     var old_graph = document.getElementById("graph");
     var graph = document.createElement("div");
     graph.id = "graph";
+    // gather the data into a list of the form [{x: x, y: y}]
     var data = [];
     for (var _i = 0, _a = entry.points; _i < _a.length; _i++) {
         var pt = _a[_i];
         data.push({ "x": pt[0], "y": pt[1] });
     }
+    // render the vega spec
     var spec = { "data": { "values": data }, "mark": "point",
         "width": 400, "height": 400,
         "encoding": { "x": { "field": "x", "type": "quantitative", "axis": { "title": "input " + input } },
             "y": { "field": "y", "type": "quantitative", "axis": { "title": "output " + output } } } };
     vg.embed(graph, { mode: "vega-lite", spec: spec }, function (err, res) { });
-    // swap out the graph
+    // swap out the graph element
     old_graph.parentNode.replaceChild(graph, old_graph);
 }
 function profileEntryClick(evt) {
