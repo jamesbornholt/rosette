@@ -131,6 +131,13 @@ function renderTable() {
     Profile.selected.output = getSelectedOption(document.getElementById("output"));
     // generate the profile entries using these metrics
     var entries = generateProfile(Profile.selected.input, Profile.selected.output);
+    // sort in decreasing R^2 order, with NaNs last
+    entries.sort(function (a, b) {
+        if (!isFinite(b.fit.r2 - a.fit.r2))
+            return !isFinite(a.fit.r2) ? 1 : -1;
+        else
+            return b.fit.r2 - a.fit.r2;
+    });
     // remove all table rows
     for (var _i = 0, _a = document.querySelectorAll("table#profile tbody tr"); _i < _a.length; _i++) {
         var node = _a[_i];
