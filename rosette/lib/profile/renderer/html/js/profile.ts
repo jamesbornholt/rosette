@@ -144,12 +144,6 @@ function renderTable() {
 
     // generate the profile entries using these metrics
     let entries = generateProfile(Profile.selected.input, Profile.selected.output);
-    // sort in decreasing R^2 order, with NaNs last
-    entries.sort(function(a, b) {
-        if (!isFinite(b.fit.r2 - a.fit.r2))
-            return !isFinite(a.fit.r2) ? 1 : -1;
-        else return b.fit.r2 - a.fit.r2;
-    });
 
     // remove all table rows
     for (let node of document.querySelectorAll("table#profile tbody tr")) {
