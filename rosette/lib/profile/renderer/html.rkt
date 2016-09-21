@@ -90,5 +90,5 @@
           'functions (for/list ([(proc nodes) entries])
                        (hash 'name proc
                              'calls (for/list ([n nodes]) (render-entry n))))))
-  (fprintf out "var profile_data = ")
+  (fprintf out "Profile.data = ")
   (write-json dict out))

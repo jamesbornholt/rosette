@@ -1,6 +1,20 @@
-function findUnique(profile, key) {
+// global state
+var Profile = {
+    inputs: [],
+    outputs: [],
+    metrics: [],
+    data: null,
+    entries: [],
+    selected: {
+        input: null,
+        output: null,
+        entry: null
+    }
+};
+// collate all unique entries in the profile data
+function findUnique(key) {
     var vals = [];
-    for (var _i = 0, _a = profile["functions"]; _i < _a.length; _i++) {
+    for (var _i = 0, _a = Profile.data["functions"]; _i < _a.length; _i++) {
         var func = _a[_i];
         for (var _b = 0, _c = func["calls"]; _b < _c.length; _b++) {
             var fcall = _c[_b];
@@ -13,27 +27,47 @@ function findUnique(profile, key) {
     }
     return vals;
 }
-function init() {
-    var inputs = findUnique(profile_data, "inputs");
-    var outputs = findUnique(profile_data, "outputs");
-    var metrics = findUnique(profile_data, "metrics");
-    document.getElementById("source").innerHTML = profile_data.source;
-    document.getElementById("form").innerHTML = profile_data.form;
-    var updateSelect = function (select, lst) {
-        for (var _i = 0, lst_1 = lst; _i < lst_1.length; _i++) {
-            var x = lst_1[_i];
-            var opt = document.createElement("option");
-            opt.value = x;
-            opt.innerHTML = x;
-            select.insertAdjacentElement('beforeend', opt);
+// update a select element to contain the given options, preserving the
+// currently selected option if possible
+function updateSelect(select, lst) {
+    var currentIndex = select.selectedIndex;
+    var currentValue = currentIndex == -1 ? null : select.value;
+    for (var _i = 0, _a = select.childNodes; _i < _a.length; _i++) {
+        var opt = _a[_i];
+        select.removeChild(opt);
+    }
+    var newIndex = -1;
+    for (var _b = 0, lst_1 = lst; _b < lst_1.length; _b++) {
+        var x = lst_1[_b];
+        var opt = document.createElement("option");
+        opt.value = x;
+        opt.innerHTML = x;
+        select.insertAdjacentElement('beforeend', opt);
+        if (x == currentValue) {
+            newIndex = select.childNodes.length - 1;
         }
-    };
+    }
+    if (newIndex != -1) {
+        select.selectedIndex = newIndex;
+    }
+}
+function init() {
+    Profile.inputs = findUnique("inputs");
+    Profile.outputs = findUnique("outputs");
+    Profile.metrics = findUnique("metrics");
+    // update the profile source info
+    document.getElementById("source").innerHTML = Profile.data.source;
+    document.getElementById("form").innerHTML = Profile.data.form;
+    // populate available inputs
     var input_select = document.getElementById("input");
+    updateSelect(input_select, Profile.inputs);
+    // populate available outputs
     var output_select = document.getElementById("output");
-    updateSelect(input_select, inputs);
-    updateSelect(output_select, outputs.concat(metrics));
+    updateSelect(output_select, Profile.outputs.concat(Profile.metrics));
+    // hook the input/output dropdowns to re-render the table
     input_select.addEventListener('change', renderTable);
     output_select.addEventListener('change', renderTable);
+    // render the initial table
     renderTable();
 }
 function getSelectedOption(elt) {
@@ -59,7 +93,7 @@ function selectProfilePoints(data, input, output) {
 }
 function generateProfile(input, output) {
     var entries = [];
-    for (var _i = 0, _a = profile_data["functions"]; _i < _a.length; _i++) {
+    for (var _i = 0, _a = Profile.data["functions"]; _i < _a.length; _i++) {
         var func = _a[_i];
         var pts = selectProfilePoints(func.calls, input, output);
         var reg_power = regression('power', pts);
@@ -89,9 +123,11 @@ function makeCell(str, row) {
     return elt;
 }
 function renderTable() {
-    var input = getSelectedOption(document.getElementById("input"));
-    var output = getSelectedOption(document.getElementById("output"));
-    var entries = generateProfile(input, output);
+    // get the selected input/output
+    Profile.selected.input = getSelectedOption(document.getElementById("input"));
+    Profile.selected.output = getSelectedOption(document.getElementById("output"));
+    // generate the profile entries using these metrics
+    var entries = generateProfile(Profile.selected.input, Profile.selected.output);
     // sort in decreasing R^2 order, with NaNs last
     entries.sort(function (a, b) {
         if (!isFinite(b.fit.r2 - a.fit.r2))
@@ -99,31 +135,63 @@ function renderTable() {
         else
             return b.fit.r2 - a.fit.r2;
     });
+    // remove all table rows
     var table = document.getElementById("profile");
     for (var _i = 0, _a = document.querySelectorAll("table tr:not(.header)"); _i < _a.length; _i++) {
         var node = _a[_i];
         node.parentNode.removeChild(node);
     }
+    Profile.entries = [];
+    // render new table rows
     for (var _b = 0, entries_1 = entries; _b < entries_1.length; _b++) {
-        var entry = entries_1[_b];
+        var entry_1 = entries_1[_b];
+        // render the row
         var row = document.createElement("tr");
-        var func = makeCell(entry.name.split(" ")[0], row);
-        func.title = entry.name.indexOf(" ") > -1 ?
-            entry.name.slice(entry.name.indexOf(" ") + 1) :
+        var func = makeCell(entry_1.name.split(" ")[0], row);
+        func.title = entry_1.name.indexOf(" ") > -1 ?
+            entry_1.name.slice(entry_1.name.indexOf(" ") + 1) :
             "<no source info>";
-        makeCell(entry.fit.string, row);
-        makeCell(isNaN(entry.fit.r2) ? "-" : entry.fit.r2.toFixed(2), row);
-        makeCell(entry.calls, row);
-        // set up event listener for graph
-        row["chartData"] = entry;
+        makeCell(entry_1.fit.string, row);
+        makeCell(isNaN(entry_1.fit.r2) ? "-" : entry_1.fit.r2.toFixed(2), row);
+        makeCell(entry_1.calls, row);
+        // store the entry in the profile state
+        entry_1.row = row;
+        Profile.entries.push(entry_1);
+        row["entry"] = entry_1;
+        // set up event listener for clicks on this row to change graph
         row.addEventListener('click', profileEntryClick);
         table.insertAdjacentElement('beforeend', row);
     }
-    if (entries.length > 0) {
-        renderGraph(input, output, entries[0], table.childNodes[1]);
+    // maintain the selection if possible, otherwise select the
+    // first element in the list
+    var new_selection = null;
+    if (Profile.selected.entry != null) {
+        for (var _c = 0, _d = Profile.entries; _c < _d.length; _c++) {
+            var entry = _d[_c];
+            if (entry.name == Profile.selected.entry.name) {
+                new_selection = entry;
+                break;
+            }
+        }
+    }
+    if (new_selection == null && Profile.entries.length > 0) {
+        new_selection = Profile.entries[0];
+    }
+    selectEntry(new_selection);
+}
+function selectEntry(entry) {
+    Profile.selected.entry = entry;
+    // highlight the selected row
+    for (var _i = 0, _a = document.querySelectorAll('.selected'); _i < _a.length; _i++) {
+        var elt = _a[_i];
+        elt.classList.remove('selected');
+    }
+    if (entry != null) {
+        entry.row.classList.add('selected');
+        renderGraph(Profile.selected.input, Profile.selected.output, entry);
     }
 }
-function renderGraph(input, output, entry, row) {
+function renderGraph(input, output, entry) {
     var old_graph = document.getElementById("graph");
     var graph = document.createElement("div");
     graph.id = "graph";
@@ -137,19 +205,12 @@ function renderGraph(input, output, entry, row) {
         "encoding": { "x": { "field": "x", "type": "quantitative", "axis": { "title": "input " + input } },
             "y": { "field": "y", "type": "quantitative", "axis": { "title": "output " + output } } } };
     vg.embed(graph, { mode: "vega-lite", spec: spec }, function (err, res) { });
-    for (var _b = 0, _c = document.querySelectorAll('.selected'); _b < _c.length; _b++) {
-        var elt = _c[_b];
-        elt.classList.remove('selected');
-    }
-    row.classList.add('selected');
     // swap out the graph
     old_graph.parentNode.replaceChild(graph, old_graph);
 }
 function profileEntryClick(evt) {
     var row = this;
-    var input = getSelectedOption(document.getElementById("input"));
-    var output = getSelectedOption(document.getElementById("output"));
-    renderGraph(input, output, row.chartData, row);
+    selectEntry(row.entry);
 }
 document.addEventListener("DOMContentLoaded", init);
 //# sourceMappingURL=profile.js.map

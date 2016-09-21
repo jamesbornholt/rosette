@@ -1,13 +1,28 @@
-declare var profile_data;  // profile data supplied by data.json
 declare var vg;            // vega
 declare var regression;    // regression.js
 
 // convince TS that document.querySelectorAll can be an array
 interface NodeListOf<TNode extends Node> extends Array<TNode> {}
+interface NodeList extends Array<Node> {}
 
-function findUnique(profile, key) {
+// global state
+let Profile = {
+    inputs: [],
+    outputs: [],
+    metrics: [],
+    data: null,
+    entries: [],
+    selected: {
+        input: null,
+        output: null,
+        entry: null,
+    },
+};
+
+// collate all unique entries in the profile data
+function findUnique(key) {
     var vals = [];
-    for (let func of profile["functions"]) {
+    for (let func of Profile.data["functions"]) {
         for (let fcall of func["calls"]) {
             for (let val in fcall[key]) {
                 if (vals.indexOf(val) == -1) {
@@ -19,32 +34,49 @@ function findUnique(profile, key) {
     return vals;
 }
 
-function init() {
-    let inputs = findUnique(profile_data, "inputs");
-    let outputs = findUnique(profile_data, "outputs");
-    let metrics = findUnique(profile_data, "metrics");
-    
-    document.getElementById("source").innerHTML = profile_data.source;
-    document.getElementById("form").innerHTML = profile_data.form;
-
-    let updateSelect = function(select, lst) {
-        for (let x of lst) {
-            let opt = document.createElement("option");
-            opt.value = x;
-            opt.innerHTML = x;
-            select.insertAdjacentElement('beforeend', opt);
+// update a select element to contain the given options, preserving the
+// currently selected option if possible
+function updateSelect(select: HTMLSelectElement, lst) {
+    let currentIndex = select.selectedIndex;
+    let currentValue = currentIndex == -1 ? null : select.value;
+    for (let opt of select.childNodes) {
+        select.removeChild(opt);
+    }
+    var newIndex = -1;
+    for (let x of lst) {
+        let opt = document.createElement("option");
+        opt.value = x;
+        opt.innerHTML = x;
+        select.insertAdjacentElement('beforeend', opt);
+        if (x == currentValue) {
+            newIndex = select.childNodes.length - 1;
         }
     }
+    if (newIndex != -1) {
+        select.selectedIndex = newIndex;
+    }
+}
 
+function init() {
+    Profile.inputs = findUnique("inputs");
+    Profile.outputs = findUnique("outputs");
+    Profile.metrics = findUnique("metrics");
+
+    // update the profile source info
+    document.getElementById("source").innerHTML = Profile.data.source;
+    document.getElementById("form").innerHTML = Profile.data.form;
+
+    // populate available inputs
     let input_select = document.getElementById("input");
+    updateSelect(input_select as HTMLSelectElement, Profile.inputs);
+    // populate available outputs
     let output_select = document.getElementById("output");
-
-    updateSelect(input_select, inputs);
-    updateSelect(output_select, outputs.concat(metrics));
-
+    updateSelect(output_select as HTMLSelectElement, Profile.outputs.concat(Profile.metrics));
+    // hook the input/output dropdowns to re-render the table
     input_select.addEventListener('change', renderTable);
     output_select.addEventListener('change', renderTable);
 
+    // render the initial table
     renderTable();
 }
 
@@ -70,7 +102,7 @@ function selectProfilePoints(data, input, output) {
 
 function generateProfile(input, output) {
     var entries = [];
-    for (let func of profile_data["functions"]) {
+    for (let func of Profile.data["functions"]) {
         let pts = selectProfilePoints(func.calls, input, output);
         let reg_power = regression('power', pts);
         let reg_linear = regression('linear', pts);
@@ -102,10 +134,12 @@ function makeCell(str, row) {
 }
 
 function renderTable() {
-    let input = getSelectedOption(document.getElementById("input"));
-    let output = getSelectedOption(document.getElementById("output"));
+    // get the selected input/output
+    Profile.selected.input = getSelectedOption(document.getElementById("input"));
+    Profile.selected.output = getSelectedOption(document.getElementById("output"));
 
-    let entries = generateProfile(input, output);
+    // generate the profile entries using these metrics
+    let entries = generateProfile(Profile.selected.input, Profile.selected.output);
     // sort in decreasing R^2 order, with NaNs last
     entries.sort(function(a, b) {
         if (!isFinite(b.fit.r2 - a.fit.r2))
@@ -113,11 +147,16 @@ function renderTable() {
         else return b.fit.r2 - a.fit.r2;
     });
 
+    // remove all table rows
     let table = document.getElementById("profile");
     for (let node of document.querySelectorAll("table tr:not(.header)")) {
         node.parentNode.removeChild(node);
     }
+    Profile.entries = [];
+
+    // render new table rows
     for (let entry of entries) {
+        // render the row
         let row = document.createElement("tr");
         let func = makeCell(entry.name.split(" ")[0], row);
         func.title = entry.name.indexOf(" ") > -1 ? 
@@ -127,18 +166,47 @@ function renderTable() {
         makeCell(isNaN(entry.fit.r2) ? "-" : entry.fit.r2.toFixed(2), row);
         makeCell(entry.calls, row);
 
-        // set up event listener for graph
-        row["chartData"] = entry;
+        // store the entry in the profile state
+        entry.row = row;
+        Profile.entries.push(entry);
+        row["entry"] = entry;
+
+        // set up event listener for clicks on this row to change graph
         row.addEventListener('click', profileEntryClick);
+
         table.insertAdjacentElement('beforeend', row);
     }
 
-    if (entries.length > 0) {
-        renderGraph(input, output, entries[0], table.childNodes[1]);
+    // maintain the selection if possible, otherwise select the
+    // first element in the list
+    var new_selection = null;
+    if (Profile.selected.entry != null) {
+        for (var entry of Profile.entries) {
+            if (entry.name == Profile.selected.entry.name) {
+                new_selection = entry;
+                break;
+            }
+        }
+    }
+    if (new_selection == null && Profile.entries.length > 0) {
+        new_selection = Profile.entries[0];
+    }
+    selectEntry(new_selection);
+}
+
+function selectEntry(entry) {
+    Profile.selected.entry = entry;
+    // highlight the selected row
+    for (var elt of document.querySelectorAll('.selected')) {
+        elt.classList.remove('selected');
+    }
+    if (entry != null) {
+        entry.row.classList.add('selected');
+        renderGraph(Profile.selected.input, Profile.selected.output, entry);
     }
 }
 
-function renderGraph(input, output, entry, row) {
+function renderGraph(input, output, entry) {
     let old_graph = document.getElementById("graph");
     let graph = document.createElement("div");
     graph.id = "graph";
@@ -155,10 +223,7 @@ function renderGraph(input, output, entry, row) {
                              "y": {"field": "y", "type": "quantitative", "axis": {"title": "output " + output}}}};
     vg.embed(graph, {mode: "vega-lite", spec: spec}, function(err, res) {});
 
-    for (var elt of document.querySelectorAll('.selected')) {
-        elt.classList.remove('selected');
-    }
-    row.classList.add('selected');
+
 
     // swap out the graph
     old_graph.parentNode.replaceChild(graph, old_graph);
@@ -166,10 +231,7 @@ function renderGraph(input, output, entry, row) {
 
 function profileEntryClick(evt) {
     let row = this;
-    let input = getSelectedOption(document.getElementById("input"));
-    let output = getSelectedOption(document.getElementById("output"));
-
-    renderGraph(input, output, row.chartData, row);
+    selectEntry(row.entry);
 }
 
 document.addEventListener("DOMContentLoaded", init);
