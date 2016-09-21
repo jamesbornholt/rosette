@@ -89,7 +89,7 @@ function selectProfilePoints(data, input, output) {
             o = fcall["metrics"][output];
         else
             continue;
-        pts.push([i, o]);
+        pts.push([i, o, fcall["location"]]);
     }
     return pts;
 }
@@ -98,11 +98,8 @@ function generateProfile(input, output) {
     for (var _i = 0, _a = Profile.data["functions"]; _i < _a.length; _i++) {
         var func = _a[_i];
         var pts = selectProfilePoints(func.calls, input, output);
-        var reg_power = regression('power', pts);
-        //let reg_linear = regression('linear', pts);
-        //let reg_best = reg_power.r2 > reg_linear.r2 ? reg_power : reg_linear;
-        var reg_best = reg_power;
-        entries.push({ "name": func.name, "points": pts, "fit": reg_best, "calls": pts.length });
+        var reg = regression('power', pts);
+        entries.push({ "name": func.name, "points": pts, "fit": reg, "calls": pts.length });
     }
     return entries;
 }
@@ -205,13 +202,40 @@ function renderGraph(input, output, entry) {
     var data = [];
     for (var _i = 0, _a = entry.points; _i < _a.length; _i++) {
         var pt = _a[_i];
-        data.push({ "x": pt[0], "y": pt[1] });
+        data.push({ "x": pt[0], "y": pt[1], "location": pt[2] });
     }
     // render the vega spec
-    var spec = { "data": { "values": data }, "mark": "point",
-        "width": 400, "height": 400,
-        "encoding": { "x": { "field": "x", "type": "quantitative", "axis": { "title": "input " + input } },
-            "y": { "field": "y", "type": "quantitative", "axis": { "title": "output " + output } } } };
+    var spec = {
+        "data": {
+            "values": data
+        },
+        "mark": "point",
+        "width": 400,
+        "height": 400,
+        "encoding": {
+            "x": {
+                "field": "x",
+                "type": "quantitative",
+                "axis": {
+                    "title": "input " + input
+                }
+            },
+            "y": {
+                "field": "y",
+                "type": "quantitative",
+                "axis": {
+                    "title": "output " + output
+                }
+            },
+            "color": {
+                "field": "location",
+                "type": "nominal",
+                "legend": {
+                    "title": "call site"
+                }
+            }
+        }
+    };
     vg.embed(graph, { mode: "vega-lite", spec: spec }, function (err, res) { });
     // swap out the graph element
     old_graph.parentNode.replaceChild(graph, old_graph);

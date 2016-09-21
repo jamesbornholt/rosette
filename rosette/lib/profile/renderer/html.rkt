@@ -20,11 +20,17 @@
       (let-values ([(base name dir?) (split-path (syntax-source stx))])
         (path->string name))
       "unknown"))
+(define (basename path)
+  (let-values ([(base name dir?) (split-path path)])
+    name))
 (define (syntax-srcloc stx)
-  (if (and (syntax? stx) (path? (syntax-source stx)))
-      (let-values ([(base name dir?) (split-path (syntax-source stx))])
-        (format "~a line ~v column ~v" (path->string name) (syntax-line stx) (syntax-column stx)))
-      stx))
+  (cond [(and (syntax? stx) (path? (syntax-source stx)))
+         (format "~a:~v:~v" (path->string (basename (syntax-source stx))) (syntax-line stx) (syntax-column stx))]
+        [(and (list? stx) (= (length stx) 3))
+         (match-let* ([(list src line col) stx]
+                      [name (if (path? src) (path->string (basename src)) (~a src))])
+           (format "~a:~v:~v" name line col))]
+        [else (~a stx)]))
 (define (make-folder-name source)
   (begin0
     (format "~a-~a-~v" (syntax-srcfile source) datestr file-count)
@@ -73,17 +79,20 @@
   functions)
 
 
+; Render a single profile-node? to a jsexpr? dictionary
+(define (render-entry node)
+  (define (convert h) (for/hash ([(k v) h]) (values (*->symbol (if (feature? k) (feature-name k) k)) v)))
+  (hash 'inputs (convert (profile-node-inputs node))
+        'outputs (convert (profile-node-outputs node))
+        'metrics (convert (profile-node-metrics node))
+        'location (syntax-srcloc (profile-node-location node))))
+
+
 ; Render entries to JSON
 ; @parameter entries (hashof symbol? profile-node?)
 ; @parameter source (or/c syntax? #f)
 ; @parameter out output-port?
-(define (render-json entries source out [key profile-node-key/srcloc])
-  ; Render a single entry to a jsexpr? hash
-  (define (render-entry node)
-    (define (convert h) (for/hash ([(k v) h]) (values (*->symbol (if (feature? k) (feature-name k) k)) v)))
-    (hash 'inputs (convert (profile-node-inputs node))
-          'outputs (convert (profile-node-outputs node))
-          'metrics (convert (profile-node-metrics node))))
+(define (render-json entries source out)
   (define dict
     (hash 'source (syntax-srcloc source)
           'form (if (syntax? source) (~v (syntax->datum source)) "")
