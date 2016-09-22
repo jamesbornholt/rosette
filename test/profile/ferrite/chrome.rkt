@@ -3,7 +3,8 @@
 (require "lib/fs.rkt" "lib/lang.rkt" "lib/litmus.rkt" 
          "lib/verifier.rkt" "lib/synth.rkt" "lib/ext4.rkt"
          "../bench.rkt"
-         rosette/lib/roseunit rackunit rackunit/text-ui)
+         rosette/lib/roseunit rackunit rackunit/text-ui
+         rosette/lib/profile rosette/lib/profile/renderer/html)
 
 (define small? #t)
 (define writes (if small? '(33 2 31) '(2509 13 2500)))
@@ -55,5 +56,10 @@
      (test-ext4-synth-nodelalloc))))
 
 
-(time (run-tests chrome-tests:slow))
-(time (run-tests chrome-tests:fast))
+(profile
+  (time (run-tests chrome-tests:slow))
+  #:renderer (html-renderer))
+
+(profile
+  (time (run-tests chrome-tests:fast))
+  #:renderer (html-renderer))

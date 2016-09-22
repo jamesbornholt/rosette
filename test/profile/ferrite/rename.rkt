@@ -3,7 +3,8 @@
 (require "lib/fs.rkt" "lib/lang.rkt" "lib/litmus.rkt" 
          "lib/verifier.rkt" "lib/synth.rkt" "lib/ext4.rkt"
          "../bench.rkt"
-         rosette/lib/roseunit rackunit rackunit/text-ui)
+         rosette/lib/roseunit rackunit rackunit/text-ui
+         rosette/lib/profile rosette/lib/profile/renderer/html)
 
 (define small? #f)
 (define block-size (if small? 64 4096))
@@ -62,5 +63,10 @@
      (test-ext4-synth))))
 
 
-(time (run-tests rename-tests:slow))
-(time (run-tests rename-tests:fast))
+(profile
+  (time (run-tests rename-tests:slow))
+  #:renderer (html-renderer))
+
+(profile
+  (time (run-tests rename-tests:fast))
+  #:renderer (html-renderer))
