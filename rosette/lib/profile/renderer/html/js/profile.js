@@ -99,7 +99,8 @@ function generateProfile(input, output) {
         var func = _a[_i];
         var pts = selectProfilePoints(func.calls, input, output);
         var reg = regression('power', pts);
-        entries.push({ "name": func.name, "points": pts, "fit": reg, "calls": pts.length });
+        var sum = pts.map(function (v) { return v[1]; }).reduce(function (a, b) { return a + b; }, 0);
+        entries.push({ "name": func.name, "points": pts, "fit": reg, "calls": pts.length, "output": sum / pts.length });
     }
     return entries;
 }
@@ -126,6 +127,8 @@ function renderTable() {
     // get the selected input/output
     Profile.selected.input = getSelectedOption(document.getElementById("input"));
     Profile.selected.output = getSelectedOption(document.getElementById("output"));
+    // update the output column
+    document.getElementById("output-col").innerHTML = "Avg " + Profile.selected.output;
     // generate the profile entries using these metrics
     var entries = generateProfile(Profile.selected.input, Profile.selected.output);
     // sort in decreasing R^2 order, with NaNs last
@@ -147,14 +150,20 @@ function renderTable() {
         var entry_1 = entries_1[_b];
         // render the row
         var row = document.createElement("tr");
+        // 1. function name
         var func = makeCell(entry_1.name.split(" ")[0], row);
         func.title = entry_1.name.indexOf(" ") > -1 ?
             entry_1.name.slice(entry_1.name.indexOf(" ") + 1) :
             "<no source info>";
+        // 2. curve
         var fit = makeCell(entry_1.fit.string, row);
         fit.dataset["sort"] = entry_1.fit.equation[1].toFixed(2);
+        // 3. r^2
         makeCell(isNaN(entry_1.fit.r2) ? "-" : entry_1.fit.r2.toFixed(2), row);
+        // 4. # calls
         makeCell(entry_1.calls, row);
+        // 5. avg output
+        makeCell(entry_1.output.toFixed(2), row);
         // store the entry in the profile state
         entry_1.row = row;
         Profile.entries.push(entry_1);
