@@ -48,13 +48,25 @@
   (lambda (profile source)
     (unless (profile-node? profile)
       (raise-argument-error 'html-renderer "profile-node?" profile))
+
+    ; generate profile data
     (define entries (aggregate profile))
+
+    ; set up output directory
     (define output-dir (build-path dir (make-folder-name source)))
-    (make-directory* dir)
-    (copy-directory/files template-dir output-dir)
+    (make-directory* output-dir)
+
+    ; link the template files into the output directory
+    (let ([src (path->complete-path template-dir)])
+      (for ([n (list "index.html" "css" "js")])
+        (make-file-or-directory-link (build-path src n) (build-path output-dir n))))
+
+    ; write the JSON data into data.json
     (let ([out (open-output-file (build-path output-dir "data.json"))])
       (render-json entries source out)
       (close-output-port out))
+
+    ; open the profile in a web browser
     (printf "Wrote profile to ~a\n" output-dir)
     (when open?
       (define opener
