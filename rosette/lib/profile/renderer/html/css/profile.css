@@ -28,8 +28,11 @@ a:hover {
     text-decoration: underline;
 }
 
-code, pre {
+code, pre, .code {
     font-family: "Inconsolata", monospace;
+}
+
+code, pre {
     background: #fafafa;
 }
 

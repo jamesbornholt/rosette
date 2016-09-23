@@ -169,6 +169,7 @@ function renderTable() {
         func.title = entry.name.indexOf(" ") > -1 ? 
                       entry.name.slice(entry.name.indexOf(" ") + 1) : 
                       "<no source info>";
+        func.classList.add("code");
         // 2. curve
         let fit = makeCell(entry.fit.string, row);
         fit.dataset["sort"] = entry.fit.equation[1].toFixed(2);
