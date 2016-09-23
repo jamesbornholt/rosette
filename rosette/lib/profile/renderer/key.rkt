@@ -9,3 +9,6 @@
     (if (hash-has-key? (current-sources) proc)
         (format "~a ~v" (object-name proc) (hash-ref (current-sources) proc))
         (~a (object-name proc)))))
+
+(define (profile-node-key/callloc node)
+  (format "~a @ ~a" (object-name (profile-node-procedure node)) (profile-node-location node)))

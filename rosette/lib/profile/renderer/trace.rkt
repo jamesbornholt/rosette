@@ -6,15 +6,15 @@
 
 ; Create a renderer that outputs the entire call tree
 (define (trace-renderer)
-  (lambda (profile source)
+  (lambda (profile source name)
     (unless (profile-node? profile)
       (raise-argument-error 'trace-renderer "profile-node?" profile))
-    (render-trace profile source)))
+    (render-trace profile source name)))
 
-(define (render-trace profile source [key profile-node-key/srcloc])
+(define (render-trace profile source name [key profile-node-key/srcloc])
   (define (indent n)
     (string-join (for/list ([i n]) "  ") ""))
-  (printf "Trace for ~v\n" source)
+  (printf "Trace for ~a (~v)\n" name source)
   (let rec ([node profile][level 0])
     (define metrics (profile-node-metrics node))
     (printf "~a* ~a (~v ms, ~v merges, ~v unions, ~v terms)\n"

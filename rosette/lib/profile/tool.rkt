@@ -5,11 +5,12 @@
 
 ; Executes the given thunk and prints the profile data generated during execution.
 (define (profile-thunk thunk #:renderer [renderer (complexity-renderer #:plot? #f)]
-                             #:source [source-stx #f])
+                             #:source [source-stx #f]
+                             #:name [name "Profile"])
   (define state (make-profile-stack))
   (define ret (parameterize ([current-profile-stack state])
                 (thunk)))
-  (renderer (profile-stack-root state) source-stx)
+  (renderer (profile-stack-root state) source-stx name)
   ret)
 
 ;; TODO:  we probably need a version of profile-thunk etc that does

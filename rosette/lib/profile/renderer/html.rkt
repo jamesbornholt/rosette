@@ -45,7 +45,7 @@
 ; The HTML renderer produces a directory containing a webpage version of a complexity profile.
 (define (html-renderer #:directory [dir (build-path (current-directory) "profiles")]
                        #:auto-open? [open? #t])
-  (lambda (profile source)
+  (lambda (profile source name)
     (unless (profile-node? profile)
       (raise-argument-error 'html-renderer "profile-node?" profile))
 
@@ -63,11 +63,11 @@
 
     ; write the JSON data into data.json
     (let ([out (open-output-file (build-path output-dir "data.json"))])
-      (render-json entries source out)
+      (render-json entries source name out)
       (close-output-port out))
 
     ; open the profile in a web browser
-    (printf "Wrote profile to ~a\n" output-dir)
+    (printf "Wrote \"~a\" profile to ~a\n" name output-dir)
     (when open?
       (define opener
         (match (system-type)
@@ -104,9 +104,10 @@
 ; @parameter entries (hashof symbol? profile-node?)
 ; @parameter source (or/c syntax? #f)
 ; @parameter out output-port?
-(define (render-json entries source out)
+(define (render-json entries source name out)
   (define dict
-    (hash 'source (syntax-srcloc source)
+    (hash 'name name
+          'source (syntax-srcloc source)
           'form (if (syntax? source) (~v (syntax->datum source)) "")
           'functions (for/list ([(proc nodes) entries])
                        (hash 'name proc

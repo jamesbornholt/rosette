@@ -65,8 +65,10 @@
 
 (profile
   (time (run-tests rename-tests:slow))
-  #:renderer (html-renderer))
+  #:renderer (html-renderer)
+  #:name "slow rename")
 
 (profile
   (time (run-tests rename-tests:fast))
-  #:renderer (html-renderer))
+  #:renderer (html-renderer)
+  #:name "fast rename")

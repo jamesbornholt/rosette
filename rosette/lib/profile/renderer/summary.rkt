@@ -7,10 +7,10 @@
 ; Create a renderer that aggregates inclusive and exclusive time
 ; per procedure and prints the results.
 (define (summary-renderer)
-  (lambda (profile source)
+  (lambda (profile source name)
     (unless (profile-node? profile)
       (raise-argument-error 'profile-renderer "profile-node?" profile))
-    (render-profile (aggregate-profile profile) source)))
+    (render-profile (aggregate-profile profile) source name)))
 
 
 ; A profile entry is a single procedure together with inclusive and
@@ -44,9 +44,9 @@
 
 
 ; Render a profile to current-output-port
-(define (render-profile profile source)
+(define (render-profile profile source name)
   (unless (null? profile)
-    (printf "--- Summary Profile (inclusive time/exclusive time) ---\n")
+    (printf "--- ~a (inclusive time/exclusive time) ---\n" name)
     (printf "--- source: ~v ---\n" source)
     (for ([node profile])
       (match-define (summary-entry proc incl excl) node)

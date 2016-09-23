@@ -57,6 +57,7 @@ function init() {
     Profile.outputs = findUnique("outputs");
     Profile.metrics = findUnique("metrics");
     // update the profile source info
+    document.getElementById("name").innerHTML = Profile.data.name;
     document.getElementById("source").innerHTML = Profile.data.source;
     document.getElementById("form").innerHTML = Profile.data.form;
     // populate available inputs
