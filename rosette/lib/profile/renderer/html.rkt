@@ -1,7 +1,7 @@
 #lang racket
 
 (require "../record.rkt" "../feature.rkt" "stats.rkt" "key.rkt"
-         racket/date json racket/runtime-path)
+         racket/date json racket/runtime-path racket/hash)
 (provide html-renderer)
 
 ; Source of the HTML template
@@ -93,10 +93,17 @@
 
 ; Render a single profile-node? to a jsexpr? dictionary
 (define (render-entry node)
-  (define (convert h) (for/hash ([(k v) h]) (values (*->symbol (if (feature? k) (feature-name k) k)) v)))
+  (define (convert h)
+    (for/hash ([(k v) h])
+      (values (*->symbol (if (feature? k) (feature-name k) k)) v)))
+  (define metrics-excl
+    (for/hash ([(k v) (profile-node-metrics node)])
+      (values (string->symbol (format "~a (excl.)" k))
+              (- v (for/sum ([c (profile-node-children node)])
+                     (hash-ref (profile-node-metrics c) k 0))))))
   (hash 'inputs (convert (profile-node-inputs node))
         'outputs (convert (profile-node-outputs node))
-        'metrics (convert (profile-node-metrics node))
+        'metrics (hash-union (convert (profile-node-metrics node)) metrics-excl)
         'location (syntax-srcloc (profile-node-location node))))
 
 
