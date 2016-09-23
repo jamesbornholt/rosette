@@ -29,24 +29,6 @@
      (for/sum ([x xs] #:when (union? x))
        (length (union-contents x))))))
 
-; A simple feature that measures the maximum length of expressions in the input.
-(define expr-length-feature
-  (feature
-   'expr-length
-   (let ([cache (make-hash)])
-     (letrec ([expr-length
-               (lambda (e)
-                 (if (hash-has-key? cache e)
-                     (hash-ref cache e)
-                     (let ([ans (match e
-                                  [(expression op elts ...) (+ 1 (apply + (map expr-length elts)))]
-                                  [(union : (_ v) ...) (+ 1 (apply + (map expr-length v)))] ; TODO treat guards too
-                                  [(list elts ...) (apply + (map expr-length elts))]
-                                  [_ 1])])
-                       (hash-set! cache e ans)
-                       ans)))])
-       (lambda (xs)
-         (if (null? xs) 1 (apply max (map expr-length xs))))))))
 
 ; Updates the footprint map to contain the object graph of x.
 ; The footprint is a set of key-value pairs, where the key is an
@@ -105,7 +87,7 @@
 ; A parameter that holds a list of features to profile.
 (define current-features
   (make-parameter
-   (list heap-size-feature union-size-feature expr-length-feature)
+   (list heap-size-feature union-size-feature)
    (lambda (fs)
      (unless (and (list? fs) (andmap feature? fs))
        (error 'current-features "Expected a list of feature?, given ~a" fs))
