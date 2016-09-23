@@ -99,7 +99,7 @@ function selectProfilePoints(data, input, output) {
         else if (fcall["metrics"].hasOwnProperty(output))
             o = fcall["metrics"][output];
         else continue;
-        pts.push([i, o, fcall["location"]]);
+        pts.push([i+1, o, fcall["location"]]);
     }
     return pts;
 }
