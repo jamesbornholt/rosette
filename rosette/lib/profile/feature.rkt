@@ -91,11 +91,15 @@
 (define heap-size-feature
   (feature
    'heap-size
-   (lambda (xs)
-     (define footprint (make-hash))
-     (for ([x xs]) (measure! footprint x))
-     (+ (hash-count footprint)
-        (for/sum ([v (in-hash-values footprint)]) v)))))
+   (let ([cache (make-hash)])
+     (lambda (xs)
+       (hash-ref! cache xs
+                  (thunk
+                   (define footprint (make-hash))
+                   (for ([x xs]) (measure! footprint x))
+                   (+ (hash-count footprint)
+                      (for/sum ([v (in-hash-values footprint)]) v))))))))
+
    
 
 ; A parameter that holds a list of features to profile.
