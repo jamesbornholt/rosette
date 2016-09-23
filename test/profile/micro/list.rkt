@@ -2,7 +2,7 @@
 
 ; Micro-benchmarks for various list operations.
 
-(require "../bench.rkt" rosette/lib/profile)
+(require "../bench.rkt" rosette/lib/profile rosette/lib/profile/renderer/html)
 (provide (all-defined-out))
 
 ; Returns a new list that updates lst[pos] with val.
@@ -72,8 +72,12 @@
 
 (profile
  (parameterize ([variant 0])
-   (test-update)))
+   (test-update))
+ #:renderer (html-renderer)
+ #:name "slow list update")
 
 (profile
  (parameterize ([variant 1])
-   (test-update)))
+   (test-update))
+ #:renderer (html-renderer)
+ #:name "fast list update")
