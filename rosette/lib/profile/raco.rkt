@@ -12,9 +12,11 @@
 
 (define plot-graphs? (make-parameter #f))
 (define profile-mode (make-parameter 'complexity))
+(define run-profiler? (make-parameter #t))
 (define file
   (command-line #:program (short-program+command-name)
                 #:once-any
+                ; Profiler selections
                 ["--complexity" "Produce a complexity profile (the default)"
                                 (profile-mode 'complexity)]
                 ["--summary" "Produce a simple summary profile"
@@ -23,6 +25,9 @@
                            (profile-mode 'trace)]
                 ["--html" "Produce an interactive HTML profile"
                           (profile-mode 'html)]
+                [("-l" "--compiler-only") 
+                 "Only install the compile handler; do not run the profiler"
+                 (run-profiler? #f)]
                 #:once-each
                 [("-g" "--graph") "Plot graphs when available"
                                  (plot-graphs? #t)]
@@ -43,8 +48,12 @@
 (collect-garbage)
 
 (current-compile symbolic-profile-compile-handler)
-(profile-thunk
-  (lambda ()
-    (dynamic-require (module-to-profile file) #f))
-  #:source (format "file ~a" file)
-  #:renderer renderer)
+
+(define (run)
+  (dynamic-require (module-to-profile file) #f))
+
+(if (run-profiler?)
+    (profile-thunk run
+                   #:source (format "file ~a" file)
+                   #:renderer renderer)
+    (run))
