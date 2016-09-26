@@ -168,8 +168,11 @@
                  (and (equal? s-exists? o-exists?)
                       (=> s-exists? (and (equal? (fsize-size (file-size s-file)) (fsize-size (file-size o-file)))
                                          ; The same problem as in (ondisk ...).
-                                         (for/all ([size (file-size s-file)])
-                                           (equal? (take (file-ondisk s-file) (fsize-size size))
-                                                   (take (file-ondisk o-file) (fsize-size size))))))))))
+                                         (bench
+                                           (equal? (take (file-ondisk s-file (fsize-size (file-size s-file))))
+                                                   (take (file-ondisk o-file (fsize-size (file-size s-file)))))
+                                           (for/all ([size (file-size s-file)])
+                                             (equal? (take (file-ondisk s-file) (fsize-size size))
+                                                     (take (file-ondisk o-file) (fsize-size size)))))))))))
    ])
 
