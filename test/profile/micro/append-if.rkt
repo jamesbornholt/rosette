@@ -19,8 +19,13 @@
 
 
 ; Simple test for append-if
-(define (test-append-if [len 50])
-  (append-if (symbolic-list len) (symbolic-list len))
+(define (test-append-if left right)
+  (append-if left right)
   (void))
-(profile-bench "slow append-if" (with-variant 0 (test-append-if)))
-(profile-bench "fast append-if" (with-variant 1 (test-append-if)))
+
+(define len 50)
+(define lstA (symbolic-list len))
+(define lstB (symbolic-list len))
+
+(profile-bench! "slow append-if" (with-variant 0 (test-append-if lstA lstB)))
+(profile-bench! "fast append-if" (with-variant 1 (test-append-if lstA lstB)))

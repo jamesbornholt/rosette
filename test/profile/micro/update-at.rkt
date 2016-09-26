@@ -28,9 +28,13 @@
 
 
 ; Simple test for update-at
-(define (test-update-at [len 50])
+(define (test-update-at lst)
   (define-symbolic* idx integer?)
-  (update-at (build-list len identity) idx -1)
+  (update-at lst idx -1)
   (void))
-(profile-bench "slow update-at" (with-variant 0 (test-update-at)))
-(profile-bench "fast update-at" (with-variant 1 (test-update-at)))
+
+(define len 50)
+(define lst (build-list 50 identity))
+
+(profile-bench "slow update-at" (with-variant 0 (test-update-at lst)))
+(profile-bench "fast update-at" (with-variant 1 (test-update-at lst)))

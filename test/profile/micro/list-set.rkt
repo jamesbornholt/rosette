@@ -17,9 +17,12 @@
 
 
 ; Simple test for list-set
-(define (test-list-set [len 50])
+(define (test-list-set lst)
   (define-symbolic* idx val integer?)
-  (list-set (symbolic-list len) idx -1)
+  (list-set lst idx -1)
   (void))
-(profile-bench "slow list-set" (with-variant 0 (test-list-set)))
-(profile-bench "fast list-set" (with-variant 1 (test-list-set)))
+
+(define lst (symbolic-list 50))
+
+(profile-bench! "slow list-set" (with-variant 0 (test-list-set lst)))
+(profile-bench! "fast list-set" (with-variant 1 (test-list-set lst)))

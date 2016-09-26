@@ -18,9 +18,12 @@
 
 
 ; Simple test for remove-at
-(define (test-remove-at [len 50])
+(define (test-remove-at lst)
   (define-symbolic* idx integer?)
-  (remove-at (symbolic-list len) idx)
+  (remove-at lst idx)
   (void))
-(profile-bench "slow remove-at" (with-variant 0 (test-remove-at)))
-(profile-bench "fast remove-at" (with-variant 1 (test-remove-at)))
+
+(define lst (symbolic-list 50))
+
+(profile-bench "slow remove-at" (with-variant 0 (test-remove-at lst)))
+(profile-bench "fast remove-at" (with-variant 1 (test-remove-at lst)))
