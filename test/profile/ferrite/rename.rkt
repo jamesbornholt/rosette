@@ -34,6 +34,7 @@
   (ext4-fs #:capacity 2 #:blocksize block-size))
 
 
+
 (define (test-ext4-synth)
   (define test
     (litmus create-rename-fs-ext4 create-rename-setup create-rename-test-incorrect create-rename-allow))
@@ -51,24 +52,11 @@
   (check-true (unsat? cex)))
 
 
-(define rename-tests:slow
-  (test-suite+
-   "Create-rename ext4 tests for slow version of Ferrite"
-   (parameterize ([variant 0][merge-structs? #t])
-     (test-ext4-synth))))
-(define rename-tests:fast
-  (test-suite+
-   "Create-rename ext4 tests for fast version of Ferrite"
-   (parameterize ([variant 1][merge-structs? #f])
-     (test-ext4-synth))))
 
+(profile-bench "slow Ferrite rename.rkt"
+  (parameterize ([variant 0][merge-structs? #t])
+    (test-ext4-synth)))
 
-(profile
-  (time (run-tests rename-tests:slow))
-  #:renderer (html-renderer)
-  #:name "slow rename")
-
-(profile
-  (time (run-tests rename-tests:fast))
-  #:renderer (html-renderer)
-  #:name "fast rename")
+(profile-bench "fast Ferrite rename.rkt"
+  (parameterize ([variant 1][merge-structs? #f])
+    (test-ext4-synth)))

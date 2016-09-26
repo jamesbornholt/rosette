@@ -2,8 +2,15 @@
 
 ; Micro-benchmarks for various list operations.
 
-(require "../bench.rkt" rosette/lib/profile rosette/lib/profile/renderer/html)
+(require "../bench.rkt" rosette/lib/angelic
+         rosette/lib/profile rosette/lib/profile/renderer/html)
 (provide (all-defined-out))
+
+
+; Construct a symbolic list of up to the given length
+(define (symbolic-list len)
+  (define lst (build-list len identity))
+  (apply choose* (for/list ([i len]) (take lst i))))
 
 ; Returns a new list that updates lst[pos] with val.
 ; Worst-case behavior trigerred when given a symbolic list and position.
@@ -64,20 +71,37 @@
       (cons (if (= pos 0) val x) (update xs (- pos 1) val))])))
 
 
-; Simple tests for both variants of the update function.
+
+; Simple test for list-set
+(define (test-list-set [len 50])
+  (define-symbolic* idx val integer?)
+  (list-set (symbolic-list len) idx -1)
+  (void))
+(profile-bench "slow list-set" (with-variant 0 (test-list-set)))
+(profile-bench "fast list-set" (with-variant 1 (test-list-set)))
+
+
+; Simple test for remove-at
+(define (test-remove-at [len 50])
+  (define-symbolic* idx integer?)
+  (remove-at (symbolic-list len) idx)
+  (void))
+(profile-bench "slow remove-at" (with-variant 0 (test-remove-at)))
+(profile-bench "fast remove-at" (with-variant 1 (test-remove-at)))
+
+
+; Simple test for append-if
+(define (test-append-if [len 50])
+  (append-if (symbolic-list len) (symbolic-list len))
+  (void))
+(profile-bench "slow append-if" (with-variant 0 (test-append-if)))
+(profile-bench "fast append-if" (with-variant 1 (test-append-if)))
+
+
+; Simple test for update
 (define (test-update [len 50])
   (define-symbolic* idx integer?)
   (update (build-list len identity) idx -1)
   (void))
-
-(profile
- (parameterize ([variant 0])
-   (test-update))
- #:renderer (html-renderer)
- #:name "slow list update")
-
-(profile
- (parameterize ([variant 1])
-   (test-update))
- #:renderer (html-renderer)
- #:name "fast list update")
+(profile-bench "slow update" (with-variant 0 (test-update)))
+(profile-bench "fast update" (with-variant 1 (test-update)))

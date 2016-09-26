@@ -1,6 +1,6 @@
 #lang rosette
 
-(provide merge-structs? variant)
+(provide merge-structs? variant with-variant)
 
 ; Setting this parameter to #t (default) ensures
 ; that all value types defined with bench-struct
@@ -17,3 +17,7 @@
 ; value of code-variant, then the default (first) expression
 ; is used.
 (define variant (make-parameter 0))
+
+; Shorthand for selecting a variant
+(define-syntax-rule (with-variant var body ...)
+  (parameterize ([variant var]) body ...))
