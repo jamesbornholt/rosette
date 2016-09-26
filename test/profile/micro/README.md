@@ -1,6 +1,8 @@
 # Microbenchmarks
 
-Contains the following microbenchmarks for symbolic profiling:     
+Contains the following microbenchmarks for symbolic profiling:
 
-- `list.rkt` includes slow and fast variants of various list procedures, both artificial and lifted from real examples.
-- `tree.rkt` includes slow and fast variants of tree procedures.
+- `append-if.rkt` includes slow and fast variants of a conditional list append operation.
+- `list-set.rkt` includes slow and fast variants of a list update.
+- `remove-at.rkt` includes slow and fast variants of a list removal.
+- `update-at.rkt` includes slow and fast variants of a recursive list update.
