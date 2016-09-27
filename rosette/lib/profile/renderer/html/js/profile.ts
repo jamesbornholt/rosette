@@ -100,16 +100,23 @@ function selectProfilePoints(data, input, output) {
         else if (fcall["metrics"].hasOwnProperty(output))
             o = fcall["metrics"][output];
         else continue;
-        pts.push([i, o+1, fcall["location"]]);
+        pts.push([i, o, fcall["location"]]);
     }
     return pts;
+}
+
+function findBestFit(pts) {
+    let shifted = pts.map((v) => [v[0], v[1]+1]);
+    let reg_pwr = regression('power', shifted);
+    let reg_lin = regression('linear', pts);
+    return reg_pwr.r2 > reg_lin.r2 ? reg_pwr : reg_lin;
 }
 
 function generateProfile(input, output) {
     var entries = [];
     for (let func of Profile.data["functions"]) {
         let pts = selectProfilePoints(func.calls, input, output);
-        let reg = regression('power', pts);
+        let reg = findBestFit(pts);
         let sum = pts.map((v) => v[1]).reduce((a,b) => a+b, 0);
         entries.push({"name": func.name, "points": pts, "fit": reg, "calls": pts.length, "output": sum/pts.length});
     }
@@ -238,7 +245,7 @@ function renderSubTable(input, output, entry) {
         let row = document.createElement("tr");
         let pts = callSites[callSite];
         // fit the data
-        let reg = regression('power', pts);
+        let reg = findBestFit(pts);
         let sum = pts.map((v) => v[1]).reduce((a,b) => a+b, 0);
 
         // 1. call site name

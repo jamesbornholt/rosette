@@ -91,16 +91,22 @@ function selectProfilePoints(data, input, output) {
             o = fcall["metrics"][output];
         else
             continue;
-        pts.push([i, o + 1, fcall["location"]]);
+        pts.push([i, o, fcall["location"]]);
     }
     return pts;
+}
+function findBestFit(pts) {
+    var shifted = pts.map(function (v) { return [v[0], v[1] + 1]; });
+    var reg_pwr = regression('power', shifted);
+    var reg_lin = regression('linear', pts);
+    return reg_pwr.r2 > reg_lin.r2 ? reg_pwr : reg_lin;
 }
 function generateProfile(input, output) {
     var entries = [];
     for (var _i = 0, _a = Profile.data["functions"]; _i < _a.length; _i++) {
         var func = _a[_i];
         var pts = selectProfilePoints(func.calls, input, output);
-        var reg = regression('power', pts);
+        var reg = findBestFit(pts);
         var sum = pts.map(function (v) { return v[1]; }).reduce(function (a, b) { return a + b; }, 0);
         entries.push({ "name": func.name, "points": pts, "fit": reg, "calls": pts.length, "output": sum / pts.length });
     }
@@ -219,7 +225,7 @@ function renderSubTable(input, output, entry) {
         var row = document.createElement("tr");
         var pts = callSites[callSite];
         // fit the data
-        var reg = regression('power', pts);
+        var reg = findBestFit(pts);
         var sum = pts.map(function (v) { return v[1]; }).reduce(function (a, b) { return a + b; }, 0);
         // 1. call site name
         makeCell(callSite, row);
