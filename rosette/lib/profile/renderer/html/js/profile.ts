@@ -109,7 +109,17 @@ function findBestFit(pts) {
     let shifted = pts.map((v) => [v[0], v[1]+1]);
     let reg_pwr = regression('power', shifted);
     let reg_lin = regression('linear', pts);
-    return reg_pwr.r2 > reg_lin.r2 ? reg_pwr : reg_lin;
+    if (reg_pwr.r2 > reg_lin.r2) {
+        let [a, b] = reg_pwr.equation;
+        reg_pwr.string = "y = " + a.toPrecision(2) + "x<sup>" + b.toFixed(2) + "</sup>";
+        reg_pwr["sort"] = b;
+        return reg_pwr;
+    } else {
+        let [a, b] = reg_lin.equation;
+        reg_lin.string = "y = " + a.toPrecision(2) + "x + " + b.toFixed(2);
+        reg_lin["sort"] = 1;
+        return reg_lin;
+    }
 }
 
 function generateProfile(input, output) {
@@ -137,9 +147,9 @@ function escapeHtml(string) {
     });
 }
 
-function makeCell(str, row) {
+function makeCell(str, row, escape = true) {
     let elt = document.createElement("td");
-    elt.innerHTML = escapeHtml(str);
+    elt.innerHTML = escape? escapeHtml(str) : str;
     row.insertAdjacentElement('beforeend', elt);
     return elt;
 }
@@ -179,8 +189,9 @@ function renderTable() {
                       "<no source info>";
         func.classList.add("code");
         // 2. curve
-        let fit = makeCell(entry.fit.string, row);
-        fit.dataset["sort"] = entry.fit.equation[1].toFixed(2);
+        let fit = entry.fit;
+        let fitCell = makeCell(isNaN(fit.equation[0]) ? "-" : fit.string, row, false);
+        fitCell.dataset["sort"] = fit.sort;
         // 3. r^2
         makeCell(isNaN(entry.fit.r2) ? "-" : entry.fit.r2.toFixed(2), row);
         // 4. # calls
@@ -251,7 +262,7 @@ function renderSubTable(input, output, entry) {
         // 1. call site name
         makeCell(callSite, row);
         // 2. fit
-        let fit = makeCell(reg.string, row);
+        let fit = makeCell(isNaN(reg.equation[0]) ? "-" : reg.string, row, false);
         // 3. r^2
         makeCell(isNaN(reg.r2) ? "-" : reg.r2.toFixed(2), row);
         // 4. # calls
@@ -319,9 +330,7 @@ function renderGraph(input, output, entry) {
             }
         }
     };
-    vg.embed(graph, {mode: "vega-lite", spec: spec}, function(err, res) {
-        console.log("data", res);
-    });
+    vg.embed(graph, {mode: "vega-lite", spec: spec}, function(err, res) {});
 
     // swap out the graph element
     old_graph.parentNode.replaceChild(graph, old_graph);

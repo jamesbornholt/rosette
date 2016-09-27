@@ -99,7 +99,18 @@ function findBestFit(pts) {
     var shifted = pts.map(function (v) { return [v[0], v[1] + 1]; });
     var reg_pwr = regression('power', shifted);
     var reg_lin = regression('linear', pts);
-    return reg_pwr.r2 > reg_lin.r2 ? reg_pwr : reg_lin;
+    if (reg_pwr.r2 > reg_lin.r2) {
+        var _a = reg_pwr.equation, a = _a[0], b = _a[1];
+        reg_pwr.string = "y = " + a.toPrecision(2) + "x<sup>" + b.toFixed(2) + "</sup>";
+        reg_pwr["sort"] = b;
+        return reg_pwr;
+    }
+    else {
+        var _b = reg_lin.equation, a = _b[0], b = _b[1];
+        reg_lin.string = "y = " + a.toPrecision(2) + "x + " + b.toFixed(2);
+        reg_lin["sort"] = 1;
+        return reg_lin;
+    }
 }
 function generateProfile(input, output) {
     var entries = [];
@@ -125,9 +136,10 @@ function escapeHtml(string) {
         return entityMap[s];
     });
 }
-function makeCell(str, row) {
+function makeCell(str, row, escape) {
+    if (escape === void 0) { escape = true; }
     var elt = document.createElement("td");
-    elt.innerHTML = escapeHtml(str);
+    elt.innerHTML = escape ? escapeHtml(str) : str;
     row.insertAdjacentElement('beforeend', elt);
     return elt;
 }
@@ -165,8 +177,9 @@ function renderTable() {
             "<no source info>";
         func.classList.add("code");
         // 2. curve
-        var fit = makeCell(entry_1.fit.string, row);
-        fit.dataset["sort"] = entry_1.fit.equation[1].toFixed(2);
+        var fit = entry_1.fit;
+        var fitCell = makeCell(isNaN(fit.equation[0]) ? "-" : fit.string, row, false);
+        fitCell.dataset["sort"] = fit.sort;
         // 3. r^2
         makeCell(isNaN(entry_1.fit.r2) ? "-" : entry_1.fit.r2.toFixed(2), row);
         // 4. # calls
@@ -230,7 +243,7 @@ function renderSubTable(input, output, entry) {
         // 1. call site name
         makeCell(callSite, row);
         // 2. fit
-        var fit = makeCell(reg.string, row);
+        var fit = makeCell(isNaN(reg.equation[0]) ? "-" : reg.string, row, false);
         // 3. r^2
         makeCell(isNaN(reg.r2) ? "-" : reg.r2.toFixed(2), row);
         // 4. # calls
@@ -295,9 +308,7 @@ function renderGraph(input, output, entry) {
             }
         }
     };
-    vg.embed(graph, { mode: "vega-lite", spec: spec }, function (err, res) {
-        console.log("data", res);
-    });
+    vg.embed(graph, { mode: "vega-lite", spec: spec }, function (err, res) { });
     // swap out the graph element
     old_graph.parentNode.replaceChild(graph, old_graph);
 }
