@@ -25,5 +25,5 @@
 
 (define lst (symbolic-list 50))
 
-(profile-bench "slow remove-at" (with-variant 0 (test-remove-at lst)))
-(profile-bench "fast remove-at" (with-variant 1 (test-remove-at lst)))
+(profile-bench! "slow remove-at" (with-variant 0 (test-remove-at lst)))
+(profile-bench! "fast remove-at" (with-variant 1 (test-remove-at lst)))

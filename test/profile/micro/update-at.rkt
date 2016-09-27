@@ -36,5 +36,5 @@
 (define len 50)
 (define lst (build-list 50 identity))
 
-(profile-bench "slow update-at" (with-variant 0 (test-update-at lst)))
-(profile-bench "fast update-at" (with-variant 1 (test-update-at lst)))
+(profile-bench! "slow update-at" (with-variant 0 (test-update-at lst)))
+(profile-bench! "fast update-at" (with-variant 1 (test-update-at lst)))
