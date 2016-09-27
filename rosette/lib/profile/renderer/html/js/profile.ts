@@ -68,6 +68,7 @@ function init() {
     document.getElementById("name").innerHTML = Profile.data.name;
     document.getElementById("source").innerHTML = Profile.data.source;
     document.getElementById("form").innerHTML = Profile.data.form;
+    document.getElementById("time").innerHTML = Profile.data.time;
 
     // populate available inputs
     let input_select = document.getElementById("input");
@@ -99,7 +100,7 @@ function selectProfilePoints(data, input, output) {
         else if (fcall["metrics"].hasOwnProperty(output))
             o = fcall["metrics"][output];
         else continue;
-        pts.push([i+1, o, fcall["location"]]);
+        pts.push([i, o+1, fcall["location"]]);
     }
     return pts;
 }
@@ -211,6 +212,50 @@ function renderTable() {
     Profile.sorter.refresh();
 }
 
+function renderSubTable(input, output, entry) {
+    // aggregate by callsite
+    let callSites = {};
+    for (let pt of entry.points) {
+        if (!callSites.hasOwnProperty(pt[2]))
+            callSites[pt[2]] = [];
+        callSites[pt[2]].push(pt);
+    }
+    let callSiteNames = Object.keys(callSites);
+    callSiteNames.sort();
+
+    // update the output column
+    document.getElementById("suboutput-col").innerHTML = "Avg " + Profile.selected.output;
+
+
+    // remove existing rows
+    for (let node of document.querySelectorAll("table#subprofile tbody tr")) {
+        node.parentNode.removeChild(node);
+    }
+    let tbody = document.querySelectorAll("table#subprofile tbody")[0] as HTMLElement;
+
+    // render row for each callsite
+    for (let callSite of callSiteNames) {
+        let row = document.createElement("tr");
+        let pts = callSites[callSite];
+        // fit the data
+        let reg = regression('power', pts);
+        let sum = pts.map((v) => v[1]).reduce((a,b) => a+b, 0);
+
+        // 1. call site name
+        makeCell(callSite, row);
+        // 2. fit
+        let fit = makeCell(reg.string, row);
+        // 3. r^2
+        makeCell(isNaN(reg.r2) ? "-" : reg.r2.toFixed(2), row);
+        // 4. # calls
+        makeCell(pts.length, row);
+        // 5. avg output
+        makeCell((sum / pts.length).toFixed(2), row);
+
+        tbody.insertAdjacentElement('beforeend', row);
+    }
+}
+
 function selectEntry(entry) {
     Profile.selected.entry = entry;
     // highlight the selected row
@@ -220,6 +265,7 @@ function selectEntry(entry) {
     if (entry != null) {
         entry.row.classList.add('selected');
         renderGraph(Profile.selected.input, Profile.selected.output, entry);
+        renderSubTable(Profile.selected.input, Profile.selected.output, entry);
     }
 }
 
@@ -266,7 +312,9 @@ function renderGraph(input, output, entry) {
             }
         }
     };
-    vg.embed(graph, {mode: "vega-lite", spec: spec}, function(err, res) {});
+    vg.embed(graph, {mode: "vega-lite", spec: spec}, function(err, res) {
+        console.log("data", res);
+    });
 
     // swap out the graph element
     old_graph.parentNode.replaceChild(graph, old_graph);

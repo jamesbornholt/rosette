@@ -50,7 +50,7 @@ pre {
 h1 {
     font-size: 1.838rem;
     line-height: 1.951rem;
-    margin-top: 1.951rem;
+    margin-top: 0; /*1.951rem;*/
 }
 h2 {
     font-size: 1.414rem;
@@ -67,7 +67,6 @@ h4 {
 }
 
 #content {
-    max-width: 768px;
     margin-left: auto;
     margin-right: auto;
     margin: 1em auto;
@@ -86,10 +85,23 @@ table td, table th {
 }
 
 #graph { /* hack to stop flashing */
-    min-height: 500px;
+    min-height: 480px;
+    min-width: 550px;
 }
 
 .vega-actions a {
     margin-right: 1em;
     font-size: 75%;
+}
+
+#content-left, #content-right {
+    float: left;
+}
+#content-left {
+    margin-right: 2em;
+}
+
+#subprofile {
+    font-size: 80%;
+    margin-top: 0;
 }

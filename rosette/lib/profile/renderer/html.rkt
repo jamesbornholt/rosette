@@ -84,8 +84,9 @@
 (define (aggregate profile [key profile-node-key/srcloc])
   (define functions (make-hash))
   (let rec ([node profile])
-    (let ([proc (key node)])
-      (hash-update! functions proc (lambda (old) (cons node old)) '()))
+    (unless (false? (profile-node-procedure node))
+      (let ([proc (key node)])
+        (hash-update! functions proc (lambda (old) (cons node old)) '())))
     (for ([c (profile-node-children node)])
       (rec c)))
   functions)
@@ -114,6 +115,8 @@
 (define (render-json entries source name out)
   (define dict
     (hash 'name name
+          'time (parameterize ([date-display-format 'rfc2822])
+                  (date->string (current-date) #t))
           'source (syntax-srcloc source)
           'form (if (syntax? source) (~v (syntax->datum source)) "")
           'functions (for/list ([(proc nodes) entries])

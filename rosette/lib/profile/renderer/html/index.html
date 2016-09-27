@@ -13,11 +13,17 @@
 <script src="http://vega.github.io/vega-lite/vega-lite.js" charset="utf-8"></script>
 <script src="http://vega.github.io/vega-editor/vendor/vega-embed.js" charset="utf-8"></script>
 <div id="content">
-<h1 id="name">Profile</h1>
-<p>Source: <span id="source">unknown</span></p>
-<p>Form: <code id="form">unknown</code></p>
-<p><label for="input">Input</label> <select id="input" name="input"></select>
-   <label for="output">Output</label> <select id="output" name="output"></select></p>
-<p><div id="graph"></div></p>
-<p><table id="profile"><thead><tr class="header"><th>Function</th><th data-sort-method="number">Fit</th><th data-sort-method="number" class="sort-default">R<sup>2</sup></th><th>Calls</th><th id="output-col" data-sort-method="number">-</th></tr></thead><tbody></tbody></table></p>
+  <div id="content-left">
+    <h1 id="name">Profile</h1>
+    <p>Source: <span id="source">unknown</span></p>
+    <p>Form: <code id="form">unknown</code></p>
+    <p>Generated: <span id="time">unknown</span></p>
+    <p><label for="input">Input</label> <select id="input" name="input"></select>
+       <label for="output">Output</label> <select id="output" name="output"></select></p>
+    <p><div id="graph"></div></p>
+    <p><table id="subprofile"><thead><tr class="header"><th>Call site</th><th>Fit</th><th>R<sup>2</sup></th><th>Calls</th><th id="suboutput-col">-</th></tr></thead><tbody></tbody></table></p>
+  </div>
+  <div id="content-right">
+    <table id="profile"><thead><tr class="header"><th>Function</th><th data-sort-method="number">Fit</th><th data-sort-method="number" class="sort-default">R<sup>2</sup></th><th>Calls</th><th id="output-col" data-sort-method="number">-</th></tr></thead><tbody></tbody></table>
+  </div>
 </div>

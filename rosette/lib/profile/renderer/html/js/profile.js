@@ -60,6 +60,7 @@ function init() {
     document.getElementById("name").innerHTML = Profile.data.name;
     document.getElementById("source").innerHTML = Profile.data.source;
     document.getElementById("form").innerHTML = Profile.data.form;
+    document.getElementById("time").innerHTML = Profile.data.time;
     // populate available inputs
     var input_select = document.getElementById("input");
     updateSelect(input_select, Profile.inputs);
@@ -90,7 +91,7 @@ function selectProfilePoints(data, input, output) {
             o = fcall["metrics"][output];
         else
             continue;
-        pts.push([i + 1, o, fcall["location"]]);
+        pts.push([i, o + 1, fcall["location"]]);
     }
     return pts;
 }
@@ -193,6 +194,46 @@ function renderTable() {
     // sort the table
     Profile.sorter.refresh();
 }
+function renderSubTable(input, output, entry) {
+    // aggregate by callsite
+    var callSites = {};
+    for (var _i = 0, _a = entry.points; _i < _a.length; _i++) {
+        var pt = _a[_i];
+        if (!callSites.hasOwnProperty(pt[2]))
+            callSites[pt[2]] = [];
+        callSites[pt[2]].push(pt);
+    }
+    var callSiteNames = Object.keys(callSites);
+    callSiteNames.sort();
+    // update the output column
+    document.getElementById("suboutput-col").innerHTML = "Avg " + Profile.selected.output;
+    // remove existing rows
+    for (var _b = 0, _c = document.querySelectorAll("table#subprofile tbody tr"); _b < _c.length; _b++) {
+        var node = _c[_b];
+        node.parentNode.removeChild(node);
+    }
+    var tbody = document.querySelectorAll("table#subprofile tbody")[0];
+    // render row for each callsite
+    for (var _d = 0, callSiteNames_1 = callSiteNames; _d < callSiteNames_1.length; _d++) {
+        var callSite = callSiteNames_1[_d];
+        var row = document.createElement("tr");
+        var pts = callSites[callSite];
+        // fit the data
+        var reg = regression('power', pts);
+        var sum = pts.map(function (v) { return v[1]; }).reduce(function (a, b) { return a + b; }, 0);
+        // 1. call site name
+        makeCell(callSite, row);
+        // 2. fit
+        var fit = makeCell(reg.string, row);
+        // 3. r^2
+        makeCell(isNaN(reg.r2) ? "-" : reg.r2.toFixed(2), row);
+        // 4. # calls
+        makeCell(pts.length, row);
+        // 5. avg output
+        makeCell((sum / pts.length).toFixed(2), row);
+        tbody.insertAdjacentElement('beforeend', row);
+    }
+}
 function selectEntry(entry) {
     Profile.selected.entry = entry;
     // highlight the selected row
@@ -203,6 +244,7 @@ function selectEntry(entry) {
     if (entry != null) {
         entry.row.classList.add('selected');
         renderGraph(Profile.selected.input, Profile.selected.output, entry);
+        renderSubTable(Profile.selected.input, Profile.selected.output, entry);
     }
 }
 function renderGraph(input, output, entry) {
@@ -247,7 +289,9 @@ function renderGraph(input, output, entry) {
             }
         }
     };
-    vg.embed(graph, { mode: "vega-lite", spec: spec }, function (err, res) { });
+    vg.embed(graph, { mode: "vega-lite", spec: spec }, function (err, res) {
+        console.log("data", res);
+    });
     // swap out the graph element
     old_graph.parentNode.replaceChild(graph, old_graph);
 }
