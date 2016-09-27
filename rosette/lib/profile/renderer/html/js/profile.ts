@@ -193,11 +193,14 @@ function renderTable() {
         let fitCell = makeCell(isNaN(fit.equation[0]) ? "-" : fit.string, row, false);
         fitCell.dataset["sort"] = fit.sort;
         // 3. r^2
-        makeCell(isNaN(entry.fit.r2) ? "-" : entry.fit.r2.toFixed(2), row);
+        let r2Cell = makeCell(isNaN(entry.fit.r2) ? "-" : entry.fit.r2.toFixed(2), row);
+        r2Cell.classList.add("numeric");
         // 4. # calls
-        makeCell(entry.calls, row);
+        let callCell = makeCell(entry.calls, row);
+        callCell.classList.add("numeric");
         // 5. avg output
-        makeCell(entry.output.toFixed(2), row);
+        let avgCell = makeCell(entry.output.toFixed(2), row);
+        avgCell.classList.add("numeric");
 
         // store the entry in the profile state
         entry.row = row;

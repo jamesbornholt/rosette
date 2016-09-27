@@ -105,3 +105,7 @@ table td, table th {
     font-size: 80%;
     margin-top: 0;
 }
+
+td.numeric {
+    text-align: right;
+}
