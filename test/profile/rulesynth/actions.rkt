@@ -1,16 +1,27 @@
 #lang rosette
 
-(require rosette/lib/match rosette/lib/angelic)
+(require rosette/lib/match rosette/lib/angelic "../bench.rkt")
 (provide (all-defined-out))
 
 ; ------------- List manipulation routines ------------- 
 (define (list-set lst pos val)
-  (let-values ([(front back) (split-at lst pos)])
-    (append front (cons val (cdr back)))))
+  (bench
+   (let-values ([(front back) (split-at lst pos)])
+     (append front (cons val (cdr back))))
+   (for/all ([lst lst]) 
+    (map (lambda (i v) (if (= pos i) val v))
+         (build-list (length lst) identity)
+         lst))))
 
 (define (remove-at lst pos)
-  (let-values ([(front back) (split-at lst pos)])
-    (append front (rest back))))
+  (bench
+   (let-values ([(front back) (split-at lst pos)])
+     (append front (rest back)))
+   (for/all ([lst lst])
+    (let loop ([i 0] [front empty] [back lst])
+      (if (= i pos)
+          (append front (cdr back))
+          (loop (add1 i) (append front (list (car back))) (cdr back)))))))
 
 
 ; ------------- Tree manipulation routines ------------- 
