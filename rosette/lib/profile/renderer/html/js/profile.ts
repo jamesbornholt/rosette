@@ -22,7 +22,7 @@ let Profile = {
 };
 
 // collate all unique entries in the profile data
-function findUnique(key) {
+function findUnique(key: string): Array<any> {
     var vals = [];
     for (let func of Profile.data["functions"]) {
         for (let fcall of func["calls"]) {
@@ -83,6 +83,9 @@ function init() {
     // render the initial table
     Profile.sorter = new Tablesort(document.getElementById("profile"), {descending: true});
     renderTable();
+
+
+    findImportantEntries();
 }
 
 function getSelectedOption(elt) {
@@ -247,6 +250,10 @@ function renderSubTable(input, output, entry) {
     // update the output column
     document.getElementById("suboutput-col").innerHTML = "Avg " + Profile.selected.output;
 
+    // update the header
+    for (let elt of document.querySelectorAll(".selected-function")) {
+        elt.innerHTML = escapeHtml(entry.name.split(" ")[0]);
+    }
 
     // remove existing rows
     for (let node of document.querySelectorAll("table#subprofile tbody tr")) {
@@ -275,6 +282,93 @@ function renderSubTable(input, output, entry) {
 
         tbody.insertAdjacentElement('beforeend', row);
     }
+}
+
+function findImportantEntries() {
+    // aggregate all fcalls by callsite
+    let callSites = {};
+    for (let func of Profile.data["functions"]) {
+        if (!callSites.hasOwnProperty(func.name))
+            callSites[func.name] = {};
+        for (let fcall of func["calls"]) {
+            if (!callSites[func.name].hasOwnProperty(fcall.location))
+                callSites[func.name][fcall.location] = [];
+            callSites[func.name][fcall.location].push(fcall);
+        }
+    }
+    
+    let mergeCounts = [];
+    let heapSizes = [];
+    for (let func in callSites) {
+        for (let loc in callSites[func]) {
+            let myMergeCounts = [];
+            let ioHeapSizes = [];
+            for (let fcall of callSites[func][loc]) {
+                if (fcall.metrics.hasOwnProperty("merge-count (excl.)")) {
+                    myMergeCounts.push(fcall.metrics["merge-count (excl.)"]);
+                }
+                if (fcall.inputs.hasOwnProperty("heap-size")
+                      && fcall.outputs.hasOwnProperty("heap-size")) {
+                    ioHeapSizes.push([fcall.inputs["heap-size"], fcall.outputs["heap-size"]]);
+                }
+            }
+            if (myMergeCounts.length > 0) {
+                let mcSum = myMergeCounts.reduce((a,b) => a+b, 0);
+                let mcAvg = mcSum / myMergeCounts.length;
+                mergeCounts.push({func: func, loc: loc, mc: mcAvg});
+            }
+            let myMax = 0.0;
+            for (let ioHeapSize of ioHeapSizes) {
+                if (ioHeapSize[0] > 0) {
+                    let ratio = ioHeapSize[1] / ioHeapSize[0];
+                    if (ratio > myMax) {
+                        myMax = ratio;
+                    }
+                }
+            }
+            heapSizes.push({func: func, loc: loc, ratio: myMax});
+        }
+    }
+
+    let highlights = [];
+
+    if (heapSizes.length > 0) {
+        heapSizes.sort((a,b) => a.ratio < b.ratio ? 1 : (a.ratio > b.ratio ? -1 : 0));
+        let top5pct = Math.min(Math.ceil(heapSizes.length / 20), 4);
+        for (var i = 0; i <= top5pct; i++) {
+            let entry = heapSizes[i];
+            if (entry.ratio >= 2) {
+                highlights.push({func: entry.func, loc: entry.loc, reason: "heap size blowup (" + entry.ratio.toFixed(2) + ")"});
+            }
+        }
+    }
+    if (mergeCounts.length > 0) {
+        mergeCounts.sort((a,b) => a.mc < b.mc ? 1 : (a.mc > b.mc ? -1 : 0));
+        let top5pct = Math.min(Math.ceil(mergeCounts.length / 20), 4);
+        for (var i = 0; i <= top5pct; i++) {
+            let entry = mergeCounts[i];
+            if (entry.mc > 10) {
+                highlights.push({func: entry.func, loc: entry.loc, reason: "high merge count (" + entry.mc.toFixed(2) + ")"});
+            }
+        }
+    }
+
+    let tbody = document.querySelector("#important tbody");
+    for (let hi of highlights) {
+        let row = document.createElement("tr");
+        // 1. name
+        let [name, ...rest] = hi.func.split(" ");
+        let body = "<code>" + escapeHtml(name) + "</code> (called at " + escapeHtml(hi.loc) + ")"; 
+        let func = makeCell(body, row, false);
+        func.title = hi.func.indexOf(" ") > -1 ? 
+                     hi.func.slice(hi.func.indexOf(" ") + 1) : 
+                     "<no source info>";
+        // 2. reason
+        makeCell(hi.reason, row);
+
+        tbody.insertAdjacentElement("beforeend", row);
+    }
+    console.log("highlights", highlights);
 }
 
 function selectEntry(entry) {

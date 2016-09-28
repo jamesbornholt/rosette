@@ -93,7 +93,7 @@
 
 
 ; Render a single profile-node? to a jsexpr? dictionary
-(define (render-entry node)
+(define (render-entry proc node)
   (define (convert h)
     (for/hash ([(k v) h])
       (values (*->symbol (if (feature? k) (feature-name k) k)) v)))
@@ -105,6 +105,7 @@
   (hash 'inputs (convert (profile-node-inputs node))
         'outputs (convert (profile-node-outputs node))
         'metrics (hash-union (convert (profile-node-metrics node)) metrics-excl)
+        'function proc
         'location (syntax-srcloc (profile-node-location node))))
 
 
@@ -121,6 +122,6 @@
           'form (if (syntax? source) (~v (syntax->datum source)) "")
           'functions (for/list ([(proc nodes) entries])
                        (hash 'name proc
-                             'calls (for/list ([n nodes]) (render-entry n))))))
+                             'calls (for/list ([n nodes]) (render-entry proc n))))))
   (fprintf out "Profile.data = ")
   (write-json dict out))

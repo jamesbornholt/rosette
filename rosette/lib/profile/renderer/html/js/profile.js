@@ -73,6 +73,7 @@ function init() {
     // render the initial table
     Profile.sorter = new Tablesort(document.getElementById("profile"), { descending: true });
     renderTable();
+    findImportantEntries();
 }
 function getSelectedOption(elt) {
     return elt.options[elt.selectedIndex].value;
@@ -229,15 +230,20 @@ function renderSubTable(input, output, entry) {
     callSiteNames.sort();
     // update the output column
     document.getElementById("suboutput-col").innerHTML = "Avg " + Profile.selected.output;
+    // update the header
+    for (var _b = 0, _c = document.querySelectorAll(".selected-function"); _b < _c.length; _b++) {
+        var elt = _c[_b];
+        elt.innerHTML = escapeHtml(entry.name.split(" ")[0]);
+    }
     // remove existing rows
-    for (var _b = 0, _c = document.querySelectorAll("table#subprofile tbody tr"); _b < _c.length; _b++) {
-        var node = _c[_b];
+    for (var _d = 0, _e = document.querySelectorAll("table#subprofile tbody tr"); _d < _e.length; _d++) {
+        var node = _e[_d];
         node.parentNode.removeChild(node);
     }
     var tbody = document.querySelectorAll("table#subprofile tbody")[0];
     // render row for each callsite
-    for (var _d = 0, callSiteNames_1 = callSiteNames; _d < callSiteNames_1.length; _d++) {
-        var callSite = callSiteNames_1[_d];
+    for (var _f = 0, callSiteNames_1 = callSiteNames; _f < callSiteNames_1.length; _f++) {
+        var callSite = callSiteNames_1[_f];
         var row = document.createElement("tr");
         var pts = callSites[callSite];
         // fit the data
@@ -255,6 +261,92 @@ function renderSubTable(input, output, entry) {
         makeCell((sum / pts.length).toFixed(2), row);
         tbody.insertAdjacentElement('beforeend', row);
     }
+}
+function findImportantEntries() {
+    // aggregate all fcalls by callsite
+    var callSites = {};
+    for (var _i = 0, _a = Profile.data["functions"]; _i < _a.length; _i++) {
+        var func = _a[_i];
+        if (!callSites.hasOwnProperty(func.name))
+            callSites[func.name] = {};
+        for (var _b = 0, _c = func["calls"]; _b < _c.length; _b++) {
+            var fcall = _c[_b];
+            if (!callSites[func.name].hasOwnProperty(fcall.location))
+                callSites[func.name][fcall.location] = [];
+            callSites[func.name][fcall.location].push(fcall);
+        }
+    }
+    var mergeCounts = [];
+    var heapSizes = [];
+    for (var func in callSites) {
+        for (var loc in callSites[func]) {
+            var myMergeCounts = [];
+            var ioHeapSizes = [];
+            for (var _d = 0, _e = callSites[func][loc]; _d < _e.length; _d++) {
+                var fcall = _e[_d];
+                if (fcall.metrics.hasOwnProperty("merge-count (excl.)")) {
+                    myMergeCounts.push(fcall.metrics["merge-count (excl.)"]);
+                }
+                if (fcall.inputs.hasOwnProperty("heap-size")
+                    && fcall.outputs.hasOwnProperty("heap-size")) {
+                    ioHeapSizes.push([fcall.inputs["heap-size"], fcall.outputs["heap-size"]]);
+                }
+            }
+            if (myMergeCounts.length > 0) {
+                var mcSum = myMergeCounts.reduce(function (a, b) { return a + b; }, 0);
+                var mcAvg = mcSum / myMergeCounts.length;
+                mergeCounts.push({ func: func, loc: loc, mc: mcAvg });
+            }
+            var myMax = 0.0;
+            for (var _f = 0, ioHeapSizes_1 = ioHeapSizes; _f < ioHeapSizes_1.length; _f++) {
+                var ioHeapSize = ioHeapSizes_1[_f];
+                if (ioHeapSize[0] > 0) {
+                    var ratio = ioHeapSize[1] / ioHeapSize[0];
+                    if (ratio > myMax) {
+                        myMax = ratio;
+                    }
+                }
+            }
+            heapSizes.push({ func: func, loc: loc, ratio: myMax });
+        }
+    }
+    var highlights = [];
+    if (heapSizes.length > 0) {
+        heapSizes.sort(function (a, b) { return a.ratio < b.ratio ? 1 : (a.ratio > b.ratio ? -1 : 0); });
+        var top5pct = Math.min(Math.ceil(heapSizes.length / 20), 4);
+        for (var i = 0; i <= top5pct; i++) {
+            var entry = heapSizes[i];
+            if (entry.ratio >= 2) {
+                highlights.push({ func: entry.func, loc: entry.loc, reason: "heap size blowup (" + entry.ratio.toFixed(2) + ")" });
+            }
+        }
+    }
+    if (mergeCounts.length > 0) {
+        mergeCounts.sort(function (a, b) { return a.mc < b.mc ? 1 : (a.mc > b.mc ? -1 : 0); });
+        var top5pct = Math.min(Math.ceil(mergeCounts.length / 20), 4);
+        for (var i = 0; i <= top5pct; i++) {
+            var entry = mergeCounts[i];
+            if (entry.mc > 10) {
+                highlights.push({ func: entry.func, loc: entry.loc, reason: "high merge count (" + entry.mc.toFixed(2) + ")" });
+            }
+        }
+    }
+    var tbody = document.querySelector("#important tbody");
+    for (var _g = 0, highlights_1 = highlights; _g < highlights_1.length; _g++) {
+        var hi = highlights_1[_g];
+        var row = document.createElement("tr");
+        // 1. name
+        var _h = hi.func.split(" "), name_1 = _h[0], rest = _h.slice(1);
+        var body = "<code>" + escapeHtml(name_1) + "</code> (called at " + escapeHtml(hi.loc) + ")";
+        var func = makeCell(body, row, false);
+        func.title = hi.func.indexOf(" ") > -1 ?
+            hi.func.slice(hi.func.indexOf(" ") + 1) :
+            "<no source info>";
+        // 2. reason
+        makeCell(hi.reason, row);
+        tbody.insertAdjacentElement("beforeend", row);
+    }
+    console.log("highlights", highlights);
 }
 function selectEntry(entry) {
     Profile.selected.entry = entry;
