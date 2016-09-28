@@ -61,6 +61,7 @@ function init() {
     document.getElementById("source").innerHTML = Profile.data.source;
     document.getElementById("form").innerHTML = Profile.data.form;
     document.getElementById("time").innerHTML = Profile.data.time;
+    document.title = "Profile: " + Profile.data.name;
     // populate available inputs
     var input_select = document.getElementById("input");
     updateSelect(input_select, Profile.inputs);
