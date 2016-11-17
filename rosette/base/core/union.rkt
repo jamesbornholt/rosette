@@ -25,7 +25,7 @@
      (case mode
        [(#t #f) 
         (fprintf port "~a:~a" (equal-hash-code self) (length (union-contents self)))]
-       [else 
+       [else
         (let ([vs (union-contents self)])
           (unless (null? vs)
             (parameterize ([error-print-width (max 4 (quotient (error-print-width) (* 2 (length vs))))])
@@ -37,9 +37,9 @@
 
 (define (fprintf-entry port p mode)
   (fprintf port "[")
-  (print (car p) port mode)
+  (fprintf port "~a" (car p)) 
   (fprintf port " ")
-  (print (cdr p) port mode)
+  (fprintf port "~a" (cdr p)) 
   (fprintf port "]")) 
 
   
