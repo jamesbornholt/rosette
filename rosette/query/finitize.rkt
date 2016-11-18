@@ -134,7 +134,7 @@
        (match e 
          [(union) (error 'finitize "all finitizations infeasible: ~a" v)]
          [_ e])))
-    [(expression (or (== @forall) (== @exists)) _ _)
+    [(expression (or (== @forall) (== @exists)) _ _ _)
      (error 'finitize "cannot use (current-bitwidth ~a) with a quantified formula ~a; use (current-bitwidth #f) instead"
             (current-bitwidth) v)]
     [(expression op x)     

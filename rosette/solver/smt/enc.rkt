@@ -61,11 +61,12 @@
      ($bv->int (enc v env quantified) (bitvector-size (get-type v)))]  
     [(expression (== @bitvector->natural) v) 
      ($bv->nat (enc v env quantified) (bitvector-size (get-type v)))]
-    [(expression (and (or (== @forall) (== @exists)) op) vars body)
+    [(expression (and (or (== @forall) (== @exists)) op) vars body guard)
      ((if (equal? op @forall) $forall $exists)
       (for/list ([v vars])
         (list (ref! env v) (smt-type (get-type v))))
-      (enc body env (remove-duplicates (append vars quantified))))]
+      (enc body  env (remove-duplicates (append vars quantified)))
+      (enc guard env (remove-duplicates (append vars quantified))))]
     [(expression (== @distinct?) (? real? rs) ..1 (? term? es) ...)
      (apply $distinct (append (if (equal? @real? (get-type (car es)))
                                   (for/list ([r rs]) (enc-real r))

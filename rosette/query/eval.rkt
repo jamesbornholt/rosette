@@ -33,11 +33,15 @@
                 (match (eval-guarded gvs sol cache guarded-test guarded-value)
                   [(union (? null?)) (solvable-default (get-type expr))]
                   [other other])]
-               [(expression (and op (or (== @forall) (== @exists))) vars body)
+               [(expression (and op (or (== @forall) (== @exists))) vars body guard)
                 ((operator-unsafe op)
                  vars
                  (eval-rec
                   body
+                  (sat (for/hash ([(k v) (model sol)] #:unless (member k vars)) (values k v)))
+                  (make-hash))
+                 (eval-rec
+                  guard
                   (sat (for/hash ([(k v) (model sol)] #:unless (member k vars)) (values k v)))
                   (make-hash)))]
                [(expression op child ...)  

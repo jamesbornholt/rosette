@@ -61,11 +61,11 @@
     #:range T*->boolean?
     #:unsafe $op
     #:safe
-    (lambda (@vars @body)
-      (match* (@vars (type-cast @boolean? @body '$op))
-        [((list (constant _ (? primitive-solvable?)) (... ...)) body)
-         ($op @vars body)]
-        [(_ _)
+    (lambda (@vars @body [@guard #t])
+      (match* (@vars (type-cast @boolean? @body '$op) (type-cast @boolean? @guard '$op))
+        [((list (constant _ (? primitive-solvable?)) (... ...)) body guard)
+         ($op @vars body guard)]
+        [(_ _ _)
          (@assert
           #f
           (thunk
@@ -147,11 +147,11 @@
 ;; ----------------- Partial evaluation rules for ∀ and ∃ ----------------- ;;
 
 (define-syntax-rule (quantifier @op)
-  (lambda (vars body)
-    (match* (vars body)
-      [((list) _) body]
-      [(_ (? boolean?)) body]
-      [(_ _) (expression @op vars body)])))
+  (lambda (vars body guard)
+    (match* (vars body guard)
+      [((list) _ _) body]
+      [(_ (? boolean?) _) body]
+      [(_ _ _) (expression @op vars body guard)])))
 
 ;; ----------------- Partial evaluation rules for && and || ----------------- ;; 
 (define-syntax-rule (logical-connective op co iden !iden)

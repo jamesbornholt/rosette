@@ -37,7 +37,7 @@
 ; Prints all smt commands to current-output-port.
 (define-syntax-rule (printf-smt arg ...)
   (begin 
-    ;(fprintf (current-error-port) arg ...)(fprintf (current-error-port) "\n")
+    (fprintf (current-error-port) arg ...)(fprintf (current-error-port) "\n")
     (printf arg ...)))
 
 ; Commands
@@ -117,13 +117,13 @@
   is_int to_int to_real )
 
 ; Quantifiers
-(define (quantified quantifier vars body)
-  `(,quantifier ,vars ,body))
+(define (quantified quantifier vars body guard)
+  `(,quantifier ,vars ,guard ,body))
 
-(define (forall vars body)
-  (quantified 'forall vars body))
+(define (forall vars body guard)
+  (quantified 'forall vars body guard))
 
-(define (exists vars body)
-  (quantified 'exists vars body))
+(define (exists vars body guard)
+  (quantified 'exists vars body guard))
 
 
