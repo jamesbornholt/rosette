@@ -1,3 +1,5 @@
+var default_input = "heap-size";
+var default_output = "merge-count";
 // global state
 var Profile = {
     inputs: [],
@@ -30,7 +32,7 @@ function findUnique(key) {
 }
 // update a select element to contain the given options, preserving the
 // currently selected option if possible
-function updateSelect(select, lst) {
+function updateSelect(select, lst, defaultOption) {
     var currentIndex = select.selectedIndex;
     var currentValue = currentIndex == -1 ? null : select.value;
     for (var _i = 0, _a = select.childNodes; _i < _a.length; _i++) {
@@ -38,6 +40,8 @@ function updateSelect(select, lst) {
         select.removeChild(opt);
     }
     var newIndex = -1;
+    var defaultIndex = -1;
+    lst.sort();
     for (var _b = 0, lst_1 = lst; _b < lst_1.length; _b++) {
         var x = lst_1[_b];
         var opt = document.createElement("option");
@@ -47,9 +51,15 @@ function updateSelect(select, lst) {
         if (x == currentValue) {
             newIndex = select.childNodes.length - 1;
         }
+        if (x == defaultOption) {
+            defaultIndex = select.childNodes.length - 1;
+        }
     }
     if (newIndex != -1) {
         select.selectedIndex = newIndex;
+    }
+    else if (defaultIndex != -1) {
+        select.selectedIndex = defaultIndex;
     }
 }
 function init() {
@@ -64,10 +74,10 @@ function init() {
     document.title = "Profile: " + Profile.data.name;
     // populate available inputs
     var input_select = document.getElementById("input");
-    updateSelect(input_select, Profile.inputs);
+    updateSelect(input_select, Profile.inputs, default_input);
     // populate available outputs
     var output_select = document.getElementById("output");
-    updateSelect(output_select, Profile.outputs.concat(Profile.metrics));
+    updateSelect(output_select, Profile.outputs.concat(Profile.metrics), default_output);
     // hook the input/output dropdowns to re-render the table
     input_select.addEventListener('change', renderTable);
     output_select.addEventListener('change', renderTable);

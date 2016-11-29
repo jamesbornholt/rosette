@@ -6,6 +6,9 @@ declare var Tablesort;     // tablesort.js
 interface NodeListOf<TNode extends Node> extends Array<TNode> {}
 interface NodeList extends Array<Node> {}
 
+let default_input = "heap-size";
+let default_output = "merge-count";
+
 // global state
 let Profile = {
     inputs: [],
@@ -38,13 +41,15 @@ function findUnique(key: string): Array<any> {
 
 // update a select element to contain the given options, preserving the
 // currently selected option if possible
-function updateSelect(select: HTMLSelectElement, lst) {
+function updateSelect(select: HTMLSelectElement, lst: Array<any>, defaultOption: String) {
     let currentIndex = select.selectedIndex;
     let currentValue = currentIndex == -1 ? null : select.value;
     for (let opt of select.childNodes) {
         select.removeChild(opt);
     }
     var newIndex = -1;
+    var defaultIndex = -1;
+    lst.sort();
     for (let x of lst) {
         let opt = document.createElement("option");
         opt.value = x;
@@ -53,9 +58,14 @@ function updateSelect(select: HTMLSelectElement, lst) {
         if (x == currentValue) {
             newIndex = select.childNodes.length - 1;
         }
+        if (x == defaultOption) {
+            defaultIndex = select.childNodes.length - 1;
+        }
     }
     if (newIndex != -1) {
         select.selectedIndex = newIndex;
+    } else if (defaultIndex != -1) {
+        select.selectedIndex = defaultIndex;
     }
 }
 
@@ -73,10 +83,10 @@ function init() {
 
     // populate available inputs
     let input_select = document.getElementById("input");
-    updateSelect(input_select as HTMLSelectElement, Profile.inputs);
+    updateSelect(input_select as HTMLSelectElement, Profile.inputs, default_input);
     // populate available outputs
     let output_select = document.getElementById("output");
-    updateSelect(output_select as HTMLSelectElement, Profile.outputs.concat(Profile.metrics));
+    updateSelect(output_select as HTMLSelectElement, Profile.outputs.concat(Profile.metrics), default_output);
     // hook the input/output dropdowns to re-render the table
     input_select.addEventListener('change', renderTable);
     output_select.addEventListener('change', renderTable);
