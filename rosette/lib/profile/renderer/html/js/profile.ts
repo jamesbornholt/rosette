@@ -3,11 +3,10 @@ declare var regression;    // regression.js
 declare var Tablesort;     // tablesort.js
 
 // convince TS that document.querySelectorAll can be an array
-interface NodeListOf<TNode extends Node> extends Array<TNode> {}
 interface NodeList extends Array<Node> {}
 
 let default_input = "heap-size";
-let default_output = "merge-count";
+let default_output = "term-count";
 
 // global state
 let Profile = {

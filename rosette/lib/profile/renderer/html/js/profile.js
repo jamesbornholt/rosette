@@ -1,5 +1,5 @@
 var default_input = "heap-size";
-var default_output = "merge-count";
+var default_output = "term-count";
 // global state
 var Profile = {
     inputs: [],
