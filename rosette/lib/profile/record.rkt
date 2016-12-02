@@ -26,12 +26,6 @@
 (struct profile-data (location procedure inputs outputs metrics)
   #:transparent #:mutable)
 
-#|
-;; Returns a new profile stack.
-(define (make-profile-stack)
-  (let ([root (profile-node 'root #f (hash) (hash) (hash) '())])
-    (profile-stack (list root) root)))
-|#
 ;; Returns a new top-level profile node
 (define (make-top-level-profile)
   (profile-node #f '() (profile-data 'top #f (hash) (hash) (hash))))
