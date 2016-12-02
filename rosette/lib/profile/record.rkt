@@ -20,20 +20,24 @@
 ;; symbol describes a performance metric collected during symbolic evaluation,
 ;; e.g., cpu time, real time, gc time, the number of merge invocations, the number
 ;; of unions and terms created, etc.
-(struct profile-node (location procedure inputs outputs metrics children)
+(struct profile-node (parent children data)
   #:transparent #:mutable)
 
-;; Represents a profile stack.
-(struct profile-stack ([frames #:mutable] root)
-  #:transparent)
+(struct profile-data (location procedure inputs outputs metrics)
+  #:transparent #:mutable)
 
+#|
 ;; Returns a new profile stack.
 (define (make-profile-stack)
   (let ([root (profile-node 'root #f (hash) (hash) (hash) '())])
     (profile-stack (list root) root)))
+|#
+;; Returns a new top-level profile node
+(define (make-top-level-profile)
+  (profile-node #f '() (profile-data 'top #f (hash) (hash) (hash))))
 
 ;; A parameter that holds the current profile / call stack.
-(define current-profile-stack (make-parameter (make-profile-stack)))
+(define current-profile (make-parameter (make-top-level-profile)))
 
 ;; Returns a hash map with entries of the form <k, v> where k is a
 ;; feature in current-features and v = (k xs).
@@ -76,10 +80,10 @@
                         'union-count (union-count)
                         'union-sum (union-sum)
                         'term-count (term-count))]
-         [entry (profile-node loc proc (compute-features in) (hash) metrics '())]
-         [parent (car (profile-stack-frames (current-profile-stack)))])
-    (set-profile-node-children! parent (cons entry (profile-node-children parent)))
-    (set-profile-stack-frames! (current-profile-stack) (cons entry (profile-stack-frames (current-profile-stack))))))
+         [data (profile-data loc proc (compute-features in) (hash) metrics)]
+         [node (profile-node (current-profile) '() data)])
+    (set-profile-node-children! (current-profile) (cons node (profile-node-children (current-profile))))
+    (current-profile node)))
 
 (define-syntax-rule (diff metrics metric)
   (- (metric) (hash-ref metrics 'metric)))
@@ -88,12 +92,12 @@
 ;; of the profile-node at the top of the current-profile-stack.
 ;; This procedure should be called after the profiled procedure call returns.
 (define (record-exit! out cpu real gc)
-  (let* ([entry (car (profile-stack-frames (current-profile-stack)))]
-         [metrics (profile-node-metrics entry)])
-    (set-profile-node-outputs! entry (compute-features out))
-    (set-profile-node-metrics! entry (hash 'cpu cpu 'real real 'gc gc
+  (let* ([entry (profile-node-data (current-profile))]
+         [metrics (profile-data-metrics entry)])
+    (set-profile-data-outputs! entry (compute-features out))
+    (set-profile-data-metrics! entry (hash 'cpu cpu 'real real 'gc gc
                                            'merge-count (diff metrics merge-count)
                                            'union-count (diff metrics union-count)
                                            'union-sum (diff metrics union-sum)
                                            'term-count (diff metrics term-count)))
-    (set-profile-stack-frames! (current-profile-stack) (cdr (profile-stack-frames (current-profile-stack))))))
+    (current-profile (profile-node-parent (current-profile)))))

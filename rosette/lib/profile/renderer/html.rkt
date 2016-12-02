@@ -84,7 +84,7 @@
 (define (aggregate profile [key profile-node-key/srcloc])
   (define functions (make-hash))
   (let rec ([node profile])
-    (unless (false? (profile-node-procedure node))
+    (unless (false? (profile-data-procedure (profile-node-data node)))
       (let ([proc (key node)])
         (hash-update! functions proc (lambda (old) (cons node old)) '())))
     (for ([c (profile-node-children node)])
@@ -98,15 +98,15 @@
     (for/hash ([(k v) h])
       (values (*->symbol (if (feature? k) (feature-name k) k)) v)))
   (define metrics-excl
-    (for/hash ([(k v) (profile-node-metrics node)])
+    (for/hash ([(k v) (profile-data-metrics (profile-node-data node))])
       (values (string->symbol (format "~a (excl.)" k))
               (- v (for/sum ([c (profile-node-children node)])
-                     (hash-ref (profile-node-metrics c) k 0))))))
-  (hash 'inputs (convert (profile-node-inputs node))
-        'outputs (convert (profile-node-outputs node))
-        'metrics (hash-union (convert (profile-node-metrics node)) metrics-excl)
+                     (hash-ref (profile-data-metrics (profile-node-data c)) k 0))))))
+  (hash 'inputs (convert (profile-data-inputs (profile-node-data node)))
+        'outputs (convert (profile-data-outputs (profile-node-data node)))
+        'metrics (hash-union (convert (profile-data-metrics (profile-node-data node))) metrics-excl)
         'function proc
-        'location (syntax-srcloc (profile-node-location node))))
+        'location (syntax-srcloc (profile-data-location (profile-node-data node)))))
 
 
 ; Render entries to JSON

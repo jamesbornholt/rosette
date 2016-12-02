@@ -40,7 +40,7 @@ function findUnique(key: string): Array<any> {
 
 // update a select element to contain the given options, preserving the
 // currently selected option if possible
-function updateSelect(select: HTMLSelectElement, lst: Array<any>, defaultOption: String) {
+function updateSelect(select: HTMLSelectElement, lst: Array<any>, defaultOption: string) {
     let currentIndex = select.selectedIndex;
     let currentValue = currentIndex == -1 ? null : select.value;
     for (let opt of select.childNodes) {

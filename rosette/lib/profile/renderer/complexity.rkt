@@ -5,16 +5,16 @@
 (provide complexity-renderer)
 
 (define (feature->feature feature)
-  (lambda (node) (hash-ref (profile-node-inputs node) feature #f)))
+  (lambda (node) (hash-ref (profile-data-inputs (profile-node-data node)) feature #f)))
 
 (define (feature->metric feature)
   (procedure-rename
-   (lambda (node) (hash-ref (profile-node-outputs node) feature #f))
+   (lambda (node) (hash-ref (profile-data-outputs (profile-node-data node)) feature #f))
    (feature-name feature)))
 
 (define (name->metric name)
   (procedure-rename
-   (lambda (node) (hash-ref (profile-node-metrics node) name #f))
+   (lambda (node) (hash-ref (profile-data-metrics (profile-node-data node)) name #f))
    name))
 
 (define metrics (map name->metric '(merge-count term-count union-count union-size real)))

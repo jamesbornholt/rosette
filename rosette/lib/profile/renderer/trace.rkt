@@ -16,7 +16,7 @@
     (string-join (for/list ([i n]) "  ") ""))
   (printf "Trace for ~a (~v)\n" name source)
   (let rec ([node profile][level 0])
-    (define metrics (profile-node-metrics node))
+    (define metrics (profile-data-metrics (profile-node-data node)))
     (printf "~a* ~a (~v ms, ~v merges, ~v unions, ~v terms)\n"
             (indent level) (key node)
             (hash-ref metrics 'real #f)

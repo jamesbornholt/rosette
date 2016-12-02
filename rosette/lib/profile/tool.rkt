@@ -7,10 +7,10 @@
 (define (profile-thunk thunk #:renderer [renderer (complexity-renderer #:plot? #f)]
                              #:source [source-stx #f]
                              #:name [name "Profile"])
-  (define state (make-profile-stack))
-  (define ret (parameterize ([current-profile-stack state])
+  (define state (make-top-level-profile))
+  (define ret (parameterize ([current-profile state])
                 (thunk)))
-  (renderer (profile-stack-root state) source-stx name)
+  (renderer state source-stx name)
   ret)
 
 ;; TODO:  we probably need a version of profile-thunk etc that does
