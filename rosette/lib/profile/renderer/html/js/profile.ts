@@ -94,7 +94,10 @@ function init() {
     Profile.sorter = new Tablesort(document.getElementById("profile"), {descending: true});
     renderTable();
 
+    // render the timeline
+    renderTimeline("terms");
 
+    // highlight important entries
     findImportantEntries();
 }
 
@@ -441,6 +444,60 @@ function renderGraph(input, output, entry) {
 
     // swap out the graph element
     old_graph.parentNode.replaceChild(graph, old_graph);
+}
+
+function renderTimeline(metric: string) {
+    let timeline = document.getElementById("timeline");
+
+    let points = [];
+    let startTime = Infinity;
+    for (let func of Profile.data["functions"]) {
+        for (let fcall of func["calls"]) {
+            for (let key of ["start", "finish"]) {
+                if (!fcall.hasOwnProperty(key))
+                    continue;
+                let data = fcall[key];
+                if (!data.hasOwnProperty("time") || !data.hasOwnProperty(metric))
+                    continue;
+                points.push({"time": data["time"], "value": data[metric]});
+                if (data["time"] < startTime)
+                    startTime = data["time"];
+            }
+        }
+    }
+    console.log(startTime);
+    for (var i = 0; i < points.length; i++) {
+        points[i]["time"] = points[i]["time"] - startTime;
+    }
+
+    // render the vega spec
+    let spec = {
+        "data": {
+            "values": points
+        },
+        "mark": "line",
+        "width": 400,
+        "height": 400,
+        "encoding": {
+            "x": {
+                "field": "time",
+                "type": "quantitative",
+                "axis": {
+                    "title": "time"
+                }
+            },
+            "y": {
+                "field": "value",
+                "type": "quantitative",
+                "axis": {
+                    "title": metric
+                }
+            }
+        }
+    };
+    vg.embed(timeline, {mode: "vega-lite", spec: spec}, function(err, res) {});
+
+    console.log("timeline:", points);
 }
 
 function profileEntryClick(evt) {

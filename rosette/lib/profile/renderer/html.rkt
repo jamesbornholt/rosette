@@ -105,6 +105,8 @@
   (hash 'inputs (convert (profile-data-inputs (profile-node-data node)))
         'outputs (convert (profile-data-outputs (profile-node-data node)))
         'metrics (hash-union (convert (profile-data-metrics (profile-node-data node))) metrics-excl)
+        'start (convert (profile-data-start (profile-node-data node)))
+        'finish (convert (profile-data-finish (profile-node-data node)))
         'function proc
         'location (syntax-srcloc (profile-data-location (profile-node-data node)))))
 

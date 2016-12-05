@@ -23,12 +23,12 @@
 (struct profile-node (parent children data)
   #:transparent #:mutable)
 
-(struct profile-data (location procedure inputs outputs metrics)
+(struct profile-data (location procedure inputs outputs metrics start finish)
   #:transparent #:mutable)
 
 ;; Returns a new top-level profile node
 (define (make-top-level-profile)
-  (profile-node #f '() (profile-data 'top #f (hash) (hash) (hash))))
+  (profile-node #f '() (profile-data 'top #f (hash) (hash) (hash) (hash) (hash))))
 
 ;; A parameter that holds the current profile / call stack.
 (define current-profile (make-parameter (make-top-level-profile)))
@@ -74,7 +74,9 @@
                         'union-count (union-count)
                         'union-sum (union-sum)
                         'term-count (term-count))]
-         [data (profile-data loc proc (compute-features in) (hash) metrics)]
+         [start (hash 'time (current-inexact-milliseconds)
+                      'terms (term-count))]
+         [data (profile-data loc proc (compute-features in) (hash) metrics start (hash))]
          [node (profile-node (current-profile) '() data)])
     (set-profile-node-children! (current-profile) (cons node (profile-node-children (current-profile))))
     (current-profile node)))
@@ -93,5 +95,8 @@
                                            'merge-count (diff metrics merge-count)
                                            'union-count (diff metrics union-count)
                                            'union-sum (diff metrics union-sum)
-                                           'term-count (diff metrics term-count)))
+                                           'term-count (diff metrics term-count)
+                                           'terms (term-count)))
+    (set-profile-data-finish! entry (hash 'time (current-inexact-milliseconds)
+                                          'terms (term-count)))
     (current-profile (profile-node-parent (current-profile)))))
