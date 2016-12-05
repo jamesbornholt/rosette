@@ -14,6 +14,7 @@ let Profile = {
     outputs: [],
     metrics: [],
     data: null,
+    graph: null,
     entries: [],
     selected: {
         input: null,
@@ -69,6 +70,21 @@ function updateSelect(select: HTMLSelectElement, lst: Array<any>, defaultOption:
 }
 
 function init() {
+    // populate the "functions" aggregated list
+    let worklist = [Profile.graph];
+    let functions = {};
+    while (worklist.length > 0) {
+        let node = worklist.pop();
+        let func = node["function"];
+        if (!functions.hasOwnProperty(func))
+            functions[func] = {"name": func, "calls": []};
+        functions[func]["calls"].push(node);
+        if (node.hasOwnProperty("children"))
+            worklist.push(...node["children"]);
+    }
+    Profile.data.functions = Object.keys(functions).map((k) => functions[k]);
+
+    // find inputs, outputs, metrics
     Profile.inputs = findUnique("inputs");
     Profile.outputs = findUnique("outputs");
     Profile.metrics = findUnique("metrics");

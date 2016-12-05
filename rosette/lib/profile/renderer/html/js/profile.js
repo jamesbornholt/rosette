@@ -6,6 +6,7 @@ var Profile = {
     outputs: [],
     metrics: [],
     data: null,
+    graph: null,
     entries: [],
     selected: {
         input: null,
@@ -63,6 +64,20 @@ function updateSelect(select, lst, defaultOption) {
     }
 }
 function init() {
+    // populate the "functions" aggregated list
+    var worklist = [Profile.graph];
+    var functions = {};
+    while (worklist.length > 0) {
+        var node = worklist.pop();
+        var func = node["function"];
+        if (!functions.hasOwnProperty(func))
+            functions[func] = { "name": func, "calls": [] };
+        functions[func]["calls"].push(node);
+        if (node.hasOwnProperty("children"))
+            worklist.push.apply(worklist, node["children"]);
+    }
+    Profile.data.functions = Object.keys(functions).map(function (k) { return functions[k]; });
+    // find inputs, outputs, metrics
     Profile.inputs = findUnique("inputs");
     Profile.outputs = findUnique("outputs");
     Profile.metrics = findUnique("metrics");

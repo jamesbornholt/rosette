@@ -49,9 +49,6 @@
     (unless (profile-node? profile)
       (raise-argument-error 'html-renderer "profile-node?" profile))
 
-    ; generate profile data
-    (define entries (aggregate profile))
-
     ; set up output directory
     (define output-dir (build-path dir (make-folder-name source)))
     (make-directory* output-dir)
@@ -63,7 +60,7 @@
 
     ; write the JSON data into data.json
     (let ([out (open-output-file (build-path output-dir "data.json"))])
-      (render-json entries source name out)
+      (render-json profile source name out)
       (close-output-port out))
 
     ; open the profile in a web browser
@@ -78,18 +75,6 @@
       (unless (false? opener)
         (printf "Opening profile...\n")
         (system (format "~a ~a" opener (path->string (build-path output-dir "index.html"))))))))
-
-
-; Aggregate profile records by procedure
-(define (aggregate profile [key profile-node-key/srcloc])
-  (define functions (make-hash))
-  (let rec ([node profile])
-    (unless (false? (profile-data-procedure (profile-node-data node)))
-      (let ([proc (key node)])
-        (hash-update! functions proc (lambda (old) (cons node old)) '())))
-    (for ([c (profile-node-children node)])
-      (rec c)))
-  functions)
 
 
 ; Render a single profile-node? to a jsexpr? dictionary
@@ -111,19 +96,24 @@
         'location (syntax-srcloc (profile-data-location (profile-node-data node)))))
 
 
-; Render entries to JSON
-; @parameter entries (hashof symbol? profile-node?)
+; Render entries to JavaScript
+; @parameter entries profile-node?
 ; @parameter source (or/c syntax? #f)
 ; @parameter out output-port?
-(define (render-json entries source name out)
-  (define dict
+(define (render-json profile source name out [key profile-node-key/srcloc])
+  (define graph
+    (let rec ([node profile])
+      (let ([proc (key node)])
+        (define entry (render-entry proc node))
+        (hash-set entry 'children (reverse (for/list ([c (profile-node-children node)]) (rec c)))))))
+  (define top-dict
     (hash 'name name
           'time (parameterize ([date-display-format 'rfc2822])
                   (date->string (current-date) #t))
           'source (syntax-srcloc source)
-          'form (if (syntax? source) (~v (syntax->datum source)) "")
-          'functions (for/list ([(proc nodes) entries])
-                       (hash 'name proc
-                             'calls (for/list ([n nodes]) (render-entry proc n))))))
+          'form (if (syntax? source) (~v (syntax->datum source)) "")))
   (fprintf out "Profile.data = ")
-  (write-json dict out))
+  (write-json top-dict out)
+  (fprintf out ";\nProfile.graph = ")
+  (write-json graph out)
+  (fprintf out ";\n"))
