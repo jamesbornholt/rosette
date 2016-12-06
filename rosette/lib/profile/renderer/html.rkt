@@ -55,7 +55,7 @@
 
     ; link the template files into the output directory
     (let ([src (path->complete-path template-dir)])
-      (for ([n (list "index.html" "css" "js")])
+      (for ([n (list "profile.html" "timeline.html" "css" "js")])
         (make-file-or-directory-link (build-path src n) (build-path output-dir n))))
 
     ; write the JSON data into data.json
@@ -74,7 +74,8 @@
           [_ #f]))
       (unless (false? opener)
         (printf "Opening profile...\n")
-        (system (format "~a ~a" opener (path->string (build-path output-dir "index.html"))))))))
+        (system (format "~a ~a" opener (path->string (build-path output-dir "profile.html"))))
+        (system (format "~a ~a" opener (path->string (build-path output-dir "timeline.html"))))))))
 
 
 ; Render a single profile-node? to a jsexpr? dictionary
@@ -112,8 +113,8 @@
                   (date->string (current-date) #t))
           'source (syntax-srcloc source)
           'form (if (syntax? source) (~v (syntax->datum source)) "")))
-  (fprintf out "Profile.data = ")
+  (fprintf out "Data.metadata = ")
   (write-json top-dict out)
-  (fprintf out ";\nProfile.graph = ")
+  (fprintf out ";\nData.graph = ")
   (write-json graph out)
   (fprintf out ";\n"))

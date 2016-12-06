@@ -1,43 +1,27 @@
-declare var vg;            // vega
-declare var regression;    // regression.js
-declare var Tablesort;     // tablesort.js
+/// <reference path="data.ts" />
 
 // convince TS that document.querySelectorAll can be an array
 interface NodeList extends Array<Node> {}
+
+namespace profile {
+
+declare var vg;            // vega
+declare var regression;    // regression.js
+declare var Tablesort;     // tablesort.js
 
 let default_input = "heap-size";
 let default_output = "term-count";
 
 // global state
 let Profile = {
-    inputs: [],
-    outputs: [],
-    metrics: [],
-    data: null,
-    graph: null,
     entries: [],
     selected: {
         input: null,
         output: null,
         entry: null,
     },
-    sorter: null,
+    sorter: null
 };
-
-// collate all unique entries in the profile data
-function findUnique(key: string): Array<any> {
-    var vals = [];
-    for (let func of Profile.data["functions"]) {
-        for (let fcall of func["calls"]) {
-            for (let val in fcall[key]) {
-                if (vals.indexOf(val) == -1) {
-                    vals.push(val);
-                }
-            }
-        }
-    }
-    return vals;
-}
 
 // update a select element to contain the given options, preserving the
 // currently selected option if possible
@@ -69,39 +53,23 @@ function updateSelect(select: HTMLSelectElement, lst: Array<any>, defaultOption:
     }
 }
 
-function init() {
-    // populate the "functions" aggregated list
-    let worklist = [Profile.graph];
-    let functions = {};
-    while (worklist.length > 0) {
-        let node = worklist.pop();
-        let func = node["function"];
-        if (!functions.hasOwnProperty(func))
-            functions[func] = {"name": func, "calls": []};
-        functions[func]["calls"].push(node);
-        if (node.hasOwnProperty("children"))
-            worklist.push(...node["children"]);
-    }
-    Profile.data.functions = Object.keys(functions).map((k) => functions[k]);
-
-    // find inputs, outputs, metrics
-    Profile.inputs = findUnique("inputs");
-    Profile.outputs = findUnique("outputs");
-    Profile.metrics = findUnique("metrics");
+export function init() {
+    // Initialize the profile data
+    initData();
 
     // update the profile source info
-    document.getElementById("name").innerHTML = Profile.data.name;
-    document.getElementById("source").innerHTML = Profile.data.source;
-    document.getElementById("form").innerHTML = Profile.data.form;
-    document.getElementById("time").innerHTML = Profile.data.time;
-    document.title = "Profile: " + Profile.data.name;
+    document.getElementById("name").innerHTML = Data.metadata.name;
+    document.getElementById("source").innerHTML = Data.metadata.source;
+    document.getElementById("form").innerHTML = Data.metadata.form;
+    document.getElementById("time").innerHTML = Data.metadata.time;
+    document.title = "Profile: " + Data.metadata.name;
 
     // populate available inputs
     let input_select = document.getElementById("input");
-    updateSelect(input_select as HTMLSelectElement, Profile.inputs, default_input);
+    updateSelect(input_select as HTMLSelectElement, Data.inputs, default_input);
     // populate available outputs
     let output_select = document.getElementById("output");
-    updateSelect(output_select as HTMLSelectElement, Profile.outputs.concat(Profile.metrics), default_output);
+    updateSelect(output_select as HTMLSelectElement, Data.outputs.concat(Data.metrics), default_output);
     // hook the input/output dropdowns to re-render the table
     input_select.addEventListener('change', renderTable);
     output_select.addEventListener('change', renderTable);
@@ -109,9 +77,6 @@ function init() {
     // render the initial table
     Profile.sorter = new Tablesort(document.getElementById("profile"), {descending: true});
     renderTable();
-
-    // render the timeline
-    renderTimeline("terms");
 
     // highlight important entries
     findImportantEntries();
@@ -156,7 +121,7 @@ function findBestFit(pts) {
 
 function generateProfile(input, output) {
     var entries = [];
-    for (let func of Profile.data["functions"]) {
+    for (let func of Data.functions) {
         let pts = selectProfilePoints(func.calls, input, output);
         let reg = findBestFit(pts);
         let sum = pts.map((v) => v[1]).reduce((a,b) => a+b, 0);
@@ -316,7 +281,7 @@ function renderSubTable(input, output, entry) {
 function findImportantEntries() {
     // aggregate all fcalls by callsite
     let callSites = {};
-    for (let func of Profile.data["functions"]) {
+    for (let func of Data.functions) {
         if (!callSites.hasOwnProperty(func.name))
             callSites[func.name] = {};
         for (let fcall of func["calls"]) {
@@ -462,63 +427,11 @@ function renderGraph(input, output, entry) {
     old_graph.parentNode.replaceChild(graph, old_graph);
 }
 
-function renderTimeline(metric: string) {
-    let timeline = document.getElementById("timeline");
-
-    let points = [];
-    let startTime = Infinity;
-    for (let func of Profile.data["functions"]) {
-        for (let fcall of func["calls"]) {
-            for (let key of ["start", "finish"]) {
-                if (!fcall.hasOwnProperty(key))
-                    continue;
-                let data = fcall[key];
-                if (!data.hasOwnProperty("time") || !data.hasOwnProperty(metric))
-                    continue;
-                points.push({"time": data["time"], "value": data[metric]});
-                if (data["time"] < startTime)
-                    startTime = data["time"];
-            }
-        }
-    }
-    console.log(startTime);
-    for (var i = 0; i < points.length; i++) {
-        points[i]["time"] = points[i]["time"] - startTime;
-    }
-
-    // render the vega spec
-    let spec = {
-        "data": {
-            "values": points
-        },
-        "mark": "line",
-        "width": 400,
-        "height": 400,
-        "encoding": {
-            "x": {
-                "field": "time",
-                "type": "quantitative",
-                "axis": {
-                    "title": "time"
-                }
-            },
-            "y": {
-                "field": "value",
-                "type": "quantitative",
-                "axis": {
-                    "title": metric
-                }
-            }
-        }
-    };
-    vg.embed(timeline, {mode: "vega-lite", spec: spec}, function(err, res) {});
-
-    console.log("timeline:", points);
-}
-
 function profileEntryClick(evt) {
     let row = this;
     selectEntry(row.entry);
 }
 
-document.addEventListener("DOMContentLoaded", init);
+}
+
+document.addEventListener("DOMContentLoaded", profile.init);
