@@ -1,8 +1,8 @@
 /// <reference path="data.ts" />
 var profile;
 (function (profile) {
-    var default_input = "heap-size";
-    var default_output = "term-count";
+    var defaultInput = "heap-size";
+    var defaultOutput = "term-count";
     // global state
     var Profile = {
         entries: [],
@@ -56,10 +56,10 @@ var profile;
         document.title = "Profile: " + Data.metadata.name;
         // populate available inputs
         var input_select = document.getElementById("input");
-        updateSelect(input_select, Data.inputs, default_input);
+        updateSelect(input_select, Data.inputs, defaultInput);
         // populate available outputs
         var output_select = document.getElementById("output");
-        updateSelect(output_select, Data.outputs.concat(Data.metrics), default_output);
+        updateSelect(output_select, Data.outputs.concat(Data.metrics), defaultOutput);
         // hook the input/output dropdowns to re-render the table
         input_select.addEventListener('change', renderTable);
         output_select.addEventListener('change', renderTable);

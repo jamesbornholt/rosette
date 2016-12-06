@@ -28,7 +28,9 @@
 
 ;; Returns a new top-level profile node
 (define (make-top-level-profile)
-  (profile-node #f '() (profile-data 'top #f (hash) (hash) (hash) (hash) (hash))))
+  (let ([start (hash 'time (current-inexact-milliseconds)
+                     'terms (term-count))])
+    (profile-node #f '() (profile-data 'top #f (hash) (hash) (hash) start (hash)))))
 
 ;; A parameter that holds the current profile / call stack.
 (define current-profile (make-parameter (make-top-level-profile)))
@@ -65,18 +67,22 @@
    (lambda (loc proc . rest) 
      (runner loc proc rest (thunk (apply proc rest)))))))
 
+;; Compute profile data on procedure entry
+(define (entry-data loc proc in)
+  (let ([metrics (hash 'merge-count (merge-count)
+                       'union-count (union-count)
+                       'union-sum (union-sum)
+                       'term-count (term-count))]
+        [start (hash 'time (current-inexact-milliseconds)
+                     'terms (term-count))])
+    (profile-data loc proc (compute-features in) (hash) metrics start (hash))))
+
 ;; Records a procedure entry by pushing a fresh profile-node onto the
 ;; current-profile-stack.
 ;; This procedure should be called after all arguments to the profiled procedure have been evaluated, but
 ;; before the procedure is invoked.
 (define (record-enter! loc proc in)
-  (let* ([metrics (hash 'merge-count (merge-count)
-                        'union-count (union-count)
-                        'union-sum (union-sum)
-                        'term-count (term-count))]
-         [start (hash 'time (current-inexact-milliseconds)
-                      'terms (term-count))]
-         [data (profile-data loc proc (compute-features in) (hash) metrics start (hash))]
+  (let* ([data (entry-data loc proc in)]
          [node (profile-node (current-profile) '() data)])
     (set-profile-node-children! (current-profile) (cons node (profile-node-children (current-profile))))
     (current-profile node)))
@@ -100,3 +106,14 @@
     (set-profile-data-finish! entry (hash 'time (current-inexact-milliseconds)
                                           'terms (term-count)))
     (current-profile (profile-node-parent (current-profile)))))
+
+;; Run a top-level profiled thunk and return a profile node for its extent
+(define (run-profile-thunk proc)
+  (define state (make-top-level-profile))
+  (set-profile-node-data! state (entry-data 'top 'top '()))
+  (define ret (parameterize ([current-profile state])
+                (define-values (out cpu real gc) (time-apply proc '()))
+                (record-exit! out cpu real gc)
+                out))
+  (values state ret))
+

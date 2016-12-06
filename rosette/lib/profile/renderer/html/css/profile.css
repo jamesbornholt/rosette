@@ -109,3 +109,14 @@ table td, table th {
 td.numeric {
     text-align: right;
 }
+
+#timeline, #stack {
+    float: left;
+}
+
+.counter::before {
+    content: " [×";
+}
+.counter::after {
+    content: "]";
+}

@@ -9,8 +9,8 @@ namespace profile {
     declare var regression;    // regression.js
     declare var Tablesort;     // tablesort.js
 
-    let default_input = "heap-size";
-    let default_output = "term-count";
+    let defaultInput = "heap-size";
+    let defaultOutput = "term-count";
 
     // global state
     let Profile = {
@@ -66,10 +66,10 @@ namespace profile {
 
         // populate available inputs
         let input_select = document.getElementById("input");
-        updateSelect(input_select as HTMLSelectElement, Data.inputs, default_input);
+        updateSelect(input_select as HTMLSelectElement, Data.inputs, defaultInput);
         // populate available outputs
         let output_select = document.getElementById("output");
-        updateSelect(output_select as HTMLSelectElement, Data.outputs.concat(Data.metrics), default_output);
+        updateSelect(output_select as HTMLSelectElement, Data.outputs.concat(Data.metrics), defaultOutput);
         // hook the input/output dropdowns to re-render the table
         input_select.addEventListener('change', renderTable);
         output_select.addEventListener('change', renderTable);
