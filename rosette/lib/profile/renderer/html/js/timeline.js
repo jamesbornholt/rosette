@@ -4,7 +4,9 @@ var timeline;
     timeline_1.Timeline = {
         breaks: [],
         stacks: [],
-        points: []
+        points: [],
+        vega: null,
+        resizing: false
     };
     function init() {
         // Initialize the profile data
@@ -19,6 +21,8 @@ var timeline;
         document.title = "Timeline: " + Data.metadata.name;
         // Render the timeline
         renderTimeline();
+        // Bind the resize handler
+        // window.addEventListener("resize", windowResizeCallback);
     }
     timeline_1.init = init;
     function initTimelineData() {
@@ -200,10 +204,15 @@ var timeline;
                 }]
         };
         vg.embed(timeline, { spec: spec }, function (err, res) {
-            if (err)
+            if (err) {
                 console.error(err);
-            else
+            }
+            else {
+                timeline_1.Timeline.vega = res.view;
                 res.view.onSignal('xtime', timelineScrubCallback);
+                // resize the graph
+                windowResizeCallback();
+            }
         });
         // initialize the callstack
         timelineScrubCallback("xtime", 0);
@@ -230,7 +239,8 @@ var timeline;
         for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
             var k = keys_1[_i];
             var node = document.createElement("li");
-            node.innerHTML = "<b>" + k + "</b>: " + point[k];
+            var val = (point[k] % 1 == 0) ? point[k] : point[k].toFixed(2);
+            node.innerHTML = "<b>" + k + "</b>: " + val;
             values.insertAdjacentElement("beforeend", node);
         }
         // render new stack
@@ -260,6 +270,18 @@ var timeline;
                 lastNode = node;
                 lastEntry = entry;
             }
+        }
+    }
+    function windowResizeCallback() {
+        if (timeline_1.Timeline.vega && !timeline_1.Timeline.resizing) {
+            timeline_1.Timeline.resizing = true;
+            window.setTimeout(function () {
+                var panel = document.getElementById("timeline-panel");
+                var width = panel.clientWidth;
+                console.log("resizing", width);
+                timeline_1.Timeline.vega.width(width - 150).update();
+                timeline_1.Timeline.resizing = false;
+            }, 50);
         }
     }
 })(timeline || (timeline = {})); // /namespace

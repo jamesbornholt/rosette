@@ -72,40 +72,27 @@ h4 {
     margin: 1em auto;
 }
 
-table td, table th {
-    padding: 0 1em;
-}
-
-#profile tr.selected {
-    background-color: #B3E6FF;
-}
-#profile tr:not(.header):hover {
-    background-color: #CCEEFF;
-    cursor: hand;
-}
-
-#graph { /* hack to stop flashing */
-    min-height: 480px;
-    min-width: 550px;
-}
-
 .vega-actions a {
     margin-right: 1em;
     font-size: 75%;
 }
 
-#content-left, #content-right {
-    float: left;
-}
-#content-left {
-    margin-right: 2em;
+#panel {
+    display: flex
 }
 
-#subprofile {
-    font-size: 80%;
-    margin-top: 0;
+#timeline-panel {
+    flex: 1 0 0;
 }
 
-td.numeric {
-    text-align: right;
+#stack {
+    width: 20em;
+    flex: 0 0 auto;
+}
+
+.counter::before {
+    content: " [×";
+}
+.counter::after {
+    content: "]";
 }

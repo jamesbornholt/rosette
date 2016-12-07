@@ -3,8 +3,7 @@
 <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
 <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
 <link rel="stylesheet" href="css/typebase.css">
-<link rel="stylesheet" href="css/tablesort.css">
-<link rel="stylesheet" href="css/profile.css">
+<link rel="stylesheet" href="css/timeline.css">
 <script src="js/regression.js"></script>
 <script src="js/tablesort.js"></script>
 <script src="js/data.js"></script>
@@ -15,12 +14,14 @@
 <script src="http://vega.github.io/vega-lite/vega-lite.js" charset="utf-8"></script>
 <script src="http://vega.github.io/vega-editor/vendor/vega-embed.js" charset="utf-8"></script>
 <div id="content">
-  <div id="content-left">
-    <h1 id="name">Timeline</h1>
-    <p>Source: <span id="source">unknown</span></p>
-    <p>Form: <code id="form">unknown</code></p>
-    <p>Generated: <span id="time">unknown</span></p>
-    <div id="timeline"></div>
+  <h1 id="name">Timeline</h1>
+  <p>Source: <span id="source">unknown</span></p>
+  <p>Form: <code id="form">unknown</code></p>
+  <p>Generated: <span id="time">unknown</span></p>
+  <div id="panel">
+    <div id="timeline-panel">
+      <div id="timeline"></div>
+    </div>
     <div id="stack"><ul id="stack-values"></ul><p>Stack:</p><ul id="stack-functions"></ul></div>
   </div>
 </div>

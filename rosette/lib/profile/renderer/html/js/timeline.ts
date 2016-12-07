@@ -12,7 +12,9 @@ namespace timeline {
     export let Timeline = {
         breaks: [],
         stacks: [],
-        points: []
+        points: [],
+        vega: null,
+        resizing: false
     }
 
     export function init() {
@@ -30,6 +32,9 @@ namespace timeline {
 
         // Render the timeline
         renderTimeline();
+
+        // Bind the resize handler
+        // window.addEventListener("resize", windowResizeCallback);
     }
 
     function initTimelineData() {
@@ -212,10 +217,14 @@ namespace timeline {
         }
 
         vg.embed(timeline, { spec: spec }, function (err, res) {
-            if (err)
+            if (err) {
                 console.error(err);
-            else
+            } else {
+                Timeline.vega = res.view;
                 res.view.onSignal('xtime', timelineScrubCallback);
+                // resize the graph
+                windowResizeCallback();
+            }
         });
 
         // initialize the callstack
@@ -245,7 +254,8 @@ namespace timeline {
         keys.sort();
         for (let k of keys) {
             let node = document.createElement("li");
-            node.innerHTML = "<b>" + k + "</b>: " + point[k];
+            let val = (point[k] % 1 == 0) ? point[k] : point[k].toFixed(2);
+            node.innerHTML = "<b>" + k + "</b>: " + val;
             values.insertAdjacentElement("beforeend", node);
         }
 
@@ -274,6 +284,19 @@ namespace timeline {
                 lastNode = node;
                 lastEntry = entry;
             }
+        }
+    }
+
+    function windowResizeCallback() {
+        if (Timeline.vega && !Timeline.resizing) {
+            Timeline.resizing = true;
+            window.setTimeout(() => {
+                let panel = document.getElementById("timeline-panel");
+                let width = panel.clientWidth;
+                console.log("resizing", width);
+                Timeline.vega.width(width-150).update();
+                Timeline.resizing = false;
+            }, 50);
         }
     }
 
