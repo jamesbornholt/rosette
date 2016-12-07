@@ -26,10 +26,24 @@
 (struct profile-data (location procedure inputs outputs metrics start finish)
   #:transparent #:mutable)
 
+;; Compute profile data on procedure entry
+(define (entry-data loc proc in)
+  (let ([metrics (hash 'merge-count (merge-count)
+                       'union-count (union-count)
+                       'union-sum (union-sum)
+                       'term-count (term-count))]
+        [start (cumulative-data)])
+    (profile-data loc proc (compute-features in) (hash) metrics start (hash))))
+
+;; Compute cumulative point data
+(define (cumulative-data)
+  (hash 'time (current-inexact-milliseconds)
+        'term-count (term-count)
+        'merge-count (merge-count)))
+
 ;; Returns a new top-level profile node
 (define (make-top-level-profile)
-  (let ([start (hash 'time (current-inexact-milliseconds)
-                     'terms (term-count))])
+  (let ([start (cumulative-data)])
     (profile-node #f '() (profile-data 'top #f (hash) (hash) (hash) start (hash)))))
 
 ;; A parameter that holds the current profile / call stack.
@@ -67,16 +81,6 @@
    (lambda (loc proc . rest) 
      (runner loc proc rest (thunk (apply proc rest)))))))
 
-;; Compute profile data on procedure entry
-(define (entry-data loc proc in)
-  (let ([metrics (hash 'merge-count (merge-count)
-                       'union-count (union-count)
-                       'union-sum (union-sum)
-                       'term-count (term-count))]
-        [start (hash 'time (current-inexact-milliseconds)
-                     'terms (term-count))])
-    (profile-data loc proc (compute-features in) (hash) metrics start (hash))))
-
 ;; Records a procedure entry by pushing a fresh profile-node onto the
 ;; current-profile-stack.
 ;; This procedure should be called after all arguments to the profiled procedure have been evaluated, but
@@ -101,10 +105,8 @@
                                            'merge-count (diff metrics merge-count)
                                            'union-count (diff metrics union-count)
                                            'union-sum (diff metrics union-sum)
-                                           'term-count (diff metrics term-count)
-                                           'terms (term-count)))
-    (set-profile-data-finish! entry (hash 'time (current-inexact-milliseconds)
-                                          'terms (term-count)))
+                                           'term-count (diff metrics term-count)))
+    (set-profile-data-finish! entry (cumulative-data))
     (current-profile (profile-node-parent (current-profile)))))
 
 ;; Run a top-level profiled thunk and return a profile node for its extent

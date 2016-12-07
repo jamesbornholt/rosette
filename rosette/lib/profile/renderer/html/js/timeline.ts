@@ -19,7 +19,7 @@ namespace timeline {
         // Initialize the profile data
         initData();
         // Cache the stacks at each timestep
-        initTimelineData("terms");
+        initTimelineData();
 
         // update the profile source info
         document.getElementById("name").innerHTML = "Timeline: " + Data.metadata.name;
@@ -29,10 +29,10 @@ namespace timeline {
         document.title = "Timeline: " + Data.metadata.name;
 
         // Render the timeline
-        renderTimeline("terms");
+        renderTimeline();
     }
 
-    function initTimelineData(metric: string) {
+    function initTimelineData() {
         // walk the profile graph
         let root = Data.graph;
         // let root =
@@ -68,65 +68,52 @@ namespace timeline {
         //         }
         //     ]
         // };
-        let dt = root["start"]["time"];
+        let first = root["start"];
+        // compute difference between a point and the first point
+        let computePoint = (p: Object) => {
+            let ret = {};
+            for (let k of Object.keys(p)) {
+                if (first.hasOwnProperty(k))
+                    ret[k] = p[k] - first[k];
+            }
+            return ret;
+        }
         let stack = [];
         let rec = (node) => {
-            let start = node["start"];
-            let t1 = start["time"] - dt;
+            let start = computePoint(node["start"]);
             // push start data point
-            Timeline.points.push({ "time": t1, "value": start[metric] });
-            if (node["function"] != "#f")
-                stack.push(getFunctionName(node["function"]));
+            stack.push(node);
             let children = node["children"].slice() as Array<any>;
             children.sort((a, b) => a["start"]["time"] - b["start"]["time"]);
             for (let c of children) {
                 // before entry, current stack
-                let t_entry = c["start"]["time"] - dt;
-                Timeline.breaks.push(t_entry);
+                let p = computePoint(c["start"]);
+                Timeline.breaks.push(p["time"]);
                 Timeline.stacks.push(stack.slice());
+                Timeline.points.push(p);
                 // recurse on c, will push a pre-exit stack
                 rec(c);
             }
-            let finish = node["finish"];
-            let t2 = finish["time"] - dt;
+            let finish = computePoint(node["finish"]);
             // push pre-exit stack
-            Timeline.breaks.push(t2);
+            Timeline.breaks.push(finish["time"]);
             Timeline.stacks.push(stack.slice());
+            Timeline.points.push(finish);
             // remove self from stack
             stack.pop();
         };
         rec(root);
     }
 
-    function renderTimeline(metric: string) {
+    function renderTimeline() {
         let timeline = document.getElementById("timeline");
-
-        let points = [];
-        let startTime = Infinity;
-        for (let func of Data.functions) {
-            for (let fcall of func["calls"]) {
-                for (let key of ["start", "finish"]) {
-                    if (!fcall.hasOwnProperty(key))
-                        continue;
-                    let data = fcall[key];
-                    if (!data.hasOwnProperty("time") || !data.hasOwnProperty(metric))
-                        continue;
-                    points.push({ "time": data["time"], "value": data[metric] });
-                    if (data["time"] < startTime)
-                        startTime = data["time"];
-                }
-            }
-        }
-        for (var i = 0; i < points.length; i++) {
-            points[i]["time"] = points[i]["time"] - startTime;
-        }
 
         // render the vega spec
         let spec = {
             "width": 800,
             "height": 400,
             "padding": "auto",
-            "data": [{ "name": "points", "values": points }],
+            "data": [{ "name": "points", "values": Timeline.points }],
             "scales": [{
                 "name": "x",
                 "type": "linear",
@@ -135,9 +122,17 @@ namespace timeline {
                 "round": true
             },
             {
-                "name": "y",
+                "name": "term-count",
                 "type": "linear",
-                "domain": { "data": "points", "field": "value" },
+                "domain": { "data": "points", "field": "term-count" },
+                "range": "height",
+                "round": true,
+                "nice": true
+            },
+            {
+                "name": "merge-count",
+                "type": "linear",
+                "domain": { "data": "points", "field": "merge-count" },
                 "range": "height",
                 "round": true,
                 "nice": true
@@ -162,21 +157,43 @@ namespace timeline {
             },
             {
                 "type": "y",
-                "scale": "y",
+                "scale": "term-count",
                 "format": "s",
                 "grid": true,
                 "layer": "back",
-                "title": "terms"
+                "title": "term-count"
+            },
+            {
+                "type": "y",
+                "scale": "merge-count",
+                "format": "s",
+                "grid": false,
+                "layer": "back",
+                "title": "merge-count",
+                "orient": "right"
             }],
             "marks": [{
-                "name": "root",
+                "name": "term-count",
                 "type": "line",
                 "from": { "data": "points", "transform": [{ "type": "sort", "by": "-time" }] },
                 "properties": {
                     "update": {
                         "x": { "scale": "x", "field": "time" },
-                        "y": { "scale": "y", "field": "value" },
+                        "y": { "scale": "term-count", "field": "term-count" },
                         "stroke": { "value": "#4682b4" },
+                        "strokeWidth": { "value": 2 }
+                    }
+                }
+            },
+            {
+                "name": "merge-count",
+                "type": "line",
+                "from": { "data": "points", "transform": [{ "type": "sort", "by": "-time" }] },
+                "properties": {
+                    "update": {
+                        "x": { "scale": "x", "field": "time" },
+                        "y": { "scale": "merge-count", "field": "merge-count" },
+                        "stroke": { "value": "#01BA38" },
                         "strokeWidth": { "value": 2 }
                     }
                 }
@@ -195,7 +212,10 @@ namespace timeline {
         }
 
         vg.embed(timeline, { spec: spec }, function (err, res) {
-            res.view.onSignal('xtime', timelineScrubCallback);
+            if (err)
+                console.error(err);
+            else
+                res.view.onSignal('xtime', timelineScrubCallback);
         });
 
         // initialize the callstack
@@ -203,13 +223,14 @@ namespace timeline {
     }
 
     function timelineScrubCallback(signal: string, value: number) {
-        // update timestamp
-        let ts = document.querySelector("#stack-time");
-        ts.innerHTML = (value / 1000).toFixed(2);
-        let ul = document.querySelector("#stack ul");
+        let values = document.getElementById("stack-values");
+        let functions = document.getElementById("stack-functions");
         // remove existing entries
-        while (ul.firstChild)
-            ul.removeChild(ul.firstChild);
+        while (values.firstChild)
+            values.removeChild(values.firstChild);
+        while (functions.firstChild)
+            functions.removeChild(functions.firstChild);
+        
         // find the appropriate stack
         var i = 0;
         for (i = 0; i < Timeline.breaks.length; i++) {
@@ -217,11 +238,22 @@ namespace timeline {
                 break;
         }
         let stack = Timeline.stacks[i];
+        let point = Timeline.points[i];
+
+        // render values
+        let keys = Object.keys(point);
+        keys.sort();
+        for (let k of keys) {
+            let node = document.createElement("li");
+            node.innerHTML = "<b>" + k + "</b>: " + point[k];
+            values.insertAdjacentElement("beforeend", node);
+        }
+
         // render new stack
         let lastEntry = null;
         let lastNode = null as HTMLLIElement;
         for (let entry of stack) {
-            if (entry == lastEntry) {
+            if (lastEntry && entry["function"] == lastEntry["function"]) {
                 var counter = lastNode.querySelector(".counter");
                 if (!counter) {
                     counter = document.createElement("span");
@@ -231,12 +263,14 @@ namespace timeline {
                 }
                 counter.innerHTML = (parseInt(counter.innerHTML) + 1).toString();
             } else {
+                if (entry["function"] == "#f")
+                    continue;
                 let node = document.createElement("li");
                 let code = document.createElement("span");
-                code.innerHTML = entry;
+                code.innerHTML = getFunctionName(entry["function"]);
                 code.classList.add("code");
                 node.insertAdjacentElement("beforeend", code);
-                ul.insertAdjacentElement("beforeend", node);
+                functions.insertAdjacentElement("beforeend", node);
                 lastNode = node;
                 lastEntry = entry;
             }
