@@ -13,7 +13,7 @@ namespace profile {
     let defaultOutput = "term-count";
 
     // global state
-    let Profile = {
+    export let Profile = {
         entries: [],
         selected: {
             input: null,

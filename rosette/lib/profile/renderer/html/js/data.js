@@ -42,4 +42,7 @@ function initData() {
     Data.outputs = findUnique("outputs");
     Data.metrics = findUnique("metrics");
 }
+function getFunctionName(func) {
+    return func.split(" ")[0];
+}
 //# sourceMappingURL=data.js.map

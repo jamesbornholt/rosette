@@ -43,3 +43,7 @@ function initData() {
     Data.outputs = findUnique("outputs");
     Data.metrics = findUnique("metrics");
 }
+
+function getFunctionName(func: string) {
+    return func.split(" ")[0];
+}

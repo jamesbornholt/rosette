@@ -64,7 +64,8 @@ var timeline;
             var t1 = start["time"] - dt;
             // push start data point
             timeline_1.Timeline.points.push({ "time": t1, "value": start[metric] });
-            stack.push(node["function"]);
+            if (node["function"] != "#f")
+                stack.push(getFunctionName(node["function"]));
             var children = node["children"].slice();
             children.sort(function (a, b) { return a["start"]["time"] - b["start"]["time"]; });
             for (var _i = 0, children_1 = children; _i < children_1.length; _i++) {
@@ -112,7 +113,7 @@ var timeline;
         }
         // render the vega spec
         var spec = {
-            "width": 400,
+            "width": 800,
             "height": 400,
             "padding": "auto",
             "data": [{ "name": "points", "values": points }],
@@ -185,8 +186,13 @@ var timeline;
         vg.embed(timeline, { spec: spec }, function (err, res) {
             res.view.onSignal('xtime', timelineScrubCallback);
         });
+        // initialize the callstack
+        timelineScrubCallback("xtime", 0);
     }
     function timelineScrubCallback(signal, value) {
+        // update timestamp
+        var ts = document.querySelector("#stack-time");
+        ts.innerHTML = (value / 1000).toFixed(2);
         var ul = document.querySelector("#stack ul");
         // remove existing entries
         while (ul.firstChild)

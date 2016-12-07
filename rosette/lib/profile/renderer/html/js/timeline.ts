@@ -74,10 +74,11 @@ namespace timeline {
             let start = node["start"];
             let t1 = start["time"] - dt;
             // push start data point
-            Timeline.points.push({"time": t1, "value": start[metric]});
-            stack.push(node["function"]);
+            Timeline.points.push({ "time": t1, "value": start[metric] });
+            if (node["function"] != "#f")
+                stack.push(getFunctionName(node["function"]));
             let children = node["children"].slice() as Array<any>;
-            children.sort((a,b) => a["start"]["time"] - b["start"]["time"]);
+            children.sort((a, b) => a["start"]["time"] - b["start"]["time"]);
             for (let c of children) {
                 // before entry, current stack
                 let t_entry = c["start"]["time"] - dt;
@@ -122,21 +123,21 @@ namespace timeline {
 
         // render the vega spec
         let spec = {
-            "width": 400,
+            "width": 800,
             "height": 400,
             "padding": "auto",
-            "data": [{"name": "points", "values": points}],
+            "data": [{ "name": "points", "values": points }],
             "scales": [{
                 "name": "x",
                 "type": "linear",
-                "domain": {"data": "points", "field": "time"},
+                "domain": { "data": "points", "field": "time" },
                 "range": "width",
                 "round": true
             },
             {
                 "name": "y",
                 "type": "linear",
-                "domain": {"data": "points", "field": "value"},
+                "domain": { "data": "points", "field": "value" },
                 "range": "height",
                 "round": true,
                 "nice": true
@@ -147,7 +148,7 @@ namespace timeline {
                 "streams": [{
                     "type": "mousemove",
                     "expr": "clamp(eventX(), 0, eventGroup('root').width)",
-                    "scale": {"name": "x", "invert": true}
+                    "scale": { "name": "x", "invert": true }
                 }]
             }],
             "axes": [{
@@ -170,13 +171,13 @@ namespace timeline {
             "marks": [{
                 "name": "root",
                 "type": "line",
-                "from": {"data": "points", "transform": [{"type": "sort", "by": "-time"}]},
+                "from": { "data": "points", "transform": [{ "type": "sort", "by": "-time" }] },
                 "properties": {
                     "update": {
-                        "x": {"scale": "x", "field": "time"},
-                        "y": {"scale": "y", "field": "value"},
-                        "stroke": {"value": "#4682b4"},
-                        "strokeWidth": {"value": 2}
+                        "x": { "scale": "x", "field": "time" },
+                        "y": { "scale": "y", "field": "value" },
+                        "stroke": { "value": "#4682b4" },
+                        "strokeWidth": { "value": 2 }
                     }
                 }
             },
@@ -184,10 +185,10 @@ namespace timeline {
                 "type": "rule",
                 "properties": {
                     "update": {
-                        "x": {"scale": "x", "signal": "xtime"},
-                        "y": {"value": 0},
-                        "y2": {"field": {"group": "height"}},
-                        "stroke": {"value": "red"}
+                        "x": { "scale": "x", "signal": "xtime" },
+                        "y": { "value": 0 },
+                        "y2": { "field": { "group": "height" } },
+                        "stroke": { "value": "red" }
                     }
                 }
             }]
@@ -196,9 +197,15 @@ namespace timeline {
         vg.embed(timeline, { spec: spec }, function (err, res) {
             res.view.onSignal('xtime', timelineScrubCallback);
         });
+
+        // initialize the callstack
+        timelineScrubCallback("xtime", 0);
     }
 
-    function timelineScrubCallback(signal, value) {
+    function timelineScrubCallback(signal: string, value: number) {
+        // update timestamp
+        let ts = document.querySelector("#stack-time");
+        ts.innerHTML = (value / 1000).toFixed(2);
         let ul = document.querySelector("#stack ul");
         // remove existing entries
         while (ul.firstChild)
