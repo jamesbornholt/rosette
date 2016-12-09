@@ -42,15 +42,6 @@
   (or (and (i-swap? op1) (i-swap-enabled op1))
       (and (i-swap? op2) (i-swap-enabled op2))))
 
-; Tests if two ops are file ops that operate on the same file.
-(define (file-same-ino-deps? op1 op2)
-  (or (equal? (inode-op-ino op1) (inode-op-ino op2))
-      (and (i-dir-rename? op1) (equal? (i-dir-rename-dst op1) (inode-op-ino op2)))
-      (and (i-dir-rename? op2) (equal? (i-dir-rename-dst op2) (inode-op-ino op1)))
-      (and (i-dir-rename? op1) (i-dir-rename? op2) (equal? (i-dir-rename-dst op1) (i-dir-rename-dst op2)))
-      (and (i-dir-add? op1) (equal? (i-dir-add-fd op1) (inode-op-ino op2)))
-      (and (i-dir-add? op2) (equal? (i-dir-add-fd op2) (inode-op-ino op1)))))
-
 ; Tests if two ops are metadata updates that operate on the same file.
 (define (metadata-same-ino-deps? op1 op2)
   (and (or (i-file-setsize? op1) (i-file-extend? op1))
@@ -119,21 +110,6 @@
      (define op-j (list-ref prog idx-j))
      (=> (> idx-i idx-j) (and (reorder? fs op-i op-j) (reorder? fs op-j op-i)))))))
 
-; Produce a list of all valid reorderings of a program according to the given filesystem.
-(define (all-valid-orderings fs prog)
-  (define-symbolic* order integer? [(length prog)])
-  (let loop ([orders '()] [asserts '(#t)])
-    (define S (solve (assert (and (valid-ordering fs prog order)
-                                  (apply && asserts)))))
-    (cond [(sat? S) (define o (evaluate order S))
-                    (define a (not (equal? order o)))
-                    (loop (append orders (list o)) (append asserts (list a)))]
-          [else     orders])))
-
-; Convert an ordering `lst` into a model for the order variables in `order`.
-(define (ordering->model order lst)
-  (sat (for/hash ([o order][l lst])
-         (values o l))))
 
 ; Insert symbolic fsync operations between each syscall in a given program.
 ; If (length prog) = n, then the returned program has length 2n+1,

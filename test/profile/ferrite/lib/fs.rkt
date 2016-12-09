@@ -35,12 +35,5 @@
   ; with each other, or #f otherwise.
   ; reorder? : inode-op? → inode-op? → boolean?
   (reorder? filesystem op1 op2)
-
-  ; Returns #t if this file system is observationally equivalent to the given
-  ; file system, or #f otherwise.
-  ; Two file systems are observationaly equivalent if they contain the same files
-  ; with the same on-disk contents.
-  ; obs-equal? : filesystem? → boolean?
-  (obs-equal? filesystem other)
   
   )

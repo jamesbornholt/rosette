@@ -152,27 +152,5 @@
       (not (metadata-same-ino-deps? call1 call2))
       (not (same-file-block-deps? call1 call2 BLOCK_SIZE))
       (not (file-write-extend-deps? call1 call2 nodelalloc?))))
-
-   ; Returns #t if this file system is observationally equivalent to the given
-   ; file system, or #f otherwise.
-   (define (obs-equal? self other)
-     (match-define (Ext4FS s-BLOCK_SIZE s-nodelalloc? s-dir s-fds s-files) self)
-     (match-define (Ext4FS o-BLOCK_SIZE o-nodelalloc? o-dir o-fds o-files) other)
-     (apply && (for/list ([i (vector-length s-dir)])
-                 (define s-ino (car (vector-ref s-dir i)))
-                 (define s-exists? (cdr (vector-ref s-dir i)))
-                 (define o-ino (car (vector-ref o-dir i)))
-                 (define o-exists? (cdr (vector-ref o-dir i)))
-                 (define s-file (vector-ref s-files s-ino))
-                 (define o-file (vector-ref o-files o-ino))
-                 (and (equal? s-exists? o-exists?)
-                      (=> s-exists? (and (equal? (fsize-size (file-size s-file)) (fsize-size (file-size o-file)))
-                                         ; The same problem as in (ondisk ...).
-                                         (bench
-                                           (equal? (take (file-ondisk s-file (fsize-size (file-size s-file))))
-                                                   (take (file-ondisk o-file (fsize-size (file-size s-file)))))
-                                           (for/all ([size (file-size s-file)])
-                                             (equal? (take (file-ondisk s-file) (fsize-size size))
-                                                     (take (file-ondisk o-file) (fsize-size size)))))))))))
    ])
 

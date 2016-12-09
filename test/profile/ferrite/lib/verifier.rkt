@@ -36,32 +36,3 @@
   (define cex-state (if (sat? allowed-cex) (evaluate newfs allowed-cex) #f))
 
   (values allowed-cex cex-state))
-  
-; Generate a list of all possible crash outcomes of a litmus test.
-; @returns (listof (cons/c solution? filesystem?)), where each element of the
-;          list is a pair of the model that produces the state, and the file system state.
-(define (all-outcomes test)
-  (clear-state!)
-  (match-define (litmus make-fs setup prog allow) test)
-  (define fs (make-fs))
-  (when (> (length setup) 0)
-    (set! setup (crack fs setup))
-    (set! fs (interpret #:program setup
-                        #:filesystem fs
-                        #:crash? #f)))
-
-  (set! prog (crack fs prog))
-  (define-symbolic* order integer? [(length prog)])
-  (define outcome (interpret #:program prog 
-                             #:filesystem fs 
-                             #:order order))
-  
-  (let loop ([states '()] [asserts '(#t)])
-    (define S  (solve (assert (and (valid-ordering fs prog order)
-                                   (apply && asserts)))))
-    (cond [(sat? S) (define new-fs (evaluate outcome S))
-                    (set! states (append states (list (cons S new-fs))))
-                    (set! asserts (append asserts (list (not (obs-equal? new-fs outcome)))))
-                    (loop states asserts)]
-          [else     states]))
-  )
