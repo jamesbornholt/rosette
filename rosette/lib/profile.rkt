@@ -1,6 +1,6 @@
 #lang racket
 
-(require "profile/instrument.rkt" "profile/tool.rkt" "profile/compile.rkt")
+(require "profile/instrument.rkt" "profile/tool.rkt" "profile/compile.rkt" "profile/stream.rkt")
 
 ; The symbolic profiler can be run in two ways:
 ; (1) require this module in your code, wrap the code you wish to profile in
@@ -12,4 +12,4 @@
 
 (current-compile symbolic-profile-compile-handler)
 
-(provide #%app #%plain-app profile-thunk profile)
+(provide #%app #%plain-app profile-thunk profile profile-stream)

@@ -4,4 +4,4 @@
 
 (provide merge-structs? variant with-variant
          bench bench-struct 
-         profile-bench profile-bench!)
+         profile-bench profile-bench-stream profile-bench!)
