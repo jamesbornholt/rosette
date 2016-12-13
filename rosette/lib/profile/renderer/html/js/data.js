@@ -1,6 +1,12 @@
 // global state
 var Data = {
+    // populated by Racket
+    data: {
+        nodes: [],
+        edges: []
+    },
     metadata: null,
+    // populated by initData
     inputs: [],
     outputs: [],
     metrics: [],
@@ -24,6 +30,17 @@ function findUnique(key) {
     return vals;
 }
 function initData() {
+    // reconstruct the graph from the list of nodes/edges in data
+    for (var _i = 0, _a = Data.data.nodes; _i < _a.length; _i++) {
+        var n = _a[_i];
+        n.children = []; // every node needs a list of children
+    }
+    for (var _b = 0, _c = Data.data.edges; _b < _c.length; _b++) {
+        var e = _c[_b];
+        var a = e[0], b = e[1];
+        Data.data.nodes[a].children.push(Data.data.nodes[b]);
+    }
+    Data.graph = Data.data.nodes[0];
     // populate the "functions" aggregated list
     var worklist = [Data.graph];
     var functions = {};

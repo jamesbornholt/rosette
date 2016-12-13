@@ -97,16 +97,39 @@
         'location (syntax-srcloc (profile-data-location (profile-node-data node)))))
 
 
+; Transform the profile tree to a list of nodes and list of edges
+(define (render-graph profile [key profile-node-key/srcloc])
+  (define nodes '())
+  (define add-node!
+    (let ([i 0])
+      (lambda (n)
+        (begin0
+          i
+          (set! nodes (cons n nodes))
+          (set! i (add1 i))))))
+  (define edges '())
+  (define (add-edge! a b)
+    (set! edges (cons (list a b) edges)))
+    
+  (let rec ([node profile][parent -1])
+    (let ([proc (key node)][idx (add-node! node)])
+      (unless (= parent -1)
+        (add-edge! parent idx))
+      (for ([c (profile-node-children node)])
+        (rec c idx))))
+
+  (values (reverse nodes) (reverse edges)))
+
+
 ; Render entries to JavaScript
 ; @parameter entries profile-node?
 ; @parameter source (or/c syntax? #f)
 ; @parameter out output-port?
 (define (render-json profile source name out [key profile-node-key/srcloc])
+  (define-values (nodes edges) (render-graph profile key))
   (define graph
-    (let rec ([node profile])
-      (let ([proc (key node)])
-        (define entry (render-entry proc node))
-        (hash-set entry 'children (reverse (for/list ([c (profile-node-children node)]) (rec c)))))))
+    (hash 'nodes (for/list ([n nodes]) (render-entry (key n) n))
+          'edges edges))
   (define top-dict
     (hash 'name name
           'time (parameterize ([date-display-format 'rfc2822])
@@ -115,6 +138,6 @@
           'form (if (syntax? source) (~v (syntax->datum source)) "")))
   (fprintf out "Data.metadata = ")
   (write-json top-dict out)
-  (fprintf out ";\nData.graph = ")
+  (fprintf out ";\nData.data = ")
   (write-json graph out)
   (fprintf out ";\n"))
