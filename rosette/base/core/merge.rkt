@@ -31,7 +31,12 @@
 (define (unsafe-merge* . ps)
   (do-merge* #t ps))
 
-(define merge-count (make-parameter 0))
+;(define merge-count (make-parameter 0))
+(define merge-count
+  (let ([v 0])
+    (case-lambda
+      [() v]
+      [(x) (set! v x)])))
 
 (define-syntax-rule (do-merge* force? ps)
   (begin

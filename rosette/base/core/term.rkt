@@ -18,7 +18,12 @@
 ; of expressions with commutative operators.
 #|-----------------------------------------------------------------------------------|#
 (define term-cache (make-parameter (make-hash)))
-(define term-count (make-parameter 0)) 
+;(define term-count (make-parameter 0)) 
+(define term-count
+  (let ([v 0])
+    (case-lambda
+      [() v]
+      [(x) (set! v x)])))
 
 ; Clears the entire term-cache if invoked with #f (default), or 
 ; it clears all terms reachable from the given set of leaf terms.
