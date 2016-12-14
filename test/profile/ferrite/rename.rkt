@@ -51,7 +51,7 @@
   (define-values (cex state) (verify-correctness test*))
   (check-true (unsat? cex)))
 
-#|
+
 (profile-bench "slow Ferrite rename.rkt"
   (parameterize ([variant 0][merge-structs? #t])
     (test-ext4-synth)))
@@ -59,8 +59,9 @@
 (profile-bench "fast Ferrite rename.rkt"
   (parameterize ([variant 1][merge-structs? #f])
     (test-ext4-synth))
-|#
 
+#|
 (profile-bench-stream "slow Ferrite rename.rkt"
   (parameterize ([variant 0][merge-structs? #t])
     (test-ext4-synth)))
+|#
