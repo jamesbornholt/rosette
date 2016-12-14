@@ -15,7 +15,8 @@
                 (define-values (out cpu real gc) (time-apply thunk '()))
                 (record-exit! out cpu real gc)
                 out))
-  (kill-thread thd)
+  (thread-send thd 'stop) ; tell the streaming thread to write once more then quit
+  (thread-wait thd)
   (let ([out (open-output-file out-path)])
     (render-json profile source-stx name out)
     (close-output-port out))
@@ -38,18 +39,42 @@
     (for ([n (list "profile.html" "timeline.html" "css" "js")])
       (make-file-or-directory-link (build-path src n) (build-path output-dir n))))
 
+  ; write the config
+  (let ([out (open-output-file (build-path output-dir "config.json"))])
+    (fprintf out "Data.config.stream = true;\n")
+    (close-output-port out))
+
+  ; touch the streaming output file
+  (write-to-file "" (build-path output-dir "stream.json"))
+
+  ; open the timeline page after a delay *TODO HACK*
+  (thread
+   (thunk
+    (sleep 4)
+    (define opener
+      (match (system-type)
+        ['unix "xdg-open"]
+        ['windows "start"]
+        ['macosx "open"]
+        [_ #f]))
+    (unless (false? opener)
+      (printf "Opening streaming timeline...\n")
+      (system (format "~a ~a" opener (path->string (build-path output-dir "timeline.html")))))))
+
   (values (build-path output-dir "stream.json")
           (build-path output-dir "data.json")))
 
 
 (define (stream-thread delay path profile source name)
-  (define (loop)
+  (thread
+   (thunk
     (sleep delay)
-    (define out (open-output-file path #:exists 'replace))
-    (render-json profile source name out)
-    (close-output-port out)
-    (loop))
-  (thread loop))
+    (let loop ()
+      (define ret (sync/timeout delay (thread-receive-evt)))
+      (call-with-atomic-output-file
+       path
+       (lambda (out path) (render-json profile source name out)))
+      (unless ret (loop))))))  ; loop unless we received a 'stop message
 
 
 ; Profile the given form

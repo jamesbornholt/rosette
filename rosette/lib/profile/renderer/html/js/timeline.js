@@ -10,7 +10,7 @@ var timeline;
     };
     function init() {
         // Initialize the profile data
-        initData();
+        // initData();
         // Cache the stacks at each timestep
         initTimelineData();
         // update the profile source info
@@ -25,6 +25,17 @@ var timeline;
         // window.addEventListener("resize", windowResizeCallback);
     }
     timeline_1.init = init;
+    function update() {
+        var oldLength = timeline_1.Timeline.points.length;
+        initTimelineData();
+        console.log("update(): " + oldLength + " -> " + timeline_1.Timeline.points.length);
+        if (timeline_1.Timeline.points.length > oldLength) {
+            var newPoints = timeline_1.Timeline.points.slice(oldLength);
+            timeline_1.Timeline.vega.data("points").insert(newPoints);
+            timeline_1.Timeline.vega.update();
+        }
+    }
+    timeline_1.update = update;
     function initTimelineData() {
         // walk the profile graph
         var root = Data.graph;
@@ -73,6 +84,7 @@ var timeline;
             return ret;
         };
         var stack = [];
+        var breaks = [], stacks = [], points = [];
         var rec = function (node) {
             var start = computePoint(node["start"]);
             // push start data point
@@ -83,21 +95,24 @@ var timeline;
                 var c = children_1[_i];
                 // before entry, current stack
                 var p = computePoint(c["start"]);
-                timeline_1.Timeline.breaks.push(p["time"]);
-                timeline_1.Timeline.stacks.push(stack.slice());
-                timeline_1.Timeline.points.push(p);
+                breaks.push(p["time"]);
+                stacks.push(stack.slice());
+                points.push(p);
                 // recurse on c, will push a pre-exit stack
                 rec(c);
             }
             var finish = computePoint(node["finish"]);
             // push pre-exit stack
-            timeline_1.Timeline.breaks.push(finish["time"]);
-            timeline_1.Timeline.stacks.push(stack.slice());
-            timeline_1.Timeline.points.push(finish);
+            breaks.push(finish["time"]);
+            stacks.push(stack.slice());
+            points.push(finish);
             // remove self from stack
             stack.pop();
         };
         rec(root);
+        timeline_1.Timeline.points = points;
+        timeline_1.Timeline.stacks = stacks;
+        timeline_1.Timeline.breaks = breaks; // done last for race condition
     }
     function renderTimeline() {
         var timeline = document.getElementById("timeline");
@@ -285,5 +300,5 @@ var timeline;
         }
     }
 })(timeline || (timeline = {})); // /namespace
-document.addEventListener("DOMContentLoaded", timeline.init);
+document.addEventListener("DOMContentLoaded", dataOnload(timeline.init, timeline.update));
 //# sourceMappingURL=timeline.js.map

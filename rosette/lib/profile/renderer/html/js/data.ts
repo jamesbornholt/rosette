@@ -6,6 +6,9 @@ let Data = {
         edges: []
     },
     metadata: null,
+    config: {
+        stream: false
+    },
     // populated by initData
     inputs: [],
     outputs: [],
@@ -27,6 +30,39 @@ function findUnique(key: string): Array<any> {
         }
     }
     return vals;
+}
+
+// create the onload event handler
+function dataOnload(initCb, updateCb) {
+    return function() { // the callback invoked by contentready
+        if (Data.config.stream) {
+            var scr;
+            let intervalHandler = () => {
+                console.log("handler...");
+                if (scr) scr.parentNode.removeChild(scr);
+                scr = document.createElement("script");
+                scr.onload = () => { initData(); updateCb(); }
+                scr.src = "stream.json";
+                document.head.appendChild(scr);
+            };
+            scr = document.createElement("script");
+            scr.onload = () => {
+                initData();
+                initCb();
+                window.setInterval(intervalHandler, 2000);
+            }
+            scr.src = "stream.json";
+            document.head.appendChild(scr);
+        } else {
+            let scr = document.createElement("script");
+            scr.onload = () => {
+                initData();
+                initCb();
+            }
+            scr.src = "data.json";
+            document.head.appendChild(scr);
+        }
+    }
 }
 
 function initData() {

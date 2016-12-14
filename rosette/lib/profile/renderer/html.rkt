@@ -34,6 +34,11 @@
       (render-json profile source name out)
       (close-output-port out))
 
+    ; write the config
+    (let ([out (open-output-file (build-path output-dir "config.json"))])
+      (fprintf out "Data.config.stream = false;\n")
+      (close-output-port out))
+
     ; open the profile in a web browser
     (printf "Wrote \"~a\" profile to ~a\n" name output-dir)
     (when open?

@@ -6,6 +6,9 @@ var Data = {
         edges: []
     },
     metadata: null,
+    config: {
+        stream: false
+    },
     // populated by initData
     inputs: [],
     outputs: [],
@@ -28,6 +31,40 @@ function findUnique(key) {
         }
     }
     return vals;
+}
+// create the onload event handler
+function dataOnload(initCb, updateCb) {
+    return function () {
+        if (Data.config.stream) {
+            var scr;
+            var intervalHandler_1 = function () {
+                console.log("handler...");
+                if (scr)
+                    scr.parentNode.removeChild(scr);
+                scr = document.createElement("script");
+                scr.onload = function () { initData(); updateCb(); };
+                scr.src = "stream.json";
+                document.head.appendChild(scr);
+            };
+            scr = document.createElement("script");
+            scr.onload = function () {
+                initData();
+                initCb();
+                window.setInterval(intervalHandler_1, 2000);
+            };
+            scr.src = "stream.json";
+            document.head.appendChild(scr);
+        }
+        else {
+            var scr_1 = document.createElement("script");
+            scr_1.onload = function () {
+                initData();
+                initCb();
+            };
+            scr_1.src = "data.json";
+            document.head.appendChild(scr_1);
+        }
+    };
 }
 function initData() {
     // reconstruct the graph from the list of nodes/edges in data

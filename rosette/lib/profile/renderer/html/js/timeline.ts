@@ -19,7 +19,7 @@ namespace timeline {
 
     export function init() {
         // Initialize the profile data
-        initData();
+        // initData();
         // Cache the stacks at each timestep
         initTimelineData();
 
@@ -35,6 +35,17 @@ namespace timeline {
 
         // Bind the resize handler
         // window.addEventListener("resize", windowResizeCallback);
+    }
+
+    export function update() {
+        let oldLength = Timeline.points.length;
+        initTimelineData();
+        console.log("update(): " + oldLength + " -> " + Timeline.points.length);
+        if (Timeline.points.length > oldLength) {
+            let newPoints = Timeline.points.slice(oldLength);
+            Timeline.vega.data("points").insert(newPoints);
+            Timeline.vega.update();
+        }
     }
 
     function initTimelineData() {
@@ -84,6 +95,7 @@ namespace timeline {
             return ret;
         }
         let stack = [];
+        let breaks = [], stacks = [], points = [];
         let rec = (node) => {
             let start = computePoint(node["start"]);
             // push start data point
@@ -93,21 +105,24 @@ namespace timeline {
             for (let c of children) {
                 // before entry, current stack
                 let p = computePoint(c["start"]);
-                Timeline.breaks.push(p["time"]);
-                Timeline.stacks.push(stack.slice());
-                Timeline.points.push(p);
+                breaks.push(p["time"]);
+                stacks.push(stack.slice());
+                points.push(p);
                 // recurse on c, will push a pre-exit stack
                 rec(c);
             }
             let finish = computePoint(node["finish"]);
             // push pre-exit stack
-            Timeline.breaks.push(finish["time"]);
-            Timeline.stacks.push(stack.slice());
-            Timeline.points.push(finish);
+            breaks.push(finish["time"]);
+            stacks.push(stack.slice());
+            points.push(finish);
             // remove self from stack
             stack.pop();
         };
         rec(root);
+        Timeline.points = points;
+        Timeline.stacks = stacks;
+        Timeline.breaks = breaks; // done last for race condition
     }
 
     function renderTimeline() {
@@ -302,4 +317,4 @@ namespace timeline {
 
 } // /namespace
 
-document.addEventListener("DOMContentLoaded", timeline.init);
+document.addEventListener("DOMContentLoaded", dataOnload(timeline.init, timeline.update));
