@@ -252,7 +252,12 @@ var timeline;
                 break;
         }
         var stack = timeline_1.Timeline.stacks[i];
-        var point = timeline_1.Timeline.points[i];
+        var j = 0;
+        for (j = 0; j < timeline_1.Timeline.points.length; j++) {
+            if (value <= timeline_1.Timeline.points[j]["time"])
+                break;
+        }
+        var point = timeline_1.Timeline.points[j];
         // render values
         var keys = Object.keys(point);
         keys.sort();

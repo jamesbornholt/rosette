@@ -267,7 +267,12 @@ namespace timeline {
                 break;
         }
         let stack = Timeline.stacks[i];
-        let point = Timeline.points[i];
+        var j = 0;
+        for (j = 0; j < Timeline.points.length; j++) {
+            if (value <= Timeline.points[j]["time"])
+                break;
+        }
+        let point = Timeline.points[j];
 
         // render values
         let keys = Object.keys(point);
