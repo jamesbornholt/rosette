@@ -6,6 +6,7 @@ let Data = {
         edges: []
     },
     metadata: null,
+    samples: [],
     config: {
         stream: false
     },

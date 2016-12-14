@@ -1,7 +1,7 @@
 #lang racket
 
 (require "record.rkt" "renderer/html.rkt" "renderer/srcloc.rkt"
-         racket/runtime-path)
+         racket/runtime-path json)
 (provide profile-stream)
 
 
@@ -65,15 +65,26 @@
           (build-path output-dir "data.json")))
 
 
-(define (stream-thread delay path profile source name)
+; The stream thread does two things:
+; 1. every `delay` seconds, writes all current profile data to `path`
+; 2. every `sample-delay` seconds, takes a sample of current state
+(define (stream-thread delay path profile source name [sample-delay 0.5])
   (thread
    (thunk
-    (sleep delay)
+    (define last-out 0)
+    (define samples '())
     (let loop ()
-      (define ret (sync/timeout delay (thread-receive-evt)))
-      (call-with-atomic-output-file
-       path
-       (lambda (out path) (render-json profile source name out)))
+      (define ret (sync/timeout (min delay sample-delay) (thread-receive-evt)))
+      (when (or ret (> (- (current-inexact-milliseconds) last-out) (* delay 1000)))
+        (set! last-out (current-inexact-milliseconds))
+        (call-with-atomic-output-file
+         path
+         (lambda (out path)
+           (render-json profile source name out)
+           (fprintf out "Data.samples = ")
+           (write-json (reverse samples) out)
+           (fprintf out ";\n"))))
+      (set! samples (cons (cumulative-data) samples))
       (unless ret (loop))))))  ; loop unless we received a 'stop message
 
 

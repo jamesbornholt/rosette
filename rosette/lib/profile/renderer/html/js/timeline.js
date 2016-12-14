@@ -29,6 +29,7 @@ var timeline;
         var oldLength = timeline_1.Timeline.points.length;
         initTimelineData();
         console.log("update(): " + oldLength + " -> " + timeline_1.Timeline.points.length);
+        console.log("samples: ", Data.samples.length);
         if (timeline_1.Timeline.points.length > oldLength) {
             var newPoints = timeline_1.Timeline.points.slice(oldLength);
             timeline_1.Timeline.vega.data("points").insert(newPoints);
@@ -110,6 +111,10 @@ var timeline;
             stack.pop();
         };
         rec(root);
+        console.log(points.length);
+        points = points.concat(Data.samples.map(computePoint));
+        points.sort(function (a, b) { return a["time"] - b["time"]; });
+        console.log(points.length);
         timeline_1.Timeline.points = points;
         timeline_1.Timeline.stacks = stacks;
         timeline_1.Timeline.breaks = breaks; // done last for race condition

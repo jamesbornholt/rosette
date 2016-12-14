@@ -41,6 +41,7 @@ namespace timeline {
         let oldLength = Timeline.points.length;
         initTimelineData();
         console.log("update(): " + oldLength + " -> " + Timeline.points.length);
+        console.log("samples: ", Data.samples.length);
         if (Timeline.points.length > oldLength) {
             let newPoints = Timeline.points.slice(oldLength);
             Timeline.vega.data("points").insert(newPoints);
@@ -120,6 +121,10 @@ namespace timeline {
             stack.pop();
         };
         rec(root);
+        console.log(points.length);
+        points = points.concat(Data.samples.map(computePoint));
+        points.sort((a,b) => a["time"] - b["time"]);
+        console.log(points.length);
         Timeline.points = points;
         Timeline.stacks = stacks;
         Timeline.breaks = breaks; // done last for race condition
