@@ -58,7 +58,7 @@
 
 (profile-bench "fast Ferrite rename.rkt"
   (parameterize ([variant 1][merge-structs? #f])
-    (test-ext4-synth))
+    (test-ext4-synth)))
 
 #|
 (profile-bench-stream "slow Ferrite rename.rkt"

@@ -70,7 +70,7 @@
                    ; throw exceptions, which is common during symbolic evaluation.
                    ; TODO: should we annotate the profle-node somehow to indicate an exception was thrown?
                    (let-values ([(out cpu real gc)
-                                 (time-apply (thunk (with-handlers ([exn? handler])
+                                 (time-apply (thunk (with-handlers ([exn:fail? handler])
                                                       (call-with-values app-proc-to-in returner)))
                                              null)])
                      (record-exit! (cadr out) cpu real gc)
