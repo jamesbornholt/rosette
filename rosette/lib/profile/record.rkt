@@ -1,6 +1,7 @@
 #lang racket
 
-(require "feature.rkt" "metrics.rkt")
+(require rosette/base/core/reporter racket/hash
+         "feature.rkt" "reporter.rkt")
 (provide (all-defined-out))
 
 ;; Represents the global map from procedure objects to their source locations (if known).
@@ -28,26 +29,19 @@
 
 ;; Compute profile data on procedure entry
 (define (entry-data loc proc in)
-  (let ([metrics (hash 'merge-count (merge-count)
-                       'union-count (union-count)
-                       'union-sum (union-sum)
-                       'term-count (term-count))]
-        [start (cumulative-data)])
-    (profile-data loc proc (compute-features in) (hash) metrics start (hash))))
-
-;; Compute cumulative point data
-(define (cumulative-data)
-  (hash 'time (current-inexact-milliseconds)
-        'term-count (term-count)
-        'merge-count (merge-count)))
+  (let ([start (get-current-metrics)])
+    (profile-data loc proc (compute-features in) (hash) (hash) start (hash))))
 
 ;; Returns a new top-level profile node
 (define (make-top-level-profile)
-  (let ([start (cumulative-data)])
+  (let ([start (hash)])
     (profile-node #f '() (profile-data 'top #f (hash) (hash) (hash) start (hash)))))
 
 ;; A parameter that holds the current profile / call stack.
 (define current-profile (make-parameter (make-top-level-profile)))
+
+;; A default reporter
+(current-reporter (make-profiler-reporter))
 
 ;; Returns a hash map with entries of the form <k, v> where k is a
 ;; feature in current-features and v = (k xs).
@@ -78,7 +72,7 @@
   (make-keyword-procedure
    (lambda (kws kw-args loc proc . rest) 
      (runner loc proc (append rest kw-args) (thunk (keyword-apply proc kws kw-args rest))))
-   (lambda (loc proc . rest) 
+   (lambda (loc proc . rest)
      (runner loc proc rest (thunk (apply proc rest)))))))
 
 ;; Records a procedure entry by pushing a fresh profile-node onto the
@@ -91,8 +85,8 @@
     (set-profile-node-children! (current-profile) (cons node (profile-node-children (current-profile))))
     (current-profile node)))
 
-(define-syntax-rule (diff metrics metric)
-  (- (metric) (hash-ref metrics 'metric)))
+(define (diff-metrics old new)
+  (for/hash ([(k v) new]) (values k (- v (hash-ref old k 0)))))
 
 ;; Records a method exit by modifying the out, cpu, real, and gc fields
 ;; of the profile-node at the top of the current-profile-stack.
@@ -100,20 +94,20 @@
 (define (record-exit! out cpu real gc)
   (let* ([entry (profile-node-data (current-profile))]
          [metrics (profile-data-metrics entry)])
+    (set-profile-data-finish! entry (get-current-metrics))
     (set-profile-data-outputs! entry (compute-features out))
-    (set-profile-data-metrics! entry (hash 'cpu cpu 'real real 'gc gc
-                                           'merge-count (diff metrics merge-count)
-                                           'union-count (diff metrics union-count)
-                                           'union-sum (diff metrics union-sum)
-                                           'term-count (diff metrics term-count)))
-    (set-profile-data-finish! entry (cumulative-data))
+    (set-profile-data-metrics! entry (hash-union
+                                      (hash 'cpu cpu 'real real 'gc gc)
+                                      (diff-metrics (profile-data-start entry) (profile-data-finish entry))))
     (current-profile (profile-node-parent (current-profile)))))
 
 ;; Run a top-level profiled thunk and return a profile node for its extent
 (define (run-profile-thunk proc)
   (define state (make-top-level-profile))
+  (define reporter (make-profiler-reporter))
   (set-profile-node-data! state (entry-data 'top 'top '()))
-  (define ret (parameterize ([current-profile state])
+  (define ret (parameterize ([current-profile state]
+                             [current-reporter reporter])
                 (define-values (out cpu real gc) (time-apply proc '()))
                 (record-exit! out cpu real gc)
                 out))

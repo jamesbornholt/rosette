@@ -2,9 +2,9 @@
 
 (require (only-in rnrs/base-6 assert)
          (only-in racket/unsafe/ops [unsafe-car car] [unsafe-cdr cdr])
-         "term.rkt" "union.rkt" "bool.rkt")
+         "term.rkt" "union.rkt" "bool.rkt" "reporter.rkt")
 
-(provide merge merge* unsafe-merge* merge-count)
+(provide merge merge* unsafe-merge*)
 
 (define (merge b x y)
   (match* (b x y)
@@ -31,16 +31,9 @@
 (define (unsafe-merge* . ps)
   (do-merge* #t ps))
 
-;(define merge-count (make-parameter 0))
-(define merge-count
-  (let ([v 0])
-    (case-lambda
-      [() v]
-      [(x) (set! v x)])))
-
 (define-syntax-rule (do-merge* force? ps)
   (begin
-    (merge-count (add1 (merge-count)))
+    ((current-reporter) 'merge)
     (match (compress force? (simplify ps)) 
       [(list (cons g v)) (assert (not (false? g))) v]
       [(list _ (... ...) (cons #t v) _ (... ...)) v]

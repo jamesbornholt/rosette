@@ -1,6 +1,8 @@
 #lang racket
 
-(require "record.rkt" "renderer/html.rkt" "renderer/srcloc.rkt"
+(require rosette/base/core/reporter
+         "record.rkt" "reporter.rkt" "tool.rkt"
+         "renderer/html.rkt" "renderer/srcloc.rkt"
          racket/runtime-path json)
 (provide profile-stream)
 
@@ -9,9 +11,11 @@
                                     #:name [name "Profile"])
   (define-values (stream-path out-path) (begin-stream-renderer source-stx))
   (define profile (make-top-level-profile))
+  (define reporter (make-profiler-reporter))
   (set-profile-node-data! profile (entry-data 'top 'top '()))
-  (define thd (stream-thread 2.0 stream-path profile source-stx name))
-  (define ret (parameterize ([current-profile profile])
+  (define thd (stream-thread 2.0 stream-path profile reporter source-stx name))
+  (define ret (parameterize ([current-profile profile]
+                             [current-reporter reporter])
                 (define-values (out cpu real gc) (time-apply thunk '()))
                 (record-exit! out cpu real gc)
                 out))
@@ -68,7 +72,7 @@
 ; The stream thread does two things:
 ; 1. every `delay` seconds, writes all current profile data to `path`
 ; 2. every `sample-delay` seconds, takes a sample of current state
-(define (stream-thread delay path profile source name [sample-delay 0.5])
+(define (stream-thread delay path profile reporter source name [sample-delay 0.5])
   (thread
    (thunk
     (define last-out 0)
@@ -84,7 +88,7 @@
            (fprintf out "Data.samples = ")
            (write-json (reverse samples) out)
            (fprintf out ";\n"))))
-      (set! samples (cons (cumulative-data) samples))
+      (set! samples (cons (get-current-metrics reporter) samples))
       (unless ret (loop))))))  ; loop unless we received a 'stop message
 
 
