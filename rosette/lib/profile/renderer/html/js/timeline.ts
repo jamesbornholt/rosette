@@ -6,6 +6,7 @@ interface HTMLCollection extends Array<Element> { }
 
 namespace timeline {
 
+    declare var d3; // d3
     declare var vg; // vega
     declare var vl; // vega-lite
 
@@ -14,7 +15,8 @@ namespace timeline {
         stacks: [],
         points: [],
         vega: null,
-        resizing: false
+        resizing: false,
+        flameGraph: null
     }
 
     export function init() {
@@ -30,8 +32,13 @@ namespace timeline {
         document.getElementById("time").innerHTML = Data.metadata.time;
         document.title = "Timeline: " + Data.metadata.name;
 
+        // Render the flame graph
+        renderFlameGraph();
+
         // Render the timeline
         renderTimeline();
+
+        
 
         // Bind the resize handler
         // window.addEventListener("resize", windowResizeCallback);
@@ -40,8 +47,6 @@ namespace timeline {
     export function update() {
         let oldLength = Timeline.points.length;
         initTimelineData();
-        console.log("update(): " + oldLength + " -> " + Timeline.points.length);
-        console.log("samples: ", Data.samples.length);
         if (Timeline.points.length > oldLength) {
             let newPoints = Timeline.points.slice(oldLength);
             Timeline.vega.data("points").insert(newPoints);
@@ -52,39 +57,6 @@ namespace timeline {
     function initTimelineData() {
         // walk the profile graph
         let root = Data.graph;
-        // let root =
-        // {
-        //     "start": {"time": 0, "terms": 0},
-        //     "finish": {"time": 100, "terms": 0},
-        //     "function": "a",
-        //     "children": [
-        //         {
-        //             "start": {"time": 1, "terms": 0},
-        //             "finish": {"time": 20, "terms": 0},
-        //             "function": "b",
-        //             "children": [
-        //                 {
-        //                     "start": {"time": 4, "terms": 0},
-        //                     "finish": {"time": 10, "terms": 0},
-        //                     "function": "c",
-        //                     "children": []
-        //                 },
-        //                 {
-        //                     "start": {"time": 14, "terms": 0},
-        //                     "finish": {"time": 19, "terms": 0},
-        //                     "function": "d",
-        //                     "children": []
-        //                 }
-        //             ]
-        //         },
-        //         {
-        //             "start": {"time": 23, "terms": 0},
-        //             "finish": {"time": 94, "terms": 0},
-        //             "function": "e",
-        //             "children": []
-        //         }
-        //     ]
-        // };
         let first = root["start"];
         // compute difference between a point and the first point
         let computePoint = (p: Object) => {
@@ -121,10 +93,8 @@ namespace timeline {
             stack.pop();
         };
         rec(root);
-        console.log(points.length);
         points = points.concat(Data.samples.map(computePoint));
         points.sort((a,b) => a["time"] - b["time"]);
-        console.log(points.length);
         Timeline.points = points;
         Timeline.stacks = stacks;
         Timeline.breaks = breaks; // done last for race condition
@@ -170,6 +140,11 @@ namespace timeline {
                     "expr": "clamp(eventX(), 0, eventGroup('root').width)",
                     "scale": { "name": "x", "invert": true }
                 }]
+            }, {
+                "name": "xmin",
+                "init": 0
+            }, {
+                "name": "xmax"
             }],
             "axes": [{
                 "type": "x",
@@ -178,7 +153,10 @@ namespace timeline {
                 "grid": true,
                 "layer": "back",
                 "ticks": 5,
-                "title": "time"
+                "title": "time",
+                "range": "width",
+                "domainMin": {"signal": "xmin"},
+                "domainMax": {"signal": "xmax"}
             },
             {
                 "type": "y",
@@ -312,17 +290,41 @@ namespace timeline {
         }
     }
 
+    function renderFlameGraph() {
+        let dt = Data.graph["start"]["time"];
+        let rec = (node) => {
+            return {
+                "name": node["function"],
+                "value": node["finish"]["time"] - node["start"]["time"],
+                "start": node["start"]["time"] - dt,
+                "finish": node["finish"]["time"] - dt,
+                "children": node["children"].map(rec)
+            };
+        };
+        let graph = rec(Data.graph);
+        Timeline.flameGraph = d3.flameGraph("#flamegraph", graph);
+        Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
+        Timeline.flameGraph.render();
+    }
+
     function windowResizeCallback() {
         if (Timeline.vega && !Timeline.resizing) {
             Timeline.resizing = true;
             window.setTimeout(() => {
                 let panel = document.getElementById("timeline-panel");
                 let width = panel.clientWidth;
-                console.log("resizing", width);
                 Timeline.vega.width(width-150).update();
+                Timeline.flameGraph.size([width-150, 400]).render();
+                document.getElementById("flamegraph").style.marginLeft = Timeline.vega.padding().left;
                 Timeline.resizing = false;
             }, 50);
         }
+    }
+
+    function flamegraphZoomCallback(node) {
+        Timeline.vega.signal("xmin", node["start"]);
+        Timeline.vega.signal("xmax", node["finish"]);
+        Timeline.vega.update();
     }
 
 } // /namespace

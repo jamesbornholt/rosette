@@ -6,7 +6,8 @@ var timeline;
         stacks: [],
         points: [],
         vega: null,
-        resizing: false
+        resizing: false,
+        flameGraph: null
     };
     function init() {
         // Initialize the profile data
@@ -19,6 +20,8 @@ var timeline;
         document.getElementById("form").innerHTML = Data.metadata.form;
         document.getElementById("time").innerHTML = Data.metadata.time;
         document.title = "Timeline: " + Data.metadata.name;
+        // Render the flame graph
+        renderFlameGraph();
         // Render the timeline
         renderTimeline();
         // Bind the resize handler
@@ -28,8 +31,6 @@ var timeline;
     function update() {
         var oldLength = timeline_1.Timeline.points.length;
         initTimelineData();
-        console.log("update(): " + oldLength + " -> " + timeline_1.Timeline.points.length);
-        console.log("samples: ", Data.samples.length);
         if (timeline_1.Timeline.points.length > oldLength) {
             var newPoints = timeline_1.Timeline.points.slice(oldLength);
             timeline_1.Timeline.vega.data("points").insert(newPoints);
@@ -40,39 +41,6 @@ var timeline;
     function initTimelineData() {
         // walk the profile graph
         var root = Data.graph;
-        // let root =
-        // {
-        //     "start": {"time": 0, "terms": 0},
-        //     "finish": {"time": 100, "terms": 0},
-        //     "function": "a",
-        //     "children": [
-        //         {
-        //             "start": {"time": 1, "terms": 0},
-        //             "finish": {"time": 20, "terms": 0},
-        //             "function": "b",
-        //             "children": [
-        //                 {
-        //                     "start": {"time": 4, "terms": 0},
-        //                     "finish": {"time": 10, "terms": 0},
-        //                     "function": "c",
-        //                     "children": []
-        //                 },
-        //                 {
-        //                     "start": {"time": 14, "terms": 0},
-        //                     "finish": {"time": 19, "terms": 0},
-        //                     "function": "d",
-        //                     "children": []
-        //                 }
-        //             ]
-        //         },
-        //         {
-        //             "start": {"time": 23, "terms": 0},
-        //             "finish": {"time": 94, "terms": 0},
-        //             "function": "e",
-        //             "children": []
-        //         }
-        //     ]
-        // };
         var first = root["start"];
         // compute difference between a point and the first point
         var computePoint = function (p) {
@@ -111,10 +79,8 @@ var timeline;
             stack.pop();
         };
         rec(root);
-        console.log(points.length);
         points = points.concat(Data.samples.map(computePoint));
         points.sort(function (a, b) { return a["time"] - b["time"]; });
-        console.log(points.length);
         timeline_1.Timeline.points = points;
         timeline_1.Timeline.stacks = stacks;
         timeline_1.Timeline.breaks = breaks; // done last for race condition
@@ -158,6 +124,11 @@ var timeline;
                             "expr": "clamp(eventX(), 0, eventGroup('root').width)",
                             "scale": { "name": "x", "invert": true }
                         }]
+                }, {
+                    "name": "xmin",
+                    "init": 0
+                }, {
+                    "name": "xmax"
                 }],
             "axes": [{
                     "type": "x",
@@ -166,7 +137,10 @@ var timeline;
                     "grid": true,
                     "layer": "back",
                     "ticks": 5,
-                    "title": "time"
+                    "title": "time",
+                    "range": "width",
+                    "domainMin": { "signal": "xmin" },
+                    "domainMax": { "signal": "xmax" }
                 },
                 {
                     "type": "y",
@@ -297,17 +271,39 @@ var timeline;
             }
         }
     }
+    function renderFlameGraph() {
+        var dt = Data.graph["start"]["time"];
+        var rec = function (node) {
+            return {
+                "name": node["function"],
+                "value": node["finish"]["time"] - node["start"]["time"],
+                "start": node["start"]["time"] - dt,
+                "finish": node["finish"]["time"] - dt,
+                "children": node["children"].map(rec)
+            };
+        };
+        var graph = rec(Data.graph);
+        timeline_1.Timeline.flameGraph = d3.flameGraph("#flamegraph", graph);
+        timeline_1.Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
+        timeline_1.Timeline.flameGraph.render();
+    }
     function windowResizeCallback() {
         if (timeline_1.Timeline.vega && !timeline_1.Timeline.resizing) {
             timeline_1.Timeline.resizing = true;
             window.setTimeout(function () {
                 var panel = document.getElementById("timeline-panel");
                 var width = panel.clientWidth;
-                console.log("resizing", width);
                 timeline_1.Timeline.vega.width(width - 150).update();
+                timeline_1.Timeline.flameGraph.size([width - 150, 400]).render();
+                document.getElementById("flamegraph").style.marginLeft = timeline_1.Timeline.vega.padding().left;
                 timeline_1.Timeline.resizing = false;
             }, 50);
         }
+    }
+    function flamegraphZoomCallback(node) {
+        timeline_1.Timeline.vega.signal("xmin", node["start"]);
+        timeline_1.Timeline.vega.signal("xmax", node["finish"]);
+        timeline_1.Timeline.vega.update();
     }
 })(timeline || (timeline = {})); // /namespace
 document.addEventListener("DOMContentLoaded", dataOnload(timeline.init, timeline.update));

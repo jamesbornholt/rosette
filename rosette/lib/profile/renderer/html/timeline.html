@@ -4,12 +4,14 @@
 <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
 <link rel="stylesheet" href="css/typebase.css">
 <link rel="stylesheet" href="css/timeline.css">
+<link rel="stylesheet" href="css/d3-flame-graph.css">
 <script src="js/regression.js"></script>
 <script src="js/tablesort.js"></script>
 <script src="js/data.js"></script>
 <script src="js/timeline.js"></script>
 <script src="config.json"></script>
 <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="js/d3-flame-graph.js" charset="utf-8"></script>
 <script src="http://vega.github.io/vega/vega.js" charset="utf-8"></script>
 <script src="http://vega.github.io/vega-lite/vega-lite.js" charset="utf-8"></script>
 <script src="http://vega.github.io/vega-editor/vendor/vega-embed.js" charset="utf-8"></script>
@@ -23,5 +25,8 @@
       <div id="timeline"></div>
     </div>
     <div id="stack"><ul id="stack-values"></ul><p>Stack:</p><ul id="stack-functions"></ul></div>
+  </div>
+  <div id="flame">
+    <div id="flamegraph"></div>
   </div>
 </div>
