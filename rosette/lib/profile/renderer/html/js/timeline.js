@@ -127,11 +127,13 @@ var timeline;
                             "expr": "clamp(eventX(), 0, eventGroup('root').width)",
                             "scale": { "name": "x", "invert": true }
                         }]
-                }, {
-                    "name": "xmin"
-                }, {
-                    "name": "xmax"
-                }],
+                },
+                { "name": "xmin" },
+                { "name": "xmax" },
+                { "name": "xminhover" },
+                { "name": "xmaxhover" },
+                { "name": "xhoveropacity", "init": 0 }
+            ],
             "axes": [{
                     "type": "x",
                     "scale": "x",
@@ -192,6 +194,19 @@ var timeline;
                             "y": { "value": 0 },
                             "y2": { "field": { "group": "height" } },
                             "stroke": { "value": "red" }
+                        }
+                    }
+                },
+                {
+                    "type": "rect",
+                    "properties": {
+                        "update": {
+                            "x": { "scale": "x", "signal": "xminhover" },
+                            "x2": { "scale": "x", "signal": "xmaxhover" },
+                            "y": { "value": 0 },
+                            "y2": { "field": { "group": "height" } },
+                            "fill": { "value": "grey" },
+                            "fillOpacity": { "signal": "xhoveropacity" } //{"value": 0.5}
                         }
                     }
                 }]
@@ -284,6 +299,7 @@ var timeline;
         var graph = rec(Data.graph);
         timeline_1.Timeline.flameGraph = d3.flameGraph("#flamegraph", graph);
         timeline_1.Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
+        timeline_1.Timeline.flameGraph.hoverAction(flamegraphHoverCallback);
         timeline_1.Timeline.flameGraph.render();
     }
     function windowResizeCallback() {
@@ -303,6 +319,20 @@ var timeline;
         timeline_1.Timeline.vega.signal("xmin", node["start"]);
         timeline_1.Timeline.vega.signal("xmax", node["finish"]);
         timeline_1.Timeline.vega.update();
+    }
+    function flamegraphHoverCallback(node, enter) {
+        var start = node["start"];
+        var finish = node["finish"];
+        if (enter) {
+            timeline_1.Timeline.vega.signal("xminhover", node["start"]);
+            timeline_1.Timeline.vega.signal("xmaxhover", node["finish"]);
+            timeline_1.Timeline.vega.signal("xhoveropacity", 0.2);
+            timeline_1.Timeline.vega.update();
+        }
+        else {
+            timeline_1.Timeline.vega.signal("xhoveropacity", 0.0);
+            timeline_1.Timeline.vega.update();
+        }
     }
 })(timeline || (timeline = {})); // /namespace
 document.addEventListener("DOMContentLoaded", dataOnload(timeline.init, timeline.update));

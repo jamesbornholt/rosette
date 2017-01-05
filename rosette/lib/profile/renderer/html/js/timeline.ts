@@ -143,11 +143,13 @@ namespace timeline {
                     "expr": "clamp(eventX(), 0, eventGroup('root').width)",
                     "scale": { "name": "x", "invert": true }
                 }]
-            }, {
-                "name": "xmin"
-            }, {
-                "name": "xmax"
-            }],
+            }, 
+            {"name": "xmin"},
+            {"name": "xmax"},
+            {"name": "xminhover"},
+            {"name": "xmaxhover"},
+            {"name": "xhoveropacity", "init": 0}
+            ],
             "axes": [{
                 "type": "x",
                 "scale": "x",
@@ -208,6 +210,19 @@ namespace timeline {
                         "y": { "value": 0 },
                         "y2": { "field": { "group": "height" } },
                         "stroke": { "value": "red" }
+                    }
+                }
+            },
+            {
+                "type": "rect",
+                "properties": {
+                    "update": {
+                        "x": {"scale": "x", "signal": "xminhover"},
+                        "x2": {"scale": "x", "signal": "xmaxhover"},
+                        "y": {"value": 0},
+                        "y2": {"field": {"group": "height"}},
+                        "fill": {"value": "grey"},
+                        "fillOpacity": {"signal": "xhoveropacity"}//{"value": 0.5}
                     }
                 }
             }]
@@ -303,6 +318,7 @@ namespace timeline {
         let graph = rec(Data.graph);
         Timeline.flameGraph = d3.flameGraph("#flamegraph", graph);
         Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
+        Timeline.flameGraph.hoverAction(flamegraphHoverCallback);
         Timeline.flameGraph.render();
     }
 
@@ -324,6 +340,20 @@ namespace timeline {
         Timeline.vega.signal("xmin", node["start"]);
         Timeline.vega.signal("xmax", node["finish"]);
         Timeline.vega.update();
+    }
+
+    function flamegraphHoverCallback(node, enter) {
+        let start = node["start"];
+        let finish = node["finish"];
+        if (enter) {
+            Timeline.vega.signal("xminhover", node["start"]);
+            Timeline.vega.signal("xmaxhover", node["finish"]);
+            Timeline.vega.signal("xhoveropacity", 0.2);
+            Timeline.vega.update();
+        } else {
+            Timeline.vega.signal("xhoveropacity", 0.0);
+            Timeline.vega.update();
+        }
     }
 
 } // /namespace

@@ -137,7 +137,7 @@
     FlameGraph = (function() {
       function FlameGraph(selector, root) {
         this._selector = selector;
-        this._generateAccessors(['margin', 'cellHeight', 'zoomEnabled', 'zoomAction', 'tooltip', 'tooltipPlugin', 'color']);
+        this._generateAccessors(['margin', 'cellHeight', 'zoomEnabled', 'zoomAction', 'hoverAction', 'tooltip', 'tooltipPlugin', 'color']);
         this._ancestors = [];
         if (debug) {
           this.console = window.console;
@@ -331,6 +331,7 @@
         if (this.tooltip()) {
           this._renderTooltip();
         }
+        this._attachHover();
         this.console.timeEnd('render');
         this.console.log("Processed " + this._data.length + " items");
         this.console.log("Rendered " + ((ref = this.container.selectAll('.node')[0]) != null ? ref.length : void 0) + " elements");
@@ -504,6 +505,30 @@
         return this;
       };
 
+      FlameGraph.prototype._attachHover = function() {
+        if (!this._hoverAction) {
+          return this;
+        }
+        this.container.selectAll('.node').on('mouseover', (function(_this) {
+          return function(d) {
+            return _this._hoverAction(d, true);
+          };
+        })(this)).on('mouseout', (function(_this) {
+          return function(d) {
+            return _this._hoverAction(d, false);
+          };
+        })(this)).selectAll('.label').on('mouseover', (function(_this) {
+          return function(d) {
+            return _this._hoverAction(d, true);
+          };
+        })(this)).on('mouseout', (function(_this) {
+          return function(d) {
+            return _this._hoverAction(d, false);
+          };
+        })(this));
+        return this;
+      };
+
       FlameGraph.prototype._generateAccessors = function(accessors) {
         var accessor, j, len, results;
         results = [];
@@ -529,3 +554,5 @@
   };
 
 }).call(this);
+
+//# sourceMappingURL=d3-flame-graph.js.map
