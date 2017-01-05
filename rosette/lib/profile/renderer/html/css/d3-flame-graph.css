@@ -36,7 +36,7 @@
     stroke-opacity: 0;
 }
 .flame-graph g.highlight rect:first-child,
-.flame-graph g:hover rect:first-child {
+.flame-graph g.node:hover rect:first-child {
     fill: #FFD700;
     fill-opacity: 1;
 }

@@ -113,8 +113,11 @@ namespace timeline {
                 "name": "x",
                 "type": "linear",
                 "domain": { "data": "points", "field": "time" },
+                "domainMin": {"signal": "xmin"},
+                "domainMax": {"signal": "xmax"},
                 "range": "width",
-                "round": true
+                "round": true,
+                "zero": false
             },
             {
                 "name": "term-count",
@@ -141,8 +144,7 @@ namespace timeline {
                     "scale": { "name": "x", "invert": true }
                 }]
             }, {
-                "name": "xmin",
-                "init": 0
+                "name": "xmin"
             }, {
                 "name": "xmax"
             }],
@@ -153,10 +155,7 @@ namespace timeline {
                 "grid": true,
                 "layer": "back",
                 "ticks": 5,
-                "title": "time",
-                "range": "width",
-                "domainMin": {"signal": "xmin"},
-                "domainMax": {"signal": "xmax"}
+                "title": "time"
             },
             {
                 "type": "y",
