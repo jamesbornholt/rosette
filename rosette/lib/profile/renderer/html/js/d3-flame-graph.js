@@ -11,7 +11,7 @@
 
   d3.flameGraphUtils = {
     augment: function(node, location) {
-      var childSum, children, d, i, j, newChildren, ref;
+      var children, d, i, j, newChildren, ref;
       children = node.children;
       if (node.augmented) {
         return node;
@@ -28,7 +28,9 @@
       if (children.length > 0) {
         newChildren.push({
           value: children[0]["start"] - node["start"],
-          filler: true
+          filler: true,
+          start: node["start"],
+          finish: children[0]["start"]
         });
       }
       for (i = j = 1, ref = children.length - 1; j <= ref; i = j += 1) {
@@ -37,7 +39,9 @@
         if (d > 0) {
           newChildren.push({
             value: d,
-            filler: true
+            filler: true,
+            start: children[i - 1]["finish"],
+            finish: children[i]["start"]
           });
         }
       }
@@ -45,17 +49,10 @@
         newChildren.push(children[children.length - 1]);
         newChildren.push({
           value: node["finish"] - children[children.length - 1]["finish"],
-          filler: true
+          filler: true,
+          start: children[children.length - 1]["finish"],
+          finish: node["finish"]
         });
-      }
-      childSum = newChildren.reduce((function(sum, child) {
-        return sum + child.value;
-      }), 0);
-      if (childSum !== node.value) {
-        console.log(node, node.value, childSum, newChildren);
-      }
-      if (node.value !== node.originalValue) {
-        console.log(node);
       }
       children = newChildren;
       node.children = children;
@@ -69,7 +66,9 @@
       return node;
     },
     partition: function(data) {
-      return d3.layout.partition().nodes(data);
+      return d3.layout.partition().sort(function(a, b) {
+        return a["start"] - b["start"];
+      }).nodes(data);
     },
     hide: function(nodes, unhide) {
       var process, processChildren, processParents, remove, sum;
@@ -303,8 +302,11 @@
             return ((cell + visibleCells) - (_this._ancestors.length + maxLevels)) * _this.cellHeight();
           };
         })(this)));
-        data = this._data;
-        console.log(data);
+        data = this._data.filter((function(_this) {
+          return function(d) {
+            return _this.x(d.dx) > 0.4 && _this.y(d.y) >= 0 && !d.filler;
+          };
+        })(this));
         renderNode = {
           x: (function(_this) {
             return function(d) {

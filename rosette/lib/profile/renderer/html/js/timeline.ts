@@ -351,6 +351,7 @@ namespace timeline {
             Timeline.vega.signal("xminhover", node["start"]);
             Timeline.vega.signal("xmaxhover", node["finish"]);
             Timeline.vega.signal("xhoveropacity", 0.2);
+            Timeline.vega.signal("xtime", node["start"] + 1e-10);
             Timeline.vega.update();
         } else {
             Timeline.vega.signal("xhoveropacity", 0.0);

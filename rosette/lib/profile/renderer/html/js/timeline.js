@@ -329,6 +329,7 @@ var timeline;
             timeline_1.Timeline.vega.signal("xminhover", node["start"]);
             timeline_1.Timeline.vega.signal("xmaxhover", node["finish"]);
             timeline_1.Timeline.vega.signal("xhoveropacity", 0.2);
+            timeline_1.Timeline.vega.signal("xtime", node["start"] + 1e-10);
             timeline_1.Timeline.vega.update();
         }
         else {

@@ -20,33 +20,28 @@ d3.flameGraphUtils =
 
     newChildren = []
     if children.length > 0
-      newChildren.push({ value: children[0]["start"] - node["start"], 
-                         filler: true, 
-                         start: node["start"], 
-                         finish: children[0]["start"] })
+      newChildren.push
+        value: children[0]["start"] - node["start"]
+        filler: true
+        start: node["start"]
+        finish: children[0]["start"]
     for i in [1..children.length-1] by 1
       newChildren.push(children[i-1])
       d = children[i]["start"] - children[i-1]["finish"]
       if d > 0
-        newChildren.push({ value: d, 
-                           filler: true,
-                           start: children[i-1]["finish"],
-                           finish: children[i]["start"]})
+        newChildren.push
+          value: d
+          filler: true
+          start: children[i-1]["finish"]
+          finish: children[i]["start"]
     if children.length > 0
       newChildren.push(children[children.length - 1])
-      newChildren.push({ value: node["finish"] - children[children.length - 1]["finish"], 
-                         filler: true,
-                         start: children[children.length - 1]["finish"],
-                         finish: node["finish"]})
-    childSum = newChildren.reduce ((sum, child) -> sum + child.value), 0
-    if childSum != node.value
-      console.log node, node.value, childSum, newChildren
-    if node.value != node.originalValue
-      console.log node
+      newChildren.push
+        value: node["finish"] - children[children.length - 1]["finish"]
+        filler: true
+        start: children[children.length - 1]["finish"]
+        finish: node["finish"]
 
-    #childSum = children.reduce ((sum, child) -> sum + child.value), 0
-    #if childSum < node.value
-    #  children.push({ value: node.value - childSum, filler: true })
     children = newChildren
     node.children = children
 
@@ -230,9 +225,7 @@ d3.flameGraph = (selector, root, debug = false) ->
           .map((cell) =>  ((cell + visibleCells) - (@_ancestors.length + maxLevels)) * @cellHeight()))
 
       # JOIN
-      #data = @_data.filter((d) => @x(d.dx) > 0.4 and @y(d.y) >= 0 and not d.filler)
-      data = @_data
-      console.log(data)
+      data = @_data.filter((d) => @x(d.dx) > 0.4 and @y(d.y) >= 0 and not d.filler)
       renderNode =
         x: (d) => @x(d.x)
         y: (d) => @y(d.y)
