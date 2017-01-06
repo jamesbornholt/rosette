@@ -288,12 +288,14 @@ var timeline;
     function renderFlameGraph() {
         var dt = Data.graph["start"]["time"];
         var rec = function (node) {
+            var children = node["children"].map(rec);
+            children.sort(function (a, b) { return a["start"] - b["start"]; });
             return {
                 "name": node["function"],
                 "value": node["finish"]["time"] - node["start"]["time"],
                 "start": node["start"]["time"] - dt,
                 "finish": node["finish"]["time"] - dt,
-                "children": node["children"].map(rec)
+                "children": children
             };
         };
         var graph = rec(Data.graph);

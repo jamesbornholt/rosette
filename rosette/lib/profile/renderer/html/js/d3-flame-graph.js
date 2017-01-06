@@ -11,7 +11,7 @@
 
   d3.flameGraphUtils = {
     augment: function(node, location) {
-      var childSum, children;
+      var childSum, children, d, i, j, newChildren, ref;
       children = node.children;
       if (node.augmented) {
         return node;
@@ -24,15 +24,41 @@
         node.augmented = true;
         return node;
       }
-      childSum = children.reduce((function(sum, child) {
-        return sum + child.value;
-      }), 0);
-      if (childSum < node.value) {
-        children.push({
-          value: node.value - childSum,
+      newChildren = [];
+      if (children.length > 0) {
+        newChildren.push({
+          value: children[0]["start"] - node["start"],
           filler: true
         });
       }
+      for (i = j = 1, ref = children.length - 1; j <= ref; i = j += 1) {
+        newChildren.push(children[i - 1]);
+        d = children[i]["start"] - children[i - 1]["finish"];
+        if (d > 0) {
+          newChildren.push({
+            value: d,
+            filler: true
+          });
+        }
+      }
+      if (children.length > 0) {
+        newChildren.push(children[children.length - 1]);
+        newChildren.push({
+          value: node["finish"] - children[children.length - 1]["finish"],
+          filler: true
+        });
+      }
+      childSum = newChildren.reduce((function(sum, child) {
+        return sum + child.value;
+      }), 0);
+      if (childSum !== node.value) {
+        console.log(node, node.value, childSum, newChildren);
+      }
+      if (node.value !== node.originalValue) {
+        console.log(node);
+      }
+      children = newChildren;
+      node.children = children;
       children.forEach(function(child, idx) {
         return d3.flameGraphUtils.augment(child, location + "." + idx);
       });
@@ -43,15 +69,7 @@
       return node;
     },
     partition: function(data) {
-      return d3.layout.partition().sort(function(a, b) {
-        if (a.filler) {
-          return 1;
-        }
-        if (b.filler) {
-          return -1;
-        }
-        return a.name.localeCompare(b.name);
-      }).nodes(data);
+      return d3.layout.partition().nodes(data);
     },
     hide: function(nodes, unhide) {
       var process, processChildren, processParents, remove, sum;
@@ -171,6 +189,7 @@
         }
         this.console.time('augment');
         this.original = d3.flameGraphUtils.augment(root, '0');
+        console.log("original", this.original);
         this.console.timeEnd('augment');
         this.root(this.original);
       }
@@ -284,11 +303,8 @@
             return ((cell + visibleCells) - (_this._ancestors.length + maxLevels)) * _this.cellHeight();
           };
         })(this)));
-        data = this._data.filter((function(_this) {
-          return function(d) {
-            return _this.x(d.dx) > 0.4 && _this.y(d.y) >= 0 && !d.filler;
-          };
-        })(this));
+        data = this._data;
+        console.log(data);
         renderNode = {
           x: (function(_this) {
             return function(d) {
@@ -554,5 +570,3 @@
   };
 
 }).call(this);
-
-//# sourceMappingURL=d3-flame-graph.js.map

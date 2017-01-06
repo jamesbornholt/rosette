@@ -307,12 +307,14 @@ namespace timeline {
     function renderFlameGraph() {
         let dt = Data.graph["start"]["time"];
         let rec = (node) => {
+            let children = node["children"].map(rec);
+            children.sort((a, b) => a["start"] - b["start"]);
             return {
                 "name": node["function"],
                 "value": node["finish"]["time"] - node["start"]["time"],
                 "start": node["start"]["time"] - dt,
                 "finish": node["finish"]["time"] - dt,
-                "children": node["children"].map(rec)
+                "children": children
             };
         };
         let graph = rec(Data.graph);
