@@ -10,6 +10,8 @@ namespace timeline {
     declare var vg; // vega
     declare var vl; // vega-lite
 
+    let SUBSAMPLE_MS = 1;
+
     export let Timeline = {
         breaks: [],
         stacks: [],
@@ -49,7 +51,15 @@ namespace timeline {
         initTimelineData();
         if (Timeline.points.length > oldLength) {
             let newPoints = Timeline.points.slice(oldLength);
-            Timeline.vega.data("points").insert(newPoints);
+            let newPointsSub = [];
+            let dt = 0;
+            for (let p of newPoints) {
+                if (p["time"] - dt > SUBSAMPLE_MS) {
+                    dt = p["time"];
+                    newPointsSub.push(p);
+                }
+            }
+            Timeline.vega.data("points").insert(newPointsSub);
             Timeline.vega.update();
         }
     }
@@ -103,12 +113,22 @@ namespace timeline {
     function renderTimeline() {
         let timeline = document.getElementById("timeline");
 
+        // subsample the points so vega doesn't get overwhelmed
+        let points = [];
+        let dt = 0;
+        for (let p of Timeline.points) {
+            if (p["time"] - dt > SUBSAMPLE_MS) {
+                dt = p["time"];
+                points.push(p);
+            }
+        }
+
         // render the vega spec
         let spec = {
             "width": 800,
             "height": 400,
             "padding": "auto",
-            "data": [{ "name": "points", "values": Timeline.points }],
+            "data": [{ "name": "points", "values": points }],
             "scales": [{
                 "name": "x",
                 "type": "linear",

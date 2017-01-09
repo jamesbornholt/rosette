@@ -1,6 +1,7 @@
 /// <reference path="data.ts" />
 var timeline;
 (function (timeline_1) {
+    var SUBSAMPLE_MS = 1;
     timeline_1.Timeline = {
         breaks: [],
         stacks: [],
@@ -33,7 +34,16 @@ var timeline;
         initTimelineData();
         if (timeline_1.Timeline.points.length > oldLength) {
             var newPoints = timeline_1.Timeline.points.slice(oldLength);
-            timeline_1.Timeline.vega.data("points").insert(newPoints);
+            var newPointsSub = [];
+            var dt = 0;
+            for (var _i = 0, newPoints_1 = newPoints; _i < newPoints_1.length; _i++) {
+                var p = newPoints_1[_i];
+                if (p["time"] - dt > SUBSAMPLE_MS) {
+                    dt = p["time"];
+                    newPointsSub.push(p);
+                }
+            }
+            timeline_1.Timeline.vega.data("points").insert(newPointsSub);
             timeline_1.Timeline.vega.update();
         }
     }
@@ -87,12 +97,22 @@ var timeline;
     }
     function renderTimeline() {
         var timeline = document.getElementById("timeline");
+        // subsample the points so vega doesn't get overwhelmed
+        var points = [];
+        var dt = 0;
+        for (var _i = 0, _a = timeline_1.Timeline.points; _i < _a.length; _i++) {
+            var p = _a[_i];
+            if (p["time"] - dt > SUBSAMPLE_MS) {
+                dt = p["time"];
+                points.push(p);
+            }
+        }
         // render the vega spec
         var spec = {
             "width": 800,
             "height": 400,
             "padding": "auto",
-            "data": [{ "name": "points", "values": timeline_1.Timeline.points }],
+            "data": [{ "name": "points", "values": points }],
             "scales": [{
                     "name": "x",
                     "type": "linear",
