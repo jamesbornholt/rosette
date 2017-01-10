@@ -75,6 +75,13 @@
 
 ; Transform the profile tree to a list of nodes and list of edges
 (define (render-graph profile [key profile-node-key/srcloc])
+  (define (dt node)
+    (- (hash-ref (profile-data-finish (profile-node-data node)) 'time)
+       (hash-ref (profile-data-start  (profile-node-data node)) 'time)))
+  (define MIN_TIME (* (dt profile) 0.001))
+  (define (include? node)
+    (> (dt node) MIN_TIME))
+
   (define nodes '())
   (define add-node!
     (let ([i 0])
@@ -88,11 +95,12 @@
     (set! edges (cons (list a b) edges)))
     
   (let rec ([node profile][parent -1])
-    (let ([proc (key node)][idx (add-node! node)])
-      (unless (= parent -1)
-        (add-edge! parent idx))
-      (for ([c (profile-node-children node)])
-        (rec c idx))))
+    (when (include? node)
+      (let ([proc (key node)][idx (add-node! node)])
+        (unless (= parent -1)
+          (add-edge! parent idx))
+        (for ([c (profile-node-children node)])
+          (rec c idx)))))
 
   (values (reverse nodes) (reverse edges)))
 
