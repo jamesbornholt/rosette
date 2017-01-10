@@ -3,8 +3,7 @@ var Data = {
     // populated by Racket
     data: {
         nodes: [],
-        edges: [],
-        map: {}
+        edges: []
     },
     metadata: null,
     samples: [],
@@ -70,30 +69,10 @@ function dataOnload(initCb, updateCb) {
 }
 function initData() {
     // reconstruct the graph from the list of nodes/edges in data
-    var nodes = [];
-    var fields = Data.data.map["top"];
-    var inflate = function (f, v) {
-        if (v instanceof Array) {
-            var ret = {};
-            for (var i in v) {
-                ret[Data.data.map[f][i]] = v[i];
-            }
-            return ret;
-        }
-        else {
-            return Data.data.map[f][v];
-        }
-    };
     for (var _i = 0, _a = Data.data.nodes; _i < _a.length; _i++) {
         var n = _a[_i];
-        var node = {};
-        for (var i in n) {
-            node[fields[i]] = inflate(fields[i], n[i]);
-        }
-        node["children"] = []; // every node needs a list of children
-        nodes.push(node);
+        n.children = []; // every node needs a list of children
     }
-    Data.data.nodes = nodes;
     for (var _b = 0, _c = Data.data.edges; _b < _c.length; _b++) {
         var e = _c[_b];
         var a = e[0], b = e[1];

@@ -164,7 +164,7 @@ namespace timeline {
                     "scale": { "name": "x", "invert": true }
                 }]
             }, 
-            {"name": "xmin", "init": 0},
+            {"name": "xmin"},
             {"name": "xmax"},
             {"name": "xminhover"},
             {"name": "xmaxhover"},
@@ -349,9 +349,8 @@ namespace timeline {
             Timeline.resizing = true;
             window.setTimeout(() => {
                 let panel = document.getElementById("timeline-panel");
-                //let width = panel.clientWidth;
-                let width = Timeline.vega.width() + 150;
-                //Timeline.vega.width(width-150).update();
+                let width = panel.clientWidth;
+                Timeline.vega.width(width-150).update();
                 Timeline.flameGraph.size([width-150, 400]).render();
                 document.getElementById("flamegraph").style.marginLeft = Timeline.vega.padding().left;
                 Timeline.resizing = false;
