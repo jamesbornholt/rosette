@@ -148,7 +148,7 @@ var timeline;
                             "scale": { "name": "x", "invert": true }
                         }]
                 },
-                { "name": "xmin" },
+                { "name": "xmin", "init": 0 },
                 { "name": "xmax" },
                 { "name": "xminhover" },
                 { "name": "xmaxhover" },
@@ -329,8 +329,9 @@ var timeline;
             timeline_1.Timeline.resizing = true;
             window.setTimeout(function () {
                 var panel = document.getElementById("timeline-panel");
-                var width = panel.clientWidth;
-                timeline_1.Timeline.vega.width(width - 150).update();
+                //let width = panel.clientWidth;
+                var width = timeline_1.Timeline.vega.width() + 150;
+                //Timeline.vega.width(width-150).update();
                 timeline_1.Timeline.flameGraph.size([width - 150, 400]).render();
                 document.getElementById("flamegraph").style.marginLeft = timeline_1.Timeline.vega.padding().left;
                 timeline_1.Timeline.resizing = false;

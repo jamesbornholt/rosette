@@ -87,7 +87,7 @@
 ; A parameter that holds a list of features to profile.
 (define current-features
   (make-parameter
-   (list heap-size-feature union-size-feature)
+   (list #;heap-size-feature union-size-feature)
    (lambda (fs)
      (unless (and (list? fs) (andmap feature? fs))
        (error 'current-features "Expected a list of feature?, given ~a" fs))
