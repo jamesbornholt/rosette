@@ -1,7 +1,7 @@
 /// <reference path="data.ts" />
 var timeline;
 (function (timeline_1) {
-    var SUBSAMPLE_MS = 1;
+    var SUBSAMPLE_MS = 0;
     timeline_1.Timeline = {
         breaks: [],
         stacks: [],
@@ -303,6 +303,10 @@ var timeline;
                 lastNode = node;
                 lastEntry = entry;
             }
+        }
+        // highlight flamegraph
+        if (timeline_1.Timeline.flameGraph) {
+            timeline_1.Timeline.flameGraph.highlight(value);
         }
     }
     function renderFlameGraph() {

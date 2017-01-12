@@ -369,6 +369,13 @@ d3.flameGraph = (selector, root, debug = false) ->
       ancestors.exit().remove()
       @
 
+    highlight: (x) ->
+      @container
+        .selectAll('g')
+        .classed("highlight", false)
+        .filter((d) => d["start"] <= x && x < d["finish"])
+        .classed("highlight", true)
+
     _enableNavigation: () ->
       clickable = (d) => Math.round(@width() - @x(d.dx)) > 0 and d.children?.length
       @container

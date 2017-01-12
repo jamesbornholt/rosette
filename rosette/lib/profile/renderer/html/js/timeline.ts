@@ -10,7 +10,7 @@ namespace timeline {
     declare var vg; // vega
     declare var vl; // vega-lite
 
-    let SUBSAMPLE_MS = 1;
+    let SUBSAMPLE_MS = 0;
 
     export let Timeline = {
         breaks: [],
@@ -321,6 +321,11 @@ namespace timeline {
                 lastNode = node;
                 lastEntry = entry;
             }
+        }
+
+        // highlight flamegraph
+        if (Timeline.flameGraph) {
+            Timeline.flameGraph.highlight(value);
         }
     }
 

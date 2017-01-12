@@ -490,6 +490,14 @@
         return this;
       };
 
+      FlameGraph.prototype.highlight = function(x) {
+        return this.container.selectAll('g').classed("highlight", false).filter((function(_this) {
+          return function(d) {
+            return d["start"] <= x && x < d["finish"];
+          };
+        })(this)).classed("highlight", true);
+      };
+
       FlameGraph.prototype._enableNavigation = function() {
         var clickable;
         clickable = (function(_this) {
@@ -572,3 +580,5 @@
   };
 
 }).call(this);
+
+//# sourceMappingURL=d3-flame-graph.js.map
