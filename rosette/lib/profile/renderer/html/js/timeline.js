@@ -99,20 +99,44 @@ var timeline;
         var timeline = document.getElementById("timeline");
         // subsample the points so vega doesn't get overwhelmed
         var points = [];
+        var keys = {};
         var dt = 0;
         for (var _i = 0, _a = timeline_1.Timeline.points; _i < _a.length; _i++) {
             var p = _a[_i];
             if (p["time"] - dt > SUBSAMPLE_MS) {
                 dt = p["time"];
                 points.push(p);
+                for (var k in p) {
+                    keys[k] = true;
+                }
             }
         }
+        if (keys.hasOwnProperty("time"))
+            delete keys["time"];
+        var keyNames = Object.keys(keys);
+        var scales = keyNames.map(function (k) {
+            return {
+                "name": k,
+                "type": "linear",
+                "domain": { "data": "points", "field": k },
+                "range": "height",
+                "round": true,
+                "nice": true
+            };
+        });
         // render the vega spec
         var spec = {
             "width": 800,
             "height": 400,
             "padding": "auto",
-            "data": [{ "name": "points", "values": points }],
+            "data": [{
+                    "name": "points",
+                    "values": points,
+                    "transform": [
+                        { "type": "fold", "fields": keyNames },
+                        { "type": "sort", "by": "-time" }
+                    ]
+                }],
             "scales": [{
                     "name": "x",
                     "type": "linear",
@@ -124,21 +148,11 @@ var timeline;
                     "zero": false
                 },
                 {
-                    "name": "term-count",
-                    "type": "linear",
-                    "domain": { "data": "points", "field": "term-count" },
-                    "range": "height",
-                    "round": true,
-                    "nice": true
-                },
-                {
-                    "name": "merge-count",
-                    "type": "linear",
-                    "domain": { "data": "points", "field": "merge-count" },
-                    "range": "height",
-                    "round": true,
-                    "nice": true
-                }],
+                    "name": "color",
+                    "type": "ordinal",
+                    "domain": { "data": "points", "field": "key" },
+                    "range": "category10"
+                }].concat(scales),
             "signals": [{
                     "name": "xtime",
                     "init": 0,
@@ -180,31 +194,36 @@ var timeline;
                     "title": "merge-count",
                     "orient": "right"
                 }],
+            "legends": [{
+                    "fill": "color",
+                    "orient": "left",
+                    "offset": -150,
+                    "properties": {
+                        "labels": { "fontSize": { "value": 12 } },
+                        "symbols": { "stroke": { "value": "transparent" } }
+                    }
+                }],
             "marks": [{
-                    "name": "term-count",
-                    "type": "line",
-                    "from": { "data": "points", "transform": [{ "type": "sort", "by": "-time" }] },
-                    "properties": {
-                        "update": {
-                            "x": { "scale": "x", "field": "time" },
-                            "y": { "scale": "term-count", "field": "term-count" },
-                            "stroke": { "value": "#4682b4" },
-                            "strokeWidth": { "value": 2 }
-                        }
-                    }
-                },
-                {
-                    "name": "merge-count",
-                    "type": "line",
-                    "from": { "data": "points", "transform": [{ "type": "sort", "by": "-time" }] },
-                    "properties": {
-                        "update": {
-                            "x": { "scale": "x", "field": "time" },
-                            "y": { "scale": "merge-count", "field": "merge-count" },
-                            "stroke": { "value": "#01BA38" },
-                            "strokeWidth": { "value": 2 }
-                        }
-                    }
+                    "type": "group",
+                    "from": {
+                        "data": "points",
+                        "transform": [{
+                                "type": "facet",
+                                "groupby": ["key"]
+                            }]
+                    },
+                    "marks": [{
+                            "name": "y",
+                            "type": "line",
+                            "properties": {
+                                "update": {
+                                    "x": { "scale": "x", "field": "time" },
+                                    "y": { "scale": { "datum": "key" }, "field": "value" },
+                                    "stroke": { "scale": "color", "field": "key" },
+                                    "strokeWidth": { "value": 2 }
+                                }
+                            }
+                        }]
                 },
                 {
                     "type": "rule",
@@ -226,11 +245,12 @@ var timeline;
                             "y": { "value": 0 },
                             "y2": { "field": { "group": "height" } },
                             "fill": { "value": "grey" },
-                            "fillOpacity": { "signal": "xhoveropacity" } //{"value": 0.5}
+                            "fillOpacity": { "signal": "xhoveropacity" }
                         }
                     }
                 }]
         };
+        console.log(spec);
         vg.embed(timeline, { spec: spec }, function (err, res) {
             if (err) {
                 console.error(err);
