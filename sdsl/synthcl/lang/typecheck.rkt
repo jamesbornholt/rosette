@@ -1,7 +1,8 @@
 #lang rosette
 
 (require (for-template (only-in "forms.rkt" app-or-ref) 
-                       (only-in racket quote #%app #%datum) 
+                       (only-in rosette quote #|#%app|# #%datum)
+                       (only-in rosette/lib/profile/instrument #%app) ; needed for profiling to work
                        "types.rkt")
          syntax/stx syntax/id-table
          (prefix-in rosette/ (only-in rosette  = <= >= ))
