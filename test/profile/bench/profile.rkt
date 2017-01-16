@@ -1,6 +1,7 @@
 #lang racket
 
-(require (only-in rosette clear-state!)
+(require (only-in rosette current-oracle oracle clear-asserts! clear-terms! current-solver)
+         (only-in rosette/solver/smt/z3 z3)
          rosette/lib/profile rosette/lib/profile/renderer/html)
 (provide profile-bench profile-bench! profile-bench-stream)
 
@@ -29,7 +30,13 @@
               (time body))
           #:name n)))]))
 
+(define (clear-most-state!)
+  (current-oracle (oracle))
+  (clear-asserts!)
+  (clear-terms!)
+  (current-solver (z3)))
+
 (define-syntax-rule (profile-bench! args ...)
   (begin
     (profile-bench args ...)
-    (clear-state!)))
+    (clear-most-state!)))
