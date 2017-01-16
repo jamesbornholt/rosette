@@ -355,7 +355,7 @@ var timeline;
                 var windowWidth = window.innerWidth;
                 var padding = timeline_1.Timeline.vega.padding();
                 var pad = padding.left + padding.right;
-                var newWidth = windowWidth - stackWidth - pad - 50;
+                var newWidth = windowWidth - stackWidth - pad - 80;
                 timeline_1.Timeline.vega.width(newWidth).update();
                 timeline_1.Timeline.flameGraph.size([newWidth, 400]).render();
                 document.getElementById("flamegraph").style.marginLeft = padding.left;
