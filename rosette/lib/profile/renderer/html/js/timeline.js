@@ -25,8 +25,7 @@ var timeline;
         renderFlameGraph();
         // Render the timeline
         renderTimeline();
-        // Bind the resize handler
-        // window.addEventListener("resize", windowResizeCallback);
+        window.addEventListener("resize", windowResizeCallback);
     }
     timeline_1.init = init;
     function update() {
@@ -352,11 +351,14 @@ var timeline;
         if (timeline_1.Timeline.vega && !timeline_1.Timeline.resizing) {
             timeline_1.Timeline.resizing = true;
             window.setTimeout(function () {
-                var panel = document.getElementById("timeline-panel");
-                var width = panel.clientWidth;
-                timeline_1.Timeline.vega.width(width - 150).update();
-                timeline_1.Timeline.flameGraph.size([width - 150, 400]).render();
-                document.getElementById("flamegraph").style.marginLeft = timeline_1.Timeline.vega.padding().left;
+                var stackWidth = document.getElementById("stack").clientWidth;
+                var windowWidth = window.innerWidth;
+                var padding = timeline_1.Timeline.vega.padding();
+                var pad = padding.left + padding.right;
+                var newWidth = windowWidth - stackWidth - pad - 50;
+                timeline_1.Timeline.vega.width(newWidth).update();
+                timeline_1.Timeline.flameGraph.size([newWidth, 400]).render();
+                document.getElementById("flamegraph").style.marginLeft = padding.left;
                 timeline_1.Timeline.resizing = false;
             }, 50);
         }
@@ -374,12 +376,11 @@ var timeline;
             timeline_1.Timeline.vega.signal("xmaxhover", node["finish"]);
             timeline_1.Timeline.vega.signal("xhoveropacity", 0.2);
             timeline_1.Timeline.vega.signal("xtime", node["start"] + 1e-10);
-            timeline_1.Timeline.vega.update();
         }
         else {
             timeline_1.Timeline.vega.signal("xhoveropacity", 0.0);
-            timeline_1.Timeline.vega.update();
         }
+        timeline_1.Timeline.vega.update();
     }
 })(timeline || (timeline = {})); // /namespace
 document.addEventListener("DOMContentLoaded", dataOnload(timeline.init, timeline.update));

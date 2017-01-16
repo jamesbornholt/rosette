@@ -40,10 +40,7 @@ namespace timeline {
         // Render the timeline
         renderTimeline();
 
-        
-
-        // Bind the resize handler
-        // window.addEventListener("resize", windowResizeCallback);
+        window.addEventListener("resize", windowResizeCallback);
     }
 
     export function update() {
@@ -375,11 +372,14 @@ namespace timeline {
         if (Timeline.vega && !Timeline.resizing) {
             Timeline.resizing = true;
             window.setTimeout(() => {
-                let panel = document.getElementById("timeline-panel");
-                let width = panel.clientWidth;
-                Timeline.vega.width(width-150).update();
-                Timeline.flameGraph.size([width-150, 400]).render();
-                document.getElementById("flamegraph").style.marginLeft = Timeline.vega.padding().left;
+                let stackWidth = document.getElementById("stack").clientWidth;
+                let windowWidth = window.innerWidth;
+                let padding = Timeline.vega.padding();
+                let pad = padding.left + padding.right;
+                let newWidth = windowWidth - stackWidth - pad - 50;
+                Timeline.vega.width(newWidth).update();
+                Timeline.flameGraph.size([newWidth, 400]).render();
+                document.getElementById("flamegraph").style.marginLeft = padding.left;
                 Timeline.resizing = false;
             }, 50);
         }
@@ -399,11 +399,10 @@ namespace timeline {
             Timeline.vega.signal("xmaxhover", node["finish"]);
             Timeline.vega.signal("xhoveropacity", 0.2);
             Timeline.vega.signal("xtime", node["start"] + 1e-10);
-            Timeline.vega.update();
         } else {
             Timeline.vega.signal("xhoveropacity", 0.0);
-            Timeline.vega.update();
         }
+        Timeline.vega.update();
     }
 
 } // /namespace

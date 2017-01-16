@@ -78,16 +78,18 @@ h4 {
 }
 
 #panel {
-    display: flex
+    /*display: flex*/
 }
 
 #timeline-panel {
-    flex: 1 0 0;
+    float: left;
+    /*flex: 1 0 0;*/
 }
 
 #stack {
     width: 20em;
-    flex: 0 0 auto;
+    float: left;
+    /*flex: 0 0 auto;*/
 }
 
 .counter::before {
