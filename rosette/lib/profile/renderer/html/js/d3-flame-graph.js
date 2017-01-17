@@ -188,7 +188,6 @@
         }
         this.console.time('augment');
         this.original = d3.flameGraphUtils.augment(root, '0');
-        console.log("original", this.original);
         this.console.timeEnd('augment');
         this.root(this.original);
       }

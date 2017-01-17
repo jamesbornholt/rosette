@@ -148,7 +148,6 @@ d3.flameGraph = (selector, root, debug = false) ->
       # initial processing of data
       @console.time('augment')
       @original = d3.flameGraphUtils.augment(root, '0')
-      console.log "original", @original
       @console.timeEnd('augment')
       @root(@original)
 

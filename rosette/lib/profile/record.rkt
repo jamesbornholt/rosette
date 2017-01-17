@@ -28,8 +28,8 @@
   #:transparent #:mutable)
 
 ;; Compute profile data on procedure entry
-(define (entry-data loc proc in)
-  (let ([start (get-current-metrics)])
+(define (entry-data loc proc in [rep (current-reporter)])
+  (let ([start (get-current-metrics rep)])
     (profile-data loc proc (compute-features in) (hash) (hash) start (hash))))
 
 ;; Returns a new top-level profile node
@@ -105,7 +105,7 @@
 (define (run-profile-thunk proc)
   (define state (make-top-level-profile))
   (define reporter (make-profiler-reporter))
-  (set-profile-node-data! state (entry-data 'top 'top '()))
+  (set-profile-node-data! state (entry-data 'top 'top '() reporter))
   (define ret (parameterize ([current-profile state]
                              [current-reporter reporter])
                 (define-values (out cpu real gc) (time-apply proc '()))

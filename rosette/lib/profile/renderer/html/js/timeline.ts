@@ -265,8 +265,6 @@ namespace timeline {
             }]
         }
 
-        console.log(spec);
-
         vg.embed(timeline, { spec: spec }, function (err, res) {
             if (err) {
                 console.error(err);
