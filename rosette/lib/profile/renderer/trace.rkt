@@ -1,15 +1,19 @@
 #lang racket
 
-(require "../record.rkt" "key.rkt")
+(require "../record.rkt" "key.rkt" "renderer.rkt")
 
-(provide trace-renderer)
+(provide make-trace-renderer)
 
-; Create a renderer that outputs the entire call tree
-(define (trace-renderer)
-  (lambda (profile source name)
-    (unless (profile-node? profile)
-      (raise-argument-error 'trace-renderer "profile-node?" profile))
-    (render-trace profile source name)))
+(struct trace-renderer (source name key) 
+  #:transparent
+  #:methods gen:renderer
+  [(define start-renderer void)
+   (define (finish-renderer self profile)
+     (match-define (trace-renderer source name key) self)
+     (render-trace profile source name key))])
+
+(define (make-trace-renderer source name [options (hash)] [key profile-node-key/srcloc])
+  (trace-renderer source name key))
 
 (define (render-trace profile source name [key profile-node-key/srcloc])
   (define (indent n)

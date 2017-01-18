@@ -1,8 +1,22 @@
 #lang racket
 
-(require plot "../record.rkt" "../feature.rkt" "stats.rkt" "key.rkt")
+(require "../record.rkt" "../feature.rkt" "stats.rkt" "key.rkt" "renderer.rkt")
+(provide make-complexity-renderer)
 
-(provide complexity-renderer)
+; The complexity renderer tries to fit power law curves to the complexity of
+; each function in the profile.
+(define (make-complexity-renderer source name [options (hash)] [key profile-node-key/srcloc])
+  (complexity-renderer source name key))
+
+(struct complexity-renderer (source name key) 
+  #:transparent
+  #:methods gen:renderer
+  [(define start-renderer void)
+   (define (finish-renderer self profile)
+     (match-define (complexity-renderer source name key) self)
+     (render-complexity profile source name))])
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (feature->feature feature)
   (lambda (node) (hash-ref (profile-data-inputs (profile-node-data node)) feature #f)))
@@ -22,17 +36,14 @@
 ; Create a renderer that outputs information about the complexity of
 ; procedures observed in a profile. If plot? is true, the renderer will
 ; also produce a plot in a new window.
-(define (complexity-renderer #:plot? [plot? #f])
-  (lambda (profile source name)
+(define (render-complexity profile source name)
     (unless (profile-node? profile)
       (raise-argument-error 'complexity-renderer "profile-node?" profile))
     (printf "=== ~a (source: ~v) ===\n" name source)
     (for* ([feature (current-features)]
            [metric (cons (feature->metric feature) metrics)])
       (let ([result (analyze-complexity profile (feature->feature feature) metric)])
-        (render-complexity/text result feature metric)
-        (when plot?
-          (render-complexity/plot result feature metric))))))
+        (render-complexity/text result feature metric))))
 
 
 ; Represents a power-law fit to the complexity of a single procedure:
@@ -84,17 +95,3 @@
       (printf "~a: output ~a = ~a * (input ~a)^~a (R^2 = ~a)\n"
               proc mname (~f a) fname (~f b) (~f R2 3)))
     (printf "\n")))
-
-; Take a list of procedure-complexity? instances and render them as a graph.
-(define (render-complexity/plot nodes feature metric)
-  (define renderers
-    (for/fold ([ret '()])
-              ([n (filter (lambda (n) (not (false? (procedure-complexity-a n)))) nodes)])
-      (match-define (procedure-complexity proc a b R2 x y) n)
-      (let ([color (/ (length ret) 2)])
-        (append ret (list (function (lambda (x) (* a (expt x b)))
-                                    #:color color #:label (~a (object-name proc)))
-                          (points (map vector x y) #:color color))))))
-  (unless (null? renderers)
-    (parameterize ([plot-new-window? #t])
-      (plot renderers #:title (format "(~v, ~v)" (feature-name feature) (object-name metric))))))

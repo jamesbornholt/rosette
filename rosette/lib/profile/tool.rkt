@@ -1,15 +1,24 @@
 #lang racket
 
-(require "record.rkt" "renderer/complexity.rkt")
+(require "record.rkt" "reporter.rkt" 
+         "renderer/renderer.rkt" "renderer/summary.rkt")
 (provide (all-defined-out))
 
+; The selected renderer
+(define current-renderer (make-parameter make-summary-renderer))
+
 ; Executes the given thunk and prints the profile data generated during execution.
-(define (profile-thunk thunk #:renderer [renderer (complexity-renderer #:plot? #f)]
+(define (profile-thunk thunk #:renderer [renderer% (current-renderer)]
                              #:source [source-stx #f]
                              #:name [name "Profile"])
-  (define-values (node ret) (run-profile-thunk thunk))
-  (renderer node source-stx name)
+  (define state (make-top-level-profile))
+  (define reporter (make-profiler-reporter))
+  (define renderer (renderer% source-stx name (hash)))
+  (start-renderer renderer state reporter)
+  (define-values (prof ret) (run-profile-thunk thunk state reporter))
+  (finish-renderer renderer prof)
   (apply values ret))
+
 
 ;; TODO:  we probably need a version of profile-thunk etc that does
 ;; the profiling wrt a clean symbolic state (empty assertion stack, term cache etc).

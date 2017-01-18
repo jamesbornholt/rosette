@@ -1,7 +1,6 @@
 /// <reference path="data.ts" />
 var timeline;
 (function (timeline_1) {
-    var SUBSAMPLE_MS = 0;
     timeline_1.Timeline = {
         breaks: [],
         stacks: [],
@@ -33,16 +32,7 @@ var timeline;
         initTimelineData();
         if (timeline_1.Timeline.points.length > oldLength) {
             var newPoints = timeline_1.Timeline.points.slice(oldLength);
-            var newPointsSub = [];
-            var dt = 0;
-            for (var _i = 0, newPoints_1 = newPoints; _i < newPoints_1.length; _i++) {
-                var p = newPoints_1[_i];
-                if (p["time"] - dt > SUBSAMPLE_MS) {
-                    dt = p["time"];
-                    newPointsSub.push(p);
-                }
-            }
-            timeline_1.Timeline.vega.data("points").insert(newPointsSub);
+            timeline_1.Timeline.vega.data("points").insert(newPoints);
             timeline_1.Timeline.vega.update();
         }
     }
@@ -61,8 +51,10 @@ var timeline;
             }
             return ret;
         };
+        // push starting point
+        var init = computePoint(first);
         var stack = [];
-        var breaks = [], stacks = [], points = [];
+        var breaks = [init["time"]], stacks = [[root]], points = [init];
         var rec = function (node) {
             var start = computePoint(node["start"]);
             // push start data point
@@ -96,18 +88,11 @@ var timeline;
     }
     function renderTimeline() {
         var timeline = document.getElementById("timeline");
-        // subsample the points so vega doesn't get overwhelmed
-        var points = [];
         var keys = {};
-        var dt = 0;
         for (var _i = 0, _a = timeline_1.Timeline.points; _i < _a.length; _i++) {
             var p = _a[_i];
-            if (p["time"] - dt > SUBSAMPLE_MS) {
-                dt = p["time"];
-                points.push(p);
-                for (var k in p) {
-                    keys[k] = true;
-                }
+            for (var k in p) {
+                keys[k] = true;
             }
         }
         if (keys.hasOwnProperty("time"))
@@ -130,7 +115,7 @@ var timeline;
             "padding": "auto",
             "data": [{
                     "name": "points",
-                    "values": points,
+                    "values": timeline_1.Timeline.points,
                     "transform": [
                         { "type": "fold", "fields": keyNames },
                         { "type": "sort", "by": "-time" }

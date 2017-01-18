@@ -10,8 +10,6 @@ namespace timeline {
     declare var vg; // vega
     declare var vl; // vega-lite
 
-    let SUBSAMPLE_MS = 0;
-
     export let Timeline = {
         breaks: [],
         stacks: [],
@@ -48,15 +46,7 @@ namespace timeline {
         initTimelineData();
         if (Timeline.points.length > oldLength) {
             let newPoints = Timeline.points.slice(oldLength);
-            let newPointsSub = [];
-            let dt = 0;
-            for (let p of newPoints) {
-                if (p["time"] - dt > SUBSAMPLE_MS) {
-                    dt = p["time"];
-                    newPointsSub.push(p);
-                }
-            }
-            Timeline.vega.data("points").insert(newPointsSub);
+            Timeline.vega.data("points").insert(newPoints);
             Timeline.vega.update();
         }
     }
@@ -74,8 +64,10 @@ namespace timeline {
             }
             return ret;
         }
+        // push starting point
+        let init = computePoint(first);
         let stack = [];
-        let breaks = [], stacks = [], points = [];
+        let breaks = [init["time"]], stacks = [[root]], points = [init];
         let rec = (node) => {
             let start = computePoint(node["start"]);
             // push start data point
@@ -110,17 +102,10 @@ namespace timeline {
     function renderTimeline() {
         let timeline = document.getElementById("timeline");
 
-        // subsample the points so vega doesn't get overwhelmed
-        let points = [];
         let keys = {};
-        let dt = 0;
         for (let p of Timeline.points) {
-            if (p["time"] - dt > SUBSAMPLE_MS) {
-                dt = p["time"];
-                points.push(p);
-                for (let k in p) {
-                    keys[k] = true;
-                }
+            for (let k in p) {
+                keys[k] = true;
             }
         }
         if (keys.hasOwnProperty("time"))
@@ -145,7 +130,7 @@ namespace timeline {
             "padding": "auto",
             "data": [{
                 "name": "points",
-                "values": points,
+                "values": Timeline.points,
                 "transform": [
                     { "type": "fold", "fields": keyNames },
                     { "type": "sort", "by": "-time" }

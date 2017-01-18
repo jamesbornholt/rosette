@@ -15,7 +15,6 @@
          (profile 
           #,(syntax/loc #'body
               (time body))
-          #:renderer (html-renderer)
           #:name n)))]))
 
 ; Shorthand to profile a given expression and generate a HTML report.

@@ -1,8 +1,8 @@
 #lang racket
 
-(require "../record.rkt" "../feature.rkt" "key.rkt" "srcloc.rkt"
+(require "../record.rkt" "../feature.rkt" "key.rkt" "srcloc.rkt" "renderer.rkt"
          racket/date json racket/runtime-path racket/hash)
-(provide html-renderer render-json)
+(provide make-html-renderer render-json)
 
 ; Source of the HTML template
 (define-runtime-path template-dir "html")
@@ -13,13 +13,22 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; The HTML renderer produces a directory containing a webpage version of a complexity profile.
-(define (html-renderer #:directory [dir (build-path (current-directory) "profiles")]
-                       #:auto-open? [open? #t])
-  (lambda (profile source name)
-    (unless (profile-node? profile)
-      (raise-argument-error 'html-renderer "profile-node?" profile))
+; The HTML renderer produces a directory containing a webpage version of a profile.
+(define (make-html-renderer source name [options (hash)] [key profile-node-key/srcloc])
+  (html-renderer source name key #t))
 
+(struct html-renderer (source name key open?) 
+  #:transparent
+  #:methods gen:renderer
+  [(define start-renderer void)
+   (define (finish-renderer self profile)
+     (match-define (html-renderer source name key open?) self)
+     (render-html profile source name open?))])
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (render-html profile source name open?
+                     #:directory [dir (build-path (current-directory) "profiles")])
     ; set up output directory
     (define output-dir (build-path dir (make-folder-name source)))
     (make-directory* output-dir)
@@ -51,7 +60,7 @@
       (unless (false? opener)
         (printf "Opening profile...\n")
         (system (format "~a ~a" opener (path->string (build-path output-dir "profile.html"))))
-        (system (format "~a ~a" opener (path->string (build-path output-dir "timeline.html"))))))))
+        (system (format "~a ~a" opener (path->string (build-path output-dir "timeline.html")))))))
 
 
 ; Render a single profile-node? to a jsexpr? dictionary

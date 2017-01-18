@@ -1,17 +1,22 @@
 #lang racket
 
-(require "../record.rkt" "key.rkt")
+(require "../record.rkt" "key.rkt" "renderer.rkt")
+(provide make-summary-renderer)
 
-(provide summary-renderer)
-
-; Create a renderer that aggregates inclusive and exclusive time
+; The summary renderer aggregates inclusive and exclusive time
 ; per procedure and prints the results.
-(define (summary-renderer)
-  (lambda (profile source name)
-    (unless (profile-node? profile)
-      (raise-argument-error 'profile-renderer "profile-node?" profile))
-    (render-profile (aggregate-profile profile) source name)))
 
+(define (make-summary-renderer source name [options (hash)] [key profile-node-key/srcloc])
+  (summary-renderer source name key))
+
+(struct summary-renderer (source name key) 
+  #:transparent
+  #:methods gen:renderer
+  [(define start-renderer void)
+   (define (finish-renderer self profile)
+     (match-define (summary-renderer source name key) self)
+     (define agg (aggregate-profile profile key))
+     (render-summary agg source name))])
 
 ; A profile entry is a single procedure together with inclusive and
 ; exclusive time.
@@ -44,7 +49,7 @@
 
 
 ; Render a profile to current-output-port
-(define (render-profile profile source name)
+(define (render-summary profile source name)
   (unless (null? profile)
     (printf "--- ~a (inclusive time/exclusive time) ---\n" name)
     (printf "--- source: ~v ---\n" source)

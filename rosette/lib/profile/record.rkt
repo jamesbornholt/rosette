@@ -102,14 +102,11 @@
     (current-profile (profile-node-parent (current-profile)))))
 
 ;; Run a top-level profiled thunk and return a profile node for its extent
-(define (run-profile-thunk proc)
-  (define state (make-top-level-profile))
-  (define reporter (make-profiler-reporter))
-  (set-profile-node-data! state (entry-data 'top 'top '() reporter))
-  (define ret (parameterize ([current-profile state]
+(define (run-profile-thunk proc profile reporter)
+  (set-profile-node-data! profile (entry-data 'top 'top '() reporter))
+  (define ret (parameterize ([current-profile profile]
                              [current-reporter reporter])
                 (define-values (out cpu real gc) (time-apply proc '()))
                 (record-exit! out cpu real gc)
                 out))
-  (values state ret))
-
+  (values profile ret))
