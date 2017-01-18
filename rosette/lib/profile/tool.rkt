@@ -1,11 +1,11 @@
 #lang racket
 
 (require "record.rkt" "reporter.rkt" 
-         "renderer/renderer.rkt" "renderer/summary.rkt")
+         "renderer/renderer.rkt" "renderer/html.rkt")
 (provide (all-defined-out))
 
 ; The selected renderer
-(define current-renderer (make-parameter make-summary-renderer))
+(define current-renderer (make-parameter make-html-renderer))
 
 ; Executes the given thunk and prints the profile data generated during execution.
 (define (profile-thunk thunk #:renderer [renderer% (current-renderer)]
