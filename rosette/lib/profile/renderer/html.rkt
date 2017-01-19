@@ -2,7 +2,7 @@
 
 (require "../record.rkt" "../feature.rkt" "key.rkt" "srcloc.rkt" "renderer.rkt"
          racket/date json racket/runtime-path racket/hash)
-(provide make-html-renderer render-json)
+(provide make-html-renderer render-entry)
 
 ; Source of the HTML template
 (define-runtime-path template-dir "html")

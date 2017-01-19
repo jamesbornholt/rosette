@@ -54,7 +54,7 @@
 ;; to their ID, a list of edges (pairs of node IDs), and a list of nodes
 ;; that have been exited (used to track which nodes need to be updated if
 ;; output is streamed).
-(struct profile-stream (nodes node->idx edges finished)
+(struct profile-stream (nodes node->idx edges finished lock)
   #:mutable)
 
 
@@ -69,7 +69,7 @@
 
 ;; Returns a new profile stream with a given root profile node
 (define (make-profile-stream root)
-  (profile-stream '() (make-hash (list (cons root 0))) '() '()))
+  (profile-stream (list root) (make-hash (list (cons root 0))) '() '() (make-semaphore 1)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -94,14 +94,16 @@
          [curr-node (profile-state-curr curr)]
          [new-data (entry-data loc proc in)]
          [new-node (profile-node curr-node '() new-data)]
-         [node->idx (profile-stream-node->idx curr-stream)]
-         [parent-idx (hash-ref node->idx curr-node)]
-         [new-idx (hash-count node->idx)])
-    (set-profile-stream-nodes! curr-stream (cons new-node
-                                                 (profile-stream-nodes curr-stream)))
-    (hash-set! node->idx new-node new-idx)
-    (set-profile-stream-edges! curr-stream (cons (cons parent-idx new-idx)
-                                                 (profile-stream-edges curr-stream)))
+         [node->idx (profile-stream-node->idx curr-stream)])
+    (semaphore-wait (profile-stream-lock curr-stream))
+    (let ([parent-idx (hash-ref node->idx curr-node)]
+          [new-idx (hash-count node->idx)])
+      (set-profile-stream-nodes! curr-stream (cons new-node
+                                                   (profile-stream-nodes curr-stream)))
+      (hash-set! node->idx new-node new-idx)
+      (set-profile-stream-edges! curr-stream (cons (list parent-idx new-idx)
+                                                   (profile-stream-edges curr-stream))))
+    (semaphore-post (profile-stream-lock curr-stream))
     (set-profile-node-children! curr-node (cons new-node
                                                 (profile-node-children curr-node)))
     (set-profile-state-curr! curr new-node)))
@@ -126,8 +128,10 @@
     (set-profile-data-metrics! data (hash-union
                                      (hash 'cpu cpu 'real real 'gc gc)
                                      (diff-metrics (profile-data-start data) (profile-data-finish data))))
+    (semaphore-wait (profile-stream-lock curr-stream))
     (set-profile-stream-finished! curr-stream (cons (hash-ref node->idx curr-node)
                                                     (profile-stream-finished curr-stream)))
+    (semaphore-post (profile-stream-lock curr-stream))
     (set-profile-state-curr! curr (profile-node-parent curr-node))))
 
 ;; Helper to compute the difference between entry and exit metrics
