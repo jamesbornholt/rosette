@@ -23,7 +23,7 @@
   [(define start-renderer void)
    (define (finish-renderer self profile)
      (match-define (html-renderer source name key open?) self)
-     (render-html profile source name open?))])
+     (render-html (profile-state-root profile) source name open?))])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

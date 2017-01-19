@@ -11,11 +11,11 @@
 (define (profile-thunk thunk #:renderer [renderer% (current-renderer)]
                              #:source [source-stx #f]
                              #:name [name "Profile"])
-  (define state (make-top-level-profile))
+  (define profile (make-profile))
   (define reporter (make-profiler-reporter))
   (define renderer (renderer% source-stx name (hash)))
-  (start-renderer renderer state reporter)
-  (define-values (prof ret) (run-profile-thunk thunk state reporter))
+  (start-renderer renderer profile reporter)
+  (define-values (prof ret) (run-profile-thunk thunk profile reporter))
   (finish-renderer renderer prof)
   (apply values ret))
 

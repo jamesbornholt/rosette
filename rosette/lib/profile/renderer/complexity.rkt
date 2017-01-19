@@ -14,7 +14,7 @@
   [(define start-renderer void)
    (define (finish-renderer self profile)
      (match-define (complexity-renderer source name key) self)
-     (render-complexity profile source name))])
+     (render-complexity (profile-state-root profile) source name))])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

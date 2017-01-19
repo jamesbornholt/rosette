@@ -15,7 +15,7 @@
   [(define start-renderer void)
    (define (finish-renderer self profile)
      (match-define (summary-renderer source name key) self)
-     (define agg (aggregate-profile profile key))
+     (define agg (aggregate-profile (profile-state-root profile) key))
      (render-summary agg source name))])
 
 ; A profile entry is a single procedure together with inclusive and

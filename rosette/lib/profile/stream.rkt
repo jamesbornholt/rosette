@@ -6,7 +6,9 @@
          racket/runtime-path json)
 (provide profile-stream)
 
+(define profile-stream void)
 
+#|
 (define (profile-stream-thunk thunk #:source [source-stx #f]
                                     #:name [name "Profile"])
   (define-values (stream-path out-path) (begin-stream-renderer source-stx))
@@ -98,3 +100,4 @@
     [(_ expr args ...)
      (syntax/loc stx
        (profile-stream-thunk (thunk expr) #:source #'expr args ...))]))
+|#

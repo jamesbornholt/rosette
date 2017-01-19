@@ -7,7 +7,8 @@
          "renderer/complexity.rkt" 
          "renderer/summary.rkt" 
          "renderer/trace.rkt"
-         "renderer/html.rkt")
+         "renderer/html.rkt"
+         "renderer/stream.rkt")
 
 ;; raco symprofile (based on raco feature-profile)
 ;; profile the main submodule (if there is one), or the top-level module
@@ -27,6 +28,8 @@
                            (current-renderer make-trace-renderer)]
                 ["--html" "Produce an interactive HTML profile"
                           (current-renderer make-html-renderer)]
+                ["--stream" "Run a streaming HTML profiler"
+                            (current-renderer make-stream-renderer)]
                 #:once-each
                 [("-l" "--compiler-only") 
                  "Only install the compile handler; do not run the profiler"
