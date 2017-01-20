@@ -23,7 +23,7 @@
 
 ;; A profile consists of a root profile node and some auxiliary data
 ;; used for streaming the profile.
-(struct profile-state (root curr stream) #:mutable)
+(struct profile-state (root curr) #:mutable)
 
 
 ;; A profile node is an entry in the dynamic control flow graph of the
@@ -62,9 +62,8 @@
 (define (make-profile)
   (let* ([start (hash)]
          [data (profile-data 'top #f (hash) (hash) (hash) start (hash))]
-         [node (profile-node #f '() data)]
-         [stream (make-profile-stream node)])
-    (profile-state node node stream)))
+         [node (profile-node #f '() data)])
+    (profile-state node node)))
 
 
 ;; Returns a new profile stream with a given root profile node
@@ -90,20 +89,9 @@
 ;; have been evaluated, but before the procedure is invoked.
 (define (record-enter! loc proc in)
   (let* ([curr (current-profile)]
-         [curr-stream (profile-state-stream curr)]
          [curr-node (profile-state-curr curr)]
          [new-data (entry-data loc proc in)]
-         [new-node (profile-node curr-node '() new-data)]
-         [node->idx (profile-stream-node->idx curr-stream)])
-    (semaphore-wait (profile-stream-lock curr-stream))
-    (let ([parent-idx (hash-ref node->idx curr-node)]
-          [new-idx (hash-count node->idx)])
-      (set-profile-stream-nodes! curr-stream (cons new-node
-                                                   (profile-stream-nodes curr-stream)))
-      (hash-set! node->idx new-node new-idx)
-      (set-profile-stream-edges! curr-stream (cons (list parent-idx new-idx)
-                                                   (profile-stream-edges curr-stream))))
-    (semaphore-post (profile-stream-lock curr-stream))
+         [new-node (profile-node curr-node '() new-data)])
     (set-profile-node-children! curr-node (cons new-node
                                                 (profile-node-children curr-node)))
     (set-profile-state-curr! curr new-node)))
@@ -118,9 +106,7 @@
 ;; This procedure should be called after the profiled procedure call returns.
 (define (record-exit! out cpu real gc)
   (let* ([curr (current-profile)]
-         [curr-stream (profile-state-stream curr)]
          [curr-node (profile-state-curr curr)]
-         [node->idx (profile-stream-node->idx curr-stream)]
          [data (profile-node-data curr-node)]
          [metrics (profile-data-metrics data)])
     (set-profile-data-finish! data (get-current-metrics))
@@ -128,10 +114,6 @@
     (set-profile-data-metrics! data (hash-union
                                      (hash 'cpu cpu 'real real 'gc gc)
                                      (diff-metrics (profile-data-start data) (profile-data-finish data))))
-    (semaphore-wait (profile-stream-lock curr-stream))
-    (set-profile-stream-finished! curr-stream (cons (hash-ref node->idx curr-node)
-                                                    (profile-stream-finished curr-stream)))
-    (semaphore-post (profile-stream-lock curr-stream))
     (set-profile-state-curr! curr (profile-node-parent curr-node))))
 
 ;; Helper to compute the difference between entry and exit metrics

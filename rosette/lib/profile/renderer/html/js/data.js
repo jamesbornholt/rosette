@@ -37,33 +37,30 @@ function findUnique(key) {
 function dataOnload(initCb, updateCb) {
     return function () {
         if (Data.config.stream) {
-            var scr;
-            var intervalHandler_1 = function () {
-                console.log("handler...");
-                if (scr)
-                    scr.parentNode.removeChild(scr);
-                scr = document.createElement("script");
-                scr.onload = function () { initData(); updateCb(); };
-                scr.src = "stream.json";
-                document.head.appendChild(scr);
+            var ws = new WebSocket('ws://localhost:8081');
+            var init = false;
+            ws.onmessage = function (evt) {
+                var data = JSON.parse(evt.data);
+                Data.data.nodes = data.nodes;
+                Data.data.edges = data.edges;
+                initData();
+                if (init) {
+                    updateCb();
+                }
+                else {
+                    initCb();
+                    init = true;
+                }
             };
-            scr = document.createElement("script");
+        }
+        else {
+            var scr = document.createElement("script");
             scr.onload = function () {
                 initData();
                 initCb();
-                window.setInterval(intervalHandler_1, 2000);
             };
-            scr.src = "stream.json";
+            scr.src = "data.json";
             document.head.appendChild(scr);
-        }
-        else {
-            var scr_1 = document.createElement("script");
-            scr_1.onload = function () {
-                initData();
-                initCb();
-            };
-            scr_1.src = "data.json";
-            document.head.appendChild(scr_1);
         }
     };
 }

@@ -28,13 +28,11 @@ var timeline;
     }
     timeline_1.init = init;
     function update() {
-        var oldLength = timeline_1.Timeline.points.length;
         initTimelineData();
-        if (timeline_1.Timeline.points.length > oldLength) {
-            var newPoints = timeline_1.Timeline.points.slice(oldLength);
-            timeline_1.Timeline.vega.data("points").insert(newPoints);
-            timeline_1.Timeline.vega.update();
-        }
+        console.log(timeline_1.Timeline.points.length);
+        timeline_1.Timeline.vega.data("points").remove(function (d) { return true; });
+        timeline_1.Timeline.vega.data("points").insert(timeline_1.Timeline.points);
+        timeline_1.Timeline.vega.update();
     }
     timeline_1.update = update;
     function initTimelineData() {

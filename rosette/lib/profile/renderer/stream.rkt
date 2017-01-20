@@ -1,71 +1,67 @@
 #lang racket
 
 (require "../record.rkt" "key.rkt" "srcloc.rkt" "renderer.rkt"
-         (only-in "html.rkt" render-entry)
-         net/rfc6455
+         (only-in "html.rkt" compute-graph render-entry)
+         net/rfc6455 net/sendurl
          racket/date json racket/runtime-path racket/hash)
 (provide make-stream-renderer)
+
+
+; Source of the HTML template
+(define-runtime-path template-dir "html")
 
 
 ; The stream renderer produces a directory containing a webpage version of a profile
 ; that is updated via a streaming websocket.
 (define (make-stream-renderer source name [options (hash)] [key profile-node-key/srcloc])
-  (stream-renderer source name key #f))
+  (stream-renderer source name key 2.0 #f))
 
-(struct stream-renderer (source name key [thd #:mutable])
+(struct stream-renderer (source name key interval [thd #:mutable])
   #:transparent
   #:methods gen:renderer
   [(define (start-renderer self profile reporter)
-     (set-stream-renderer-thd! self (streaming-data-thread profile reporter (stream-renderer-key self) 2.0)))
+     (set-stream-renderer-thd!
+      self
+      (streaming-data-thread self profile reporter)))
    (define (finish-renderer self profile)
-     (match-define (stream-renderer source name key thd) self)
-     (printf "done: ~v\n" (hash-count (profile-stream-node->idx (profile-state-stream profile))))
+     (match-define (stream-renderer _ _ _ _ thd) self)
+     (printf "done\n")
      (thread-send thd 'done)
      (printf "waiting for thread...\n")
      (thread-wait thd)
      (printf "done!\n"))])
 
+
 ; The streaming data thread reads data from the profile-state, and sends that
 ; data to registered client threads.
-(define (streaming-data-thread profile reporter key interval)
+(define (streaming-data-thread renderer profile reporter)
   (thread
    (thunk
+    (match-define (stream-renderer _ _ key interval _) renderer)
+    
     (define clients '())
-
-    (define messages '())
     
     (define server-shutdown! (ws-serve #:port 8081 (make-streaming-client (current-thread))))
+
+    ; spawn the profiler page
+    (create-profile-directory renderer)
 
     (define (get-next-sample-evt)
       (alarm-evt (+ (current-inexact-milliseconds) (* interval 1000))))
     (define thread-rec-evt (thread-receive-evt))
-    
-    (define stream-data (profile-state-stream profile))
 
     (define (pump-updates)
-      ; lock the stream data so we see an atomic view of it and don't clobber updates
-      (semaphore-wait (profile-stream-lock stream-data))
-
-      ; read all updates and clear them out
-      (define new-nodes (profile-stream-nodes stream-data))
-      (define new-edges (profile-stream-edges stream-data))
-      (define new-finished (profile-stream-finished stream-data))
-      (set-profile-stream-nodes! stream-data '())
-      (set-profile-stream-edges! stream-data '())
-      (set-profile-stream-finished! stream-data '())
-
-      ; release the lock on the stream data
-      (semaphore-post (profile-stream-lock stream-data))
-
-      ; the new message to broadcast
-      (define msg (make-stream-message new-nodes new-edges new-finished key))
+      ; get the current profile
+      (define-values (nodes edges) (compute-graph (profile-state-root profile) (stream-renderer-key renderer)))
+      ; compute the json
+      (define msg
+        (jsexpr->bytes
+         (hash 'nodes (for/list ([n nodes]) (render-entry (key n) n))
+               'edges edges)))
 
       ; send message to all threads
-      (for ([t clients])
-        (thread-send t msg))
-
-      ; hold onto this message for newly connected clients
-      (set! messages (cons msg messages)))
+      (for ([t clients] #:when (thread-running? t))
+        (thread-send t msg #f)))
     
     (let loop ([sample-evt (get-next-sample-evt)])
       (printf "streaming-data-thread is waiting...\n")
@@ -76,13 +72,11 @@
       (match evt
         [(and t (? thread?))
          (set! clients (cons t clients))
-         (for ([msg (reverse messages)])
-           (thread-send t msg))
          (loop sample-evt)]
         ['done
          (pump-updates)
-         (for ([t clients])
-           (thread-send t 'done)
+         (for ([t clients] #:when (thread-running? t))
+           (thread-send t 'done #f)
            (thread-wait t))
          (server-shutdown!)]
         [_
@@ -90,12 +84,38 @@
          (loop (get-next-sample-evt))])))))
 
 
-(define (make-stream-message nodes edges finished key)
-  (jsexpr->bytes
-   (hash 'nodes (for/list ([n (reverse nodes)]) (render-entry (key n) n))
-         'edges (reverse edges)
-         'finished (reverse finished))))
+(define (create-profile-directory renderer
+                                  #:directory [dir (build-path (current-directory) "profiles")])
+  ; get metadata
+  (match-define (stream-renderer source name _ _ _) renderer)
+  (define top-dict
+    (hash 'name name
+          'time (parameterize ([date-display-format 'rfc2822])
+                  (date->string (current-date) #t))
+          'source (syntax-srcloc source)
+          'form (if (syntax? source) (~v (syntax->datum source)) "")))
   
+  ; set up output directory
+  (define output-dir (build-path dir (make-folder-name source)))
+  (make-directory* output-dir)
+
+  ; link the template files into the output directory
+  (let ([src (path->complete-path template-dir)])
+    (for ([n (list "profile.html" "timeline.html" "css" "js")])
+      (make-file-or-directory-link (build-path src n) (build-path output-dir n))))
+
+    ; write the config
+  (let ([out (open-output-file (build-path output-dir "config.json"))])
+    (fprintf out "Data.config.stream = true;\n")
+    (fprintf out "Data.metadata = ")
+    (write-json top-dict out)
+    (fprintf out ";\n")
+    (close-output-port out))
+  
+  ; open the profile in a web browser
+  (printf "Wrote \"~a\" profile to ~a\n" name output-dir)
+  (send-url/file (build-path output-dir "timeline.html")))
+
   
 (define (make-streaming-client parent)
   (lambda (conn state)
@@ -110,8 +130,11 @@
          (ws-close! conn)]
         [msg  ; send message to client
          (printf "streaming client got a message\n")
-         (ws-send! conn msg)
-         (loop)]))))
+         (with-handlers ([exn:fail? (lambda (e) (ws-close! conn))])
+           (ws-send! conn msg)
+           (loop))]))))
+
+
 
 #|
 (define (stream-renderer-thread profile reporter)

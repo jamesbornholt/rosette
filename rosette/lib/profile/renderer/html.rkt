@@ -2,7 +2,7 @@
 
 (require "../record.rkt" "../feature.rkt" "key.rkt" "srcloc.rkt" "renderer.rkt"
          racket/date json racket/runtime-path racket/hash)
-(provide make-html-renderer render-entry)
+(provide make-html-renderer compute-graph render-entry)
 
 ; Source of the HTML template
 (define-runtime-path template-dir "html")
@@ -83,13 +83,13 @@
 
 
 ; Transform the profile tree to a list of nodes and list of edges
-(define (render-graph profile [key profile-node-key/srcloc])
-  (define (dt node)
-    (- (hash-ref (profile-data-finish (profile-node-data node)) 'time)
+(define (compute-graph profile [key profile-node-key/srcloc])
+  (define (dt node [default (current-inexact-milliseconds)])
+    (- (hash-ref (profile-data-finish (profile-node-data node)) 'time default)
        (hash-ref (profile-data-start  (profile-node-data node)) 'time)))
   (define MIN_TIME (* (dt profile) 0.001))
   (define (include? node)
-    (> (dt node) MIN_TIME))
+    (> (dt node +inf.0) MIN_TIME))
 
   (define nodes '())
   (define add-node!
@@ -119,7 +119,7 @@
 ; @parameter source (or/c syntax? #f)
 ; @parameter out output-port?
 (define (render-json profile source name out [key profile-node-key/srcloc])
-  (define-values (nodes edges) (render-graph profile key))
+  (define-values (nodes edges) (compute-graph profile key))
   (define graph
     (hash 'nodes (for/list ([n nodes]) (render-entry (key n) n))
           'edges edges))

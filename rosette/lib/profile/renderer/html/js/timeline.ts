@@ -42,13 +42,11 @@ namespace timeline {
     }
 
     export function update() {
-        let oldLength = Timeline.points.length;
         initTimelineData();
-        if (Timeline.points.length > oldLength) {
-            let newPoints = Timeline.points.slice(oldLength);
-            Timeline.vega.data("points").insert(newPoints);
-            Timeline.vega.update();
-        }
+        console.log(Timeline.points.length);
+        Timeline.vega.data("points").remove((d) => true);
+        Timeline.vega.data("points").insert(Timeline.points);
+        Timeline.vega.update();
     }
 
     function initTimelineData() {
