@@ -1,7 +1,7 @@
 #lang racket
 
 (require "../record.rkt" "../feature.rkt" "key.rkt" "srcloc.rkt" "renderer.rkt"
-         racket/date json racket/runtime-path racket/hash)
+         racket/date json racket/runtime-path racket/hash net/sendurl)
 (provide make-html-renderer compute-graph render-entry)
 
 ; Source of the HTML template
@@ -51,16 +51,8 @@
     ; open the profile in a web browser
     (printf "Wrote \"~a\" profile to ~a\n" name output-dir)
     (when open?
-      (define opener
-        (match (system-type)
-          ['unix "xdg-open"]
-          ['windows "start"]
-          ['macosx "open"]
-          [_ #f]))
-      (unless (false? opener)
-        (printf "Opening profile...\n")
-        (system (format "~a ~a" opener (path->string (build-path output-dir "profile.html"))))
-        (system (format "~a ~a" opener (path->string (build-path output-dir "timeline.html")))))))
+      #;(send-url/file (build-path output-dir "profile.html"))
+      (send-url/file (build-path output-dir "timeline.html"))))
 
 
 ; Render a single profile-node? to a jsexpr? dictionary

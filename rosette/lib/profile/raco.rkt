@@ -44,14 +44,13 @@
                 (current-command-line-arguments (list->vector rest))
                 filename))
 
+
 (collect-garbage)
 (collect-garbage)
 (collect-garbage)
 
 (current-compile symbolic-profile-compile-handler)
 
-(define (run)
-  (dynamic-require (module-to-profile file (module-name)) #f))
 
 ; check if there's a module of the given name, and if not,
 ; import the entire file instead
@@ -63,6 +62,13 @@
       main-path
       file-path))
 
+(define mod (module-to-profile file (module-name)))
+
+(define (run)
+  (dynamic-require mod #f))
+
+
 (if (run-profiler?)
-    (profile-thunk run #:source (format "file ~a" file))
+    (profile-thunk run #:source (format "~a" mod)
+                       #:name (format "~a" file))
     (run))
