@@ -4,9 +4,9 @@
          (for-syntax racket/syntax (only-in racket for/list)))
 
 (provide (rename-out [$app #%app] [$app #%plain-app] 
-                     ;[$define define]
-                     ;[$let let]
-                     ;[$lambda lambda]
+                     [$define define]
+                     [$let let]
+                     [$lambda lambda]
                      ))
 
 (define-for-syntax (location stx)
