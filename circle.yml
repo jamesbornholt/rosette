@@ -11,7 +11,7 @@ dependencies:
         curl -s -L -o racket.sh $RACKET_URL;
         sh ./racket.sh --in-place --dest $RACKET_DIR;
       else echo "using racket from cache"; fi
-    - raco pkg install
+    - raco pkg install --auto
   cache_directories:
     - "~/racket"
 
