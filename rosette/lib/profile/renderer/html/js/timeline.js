@@ -351,6 +351,8 @@ var timeline;
         timeline_1.Timeline.vega.update();
     }
     function flamegraphHoverCallback(node, enter) {
+        if (!timeline_1.Timeline.vega)
+            return;
         var start = node["start"];
         var finish = node["finish"];
         if (enter) {

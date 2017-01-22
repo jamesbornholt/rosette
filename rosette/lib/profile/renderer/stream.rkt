@@ -3,7 +3,7 @@
 (require "../record.rkt"
          "renderer.rkt"
          "util/key.rkt" "util/srcloc.rkt"
-         (only-in "html.rkt" compute-graph render-entry)
+         ;(only-in "html.rkt" compute-graph render-entry)
          net/rfc6455 net/sendurl
          racket/date json racket/runtime-path racket/hash)
 (provide make-stream-renderer)

@@ -373,6 +373,7 @@ namespace timeline {
     }
 
     function flamegraphHoverCallback(node, enter) {
+        if (!Timeline.vega) return;
         let start = node["start"];
         let finish = node["finish"];
         if (enter) {

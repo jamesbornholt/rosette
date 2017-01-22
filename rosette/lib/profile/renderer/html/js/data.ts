@@ -1,10 +1,7 @@
 // global state
 let Data = {
     // populated by Racket
-    data: {
-        nodes: [],
-        edges: []
-    },
+    events: [],
     metadata: null,
     samples: [],
     config: {
@@ -41,8 +38,7 @@ function dataOnload(initCb, updateCb) {
             var init = false;
             ws.onmessage = (evt) => {
                 let data = JSON.parse(evt.data);
-                Data.data.nodes = data.nodes;
-                Data.data.edges = data.edges;
+                Data.events = data.events;
                 initData();
                 if (init) {
                     updateCb();
@@ -63,16 +59,58 @@ function dataOnload(initCb, updateCb) {
     }
 }
 
+function eventsToGraph(events: Array<any>) {
+    let computeMetrics = (node) => {
+        let ret = {};
+        let start = node["start"];
+        let finish = node["finish"];
+        for (let k in finish) {
+            let exclKey = k + " (excl.)";
+            var inclSum;
+            if (start.hasOwnProperty(k)) {
+                inclSum =  finish[k] - start[k];
+            } else {
+                inclSum = finish[k];
+            }
+            let childSum = node["children"].map(c => c["metrics"][k]).reduce((a, b) => a + b, 0);
+            ret[k] = inclSum;
+            ret[exclKey] = inclSum - childSum;
+        }
+        return ret;
+    };
+
+    var node;
+    for (let e of events) {
+        if (e["type"] == "ENTER") {
+            let evt = {
+                "function": e["function"],
+                "location": e["location"],
+                "inputs": e["inputs"],
+                "start": e["metrics"],
+                "children": [],
+                "parent": node
+            };
+            if (typeof node === "undefined") {
+                evt.parent = evt;
+            } else {
+                node.children.push(evt);
+            }
+            node = evt;
+        } else if (e["type"] == "EXIT") {
+            let me = node;
+            node["outputs"] = e["outputs"];
+            node["finish"] = e["metrics"];
+            node["metrics"] = computeMetrics(node);
+            node = node.parent;
+            delete me["parent"]; // circular reference
+        }
+    }
+
+    return node;
+}
+
 function initData() {
-    // reconstruct the graph from the list of nodes/edges in data
-    for (let n of Data.data.nodes) {
-        n.children = [];  // every node needs a list of children
-    }
-    for (let e of Data.data.edges) {
-        let [a, b] = e;
-        Data.data.nodes[a].children.push(Data.data.nodes[b]);
-    }
-    Data.graph = Data.data.nodes[0];
+    Data["graph"] = eventsToGraph(Data["events"]);
     // populate the "functions" aggregated list
     let worklist = [Data.graph];
     let functions = {};

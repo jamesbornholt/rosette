@@ -46,8 +46,8 @@
        (define new-data (profile-data loc proc in (hash) (hash) met (hash)))
        (define new-node (profile-node node '() new-data))
        (if (false? node)
-         (set-profile-node-parent! new-node new-node)
-         (set-profile-node-children! node (cons new-node (profile-node-children node))))
+           (set-profile-node-parent! new-node new-node)
+           (set-profile-node-children! node (cons new-node (profile-node-children node))))
        (set! node new-node)]
       [(profile-event-exit out met)
        (define data (profile-node-data node))

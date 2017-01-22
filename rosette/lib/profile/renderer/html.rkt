@@ -4,7 +4,7 @@
          "renderer.rkt"
          "util/key.rkt" "util/srcloc.rkt"
          racket/date json racket/runtime-path racket/hash net/sendurl)
-(provide make-html-renderer compute-graph render-entry)
+(provide make-html-renderer filter-events render-event)
 
 ; Source of the HTML template
 (define-runtime-path template-dir "html")
@@ -25,106 +25,129 @@
   [(define start-renderer void)
    (define (finish-renderer self profile)
      (match-define (html-renderer source name key open?) self)
-     (render-html (profile-state->graph profile) source name open?))])
+     (render-html profile source name open?))])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (render-html profile source name open?
                      #:directory [dir (build-path (current-directory) "profiles")])
-    ; set up output directory
-    (define output-dir (build-path dir (make-folder-name source)))
-    (make-directory* output-dir)
+  ; set up output directory
+  (define output-dir (build-path dir (make-folder-name source)))
+  (make-directory* output-dir)
 
-    ; link the template files into the output directory
-    (let ([src (path->complete-path template-dir)])
-      (for ([n (list "profile.html" "timeline.html" "css" "js")])
-        (make-file-or-directory-link (build-path src n) (build-path output-dir n))))
+  ; link the template files into the output directory
+  (let ([src (path->complete-path template-dir)])
+    (for ([n (list "profile.html" "timeline.html" "css" "js")])
+      (make-file-or-directory-link (build-path src n) (build-path output-dir n))))
 
-    ; write the JSON data into data.json
-    (let ([out (open-output-file (build-path output-dir "data.json"))])
-      (render-json profile source name out)
-      (close-output-port out))
+  ; write the JSON data into data.json
+  (let ([out (open-output-file (build-path output-dir "data.json"))])
+    (render-json profile source name out)
+    (close-output-port out))
 
-    ; write the config
-    (let ([out (open-output-file (build-path output-dir "config.json"))])
-      (fprintf out "Data.config.stream = false;\n")
-      (close-output-port out))
+  ; write the config
+  (let ([out (open-output-file (build-path output-dir "config.json"))])
+    (fprintf out "Data.config.stream = false;\n")
+    (close-output-port out))
 
-    ; open the profile in a web browser
-    (printf "Wrote \"~a\" profile to ~a\n" name output-dir)
-    (when open?
-      #;(send-url/file (build-path output-dir "profile.html"))
-      (send-url/file (build-path output-dir "timeline.html"))))
-
-
-; Render a single profile-node? to a jsexpr? dictionary
-(define (render-entry proc node)
-  (define (convert h)
-    (for/hash ([(k v) h])
-      (values (*->symbol (if (feature? k) (feature-name k) k)) v)))
-  (define metrics-excl
-    (for/hash ([(k v) (profile-data-metrics (profile-node-data node))])
-      (values (string->symbol (format "~a (excl.)" k))
-              (- v (for/sum ([c (profile-node-children node)])
-                     (hash-ref (profile-data-metrics (profile-node-data c)) k 0))))))
-  (hash 'inputs (convert (profile-data-inputs (profile-node-data node)))
-        'outputs (convert (profile-data-outputs (profile-node-data node)))
-        'metrics (hash-union (convert (profile-data-metrics (profile-node-data node))) metrics-excl)
-        'start (convert (profile-data-start (profile-node-data node)))
-        'finish (convert (profile-data-finish (profile-node-data node)))
-        'function proc
-        'location (syntax-srcloc (profile-data-location (profile-node-data node)))))
+  ; open the profile in a web browser
+  (printf "Wrote \"~a\" profile to ~a\n" name output-dir)
+  (when open?
+    #;(send-url/file (build-path output-dir "profile.html"))
+    (send-url/file (build-path output-dir "timeline.html"))))
 
 
-; Transform the profile tree to a list of nodes and list of edges
-(define (compute-graph profile [key profile-node-key/srcloc])
-  (define (dt node [default (current-inexact-milliseconds)])
-    (- (hash-ref (profile-data-finish (profile-node-data node)) 'time default)
-       (hash-ref (profile-data-start  (profile-node-data node)) 'time)))
-  (define MIN_TIME (* (dt profile) 0.001))
-  (define (include? node)
-    (> (dt node +inf.0) MIN_TIME))
+;; Filter a stream of profile-event records to not include event pairs whose
+;; duration is longer than min% percent of the total execution time.
+;; Any unmatched pairs (created when the event stream is incomplete) will be
+;; passed through unmodified.
+(define (filter-events events [min% 0.001])
+  ; determine the minimum time for an event to be included
+  (define (event->time evt [default 0])
+    (match evt
+      [(profile-event-enter _ _ _ m) (hash-ref m 'time default)]
+      [(profile-event-exit _ m) (hash-ref m 'time default)]
+      [_ default]))
+  (define (dt enter exit)
+    (- (event->time exit +inf.0)
+       (event->time enter 0)))
+  (define MIN_TIME (* (dt (first events) (last events)) min%))
 
-  (define nodes '())
-  (define add-node!
-    (let ([i 0])
-      (lambda (n)
-        (begin0
-          i
-          (set! nodes (cons n nodes))
-          (set! i (add1 i))))))
-  (define edges '())
-  (define (add-edge! a b)
-    (set! edges (cons (list a b) edges)))
-    
-  (let rec ([node profile][parent -1])
-    (when (include? node)
-      (let ([proc (key node)][idx (add-node! node)])
-        (unless (= parent -1)
-          (add-edge! parent idx))
-        (for ([c (profile-node-children node)])
-          (rec c idx)))))
+  ; filter events by building a stack and event list in parallel.
+  ; whenever we pop from the stack, we check that the dt for the current node
+  ; is above the threshold. if not, we delete everything from the list between
+  ; the head and the index stored when the current node was pushed.
+  (define new-events '())
+  (define stack '())
+  (define n 0)
+  (for ([e events])
+    (cond [(profile-event-enter? e)
+           (set! stack (cons (cons e n) stack))
+           (set! new-events (cons e new-events))
+           (set! n (add1 n))]  ; n tracks the length of new-events
+          [(and (profile-event-exit? e) (null? stack))  ; allow unmatched (for streaming)
+           (set! new-events (cons e new-events))
+           (set! n (add1 n))]
+          [(profile-event-exit? e)
+           (match-define (cons enter k) (car stack))
+           (cond [(> (dt enter e) MIN_TIME)  ; allow the event
+                  (set! new-events (cons e new-events))
+                  (set! n (add1 n))]
+                 [else  ; filter the event and its entire stack frame
+                  (define del (- n k))
+                  (set! new-events (drop new-events del))
+                  (set! n k)])
+           (set! stack (cdr stack))]
+          [else
+           (set! new-events (cons e new-events))
+           (set! n (add1 n))]))
+  ; include any unmatched events for streaming purposes
+  (unless (null? stack)
+    (set! new-events (append (reverse stack) new-events)))
 
-  (values (reverse nodes) (reverse edges)))
+  (reverse new-events))
+
+
+;; Render an event to a jsexpr? dictionary
+(define (render-event event [key procedure-name])
+  (match event
+    [(profile-event-enter loc proc in met)
+     (hash 'type "ENTER"
+           'function (key proc)
+           'location (syntax-srcloc loc)
+           'inputs (profile-hash->jsexpr in)
+           'metrics (profile-hash->jsexpr met))]
+    [(profile-event-exit out met)
+     (hash 'type "EXIT"
+           'outputs (profile-hash->jsexpr out)
+           'metrics (profile-hash->jsexpr met))]
+    [_ (error 'render-event "unknown event ~v" event)]))
+
+
+;; Helper to convert a hash to a jsexpr?, including converting features to
+;; their names.
+(define (profile-hash->jsexpr h)
+  (for/hash ([(k v) h])
+    (values (*->symbol (if (feature? k) (feature-name k) k)) v)))
+
 
 
 ; Render entries to JavaScript
 ; @parameter entries profile-node?
 ; @parameter source (or/c syntax? #f)
 ; @parameter out output-port?
-(define (render-json profile source name out [key profile-node-key/srcloc])
-  (define-values (nodes edges) (compute-graph profile key))
-  (define graph
-    (hash 'nodes (for/list ([n nodes]) (render-entry (key n) n))
-          'edges edges))
-  (define top-dict
+(define (render-json state source name out [key profile-node-key/srcloc])
+  (define metadata
     (hash 'name name
           'time (parameterize ([date-display-format 'rfc2822])
                   (date->string (current-date) #t))
           'source (syntax-srcloc source)
           'form (if (syntax? source) (~v (syntax->datum source)) "")))
   (fprintf out "Data.metadata = ")
-  (write-json top-dict out)
-  (fprintf out ";\nData.data = ")
-  (write-json graph out)
+  (write-json metadata out)
+  (fprintf out ";\n")
+  (define events (reverse (unbox (profile-state-events state))))
+  (define filtered-events (filter-events events))
+  (fprintf out "Data.events = ")
+  (write-json (map render-event filtered-events) out)
   (fprintf out ";\n"))
