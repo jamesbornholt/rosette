@@ -1,6 +1,8 @@
 #lang racket
 
-(require "../record.rkt" "../feature.rkt" "key.rkt" "srcloc.rkt" "renderer.rkt"
+(require "../record.rkt" "../feature.rkt" "../graph.rkt"
+         "renderer.rkt"
+         "util/key.rkt" "util/srcloc.rkt"
          racket/date json racket/runtime-path racket/hash net/sendurl)
 (provide make-html-renderer compute-graph render-entry)
 
@@ -23,7 +25,7 @@
   [(define start-renderer void)
    (define (finish-renderer self profile)
      (match-define (html-renderer source name key open?) self)
-     (render-html (profile-state-root profile) source name open?))])
+     (render-html (profile-state->graph profile) source name open?))])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

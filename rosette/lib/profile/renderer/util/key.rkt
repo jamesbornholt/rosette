@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../record.rkt")
+(require "../../record.rkt" "../../graph.rkt")
 
 (provide (all-defined-out))
 

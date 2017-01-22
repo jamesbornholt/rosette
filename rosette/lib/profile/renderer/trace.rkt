@@ -1,6 +1,8 @@
 #lang racket
 
-(require "../record.rkt" "key.rkt" "renderer.rkt")
+(require "../record.rkt" "../graph.rkt"
+         "renderer.rkt"
+         "util/key.rkt")
 
 (provide make-trace-renderer)
 
@@ -10,7 +12,7 @@
   [(define start-renderer void)
    (define (finish-renderer self profile)
      (match-define (trace-renderer source name key) self)
-     (render-trace (profile-state-root profile) source name key))])
+     (render-trace (profile-state->graph profile) source name key))])
 
 (define (make-trace-renderer source name [options (hash)] [key profile-node-key/srcloc])
   (trace-renderer source name key))

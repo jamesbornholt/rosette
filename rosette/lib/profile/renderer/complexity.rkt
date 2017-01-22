@@ -1,6 +1,8 @@
 #lang racket
 
-(require "../record.rkt" "../feature.rkt" "stats.rkt" "key.rkt" "renderer.rkt")
+(require "../record.rkt" "../feature.rkt" "../graph.rkt"
+         "renderer.rkt" 
+         "util/stats.rkt" "util/key.rkt")
 (provide make-complexity-renderer)
 
 ; The complexity renderer tries to fit power law curves to the complexity of
@@ -14,7 +16,7 @@
   [(define start-renderer void)
    (define (finish-renderer self profile)
      (match-define (complexity-renderer source name key) self)
-     (render-complexity (profile-state-root profile) source name))])
+     (render-complexity (profile-state->graph profile) source name))])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

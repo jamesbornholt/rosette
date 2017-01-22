@@ -1,6 +1,8 @@
 #lang racket
 
-(require "../record.rkt" "key.rkt" "srcloc.rkt" "renderer.rkt"
+(require "../record.rkt"
+         "renderer.rkt"
+         "util/key.rkt" "util/srcloc.rkt"
          (only-in "html.rkt" compute-graph render-entry)
          net/rfc6455 net/sendurl
          racket/date json racket/runtime-path racket/hash)
@@ -17,7 +19,7 @@
   (stream-renderer source name key 2.0 #f))
 
 (struct stream-renderer (source name key interval [thd #:mutable])
-  #:transparent
+  #:transparent )#|
   #:methods gen:renderer
   [(define (start-renderer self profile reporter)
      (set-stream-renderer-thd!
@@ -134,7 +136,7 @@
            (ws-send! conn msg)
            (loop))]))))
 
-
+|#
 
 #|
 (define (stream-renderer-thread profile reporter)

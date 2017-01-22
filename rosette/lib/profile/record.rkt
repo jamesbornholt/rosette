@@ -21,61 +21,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Profiler data structures
 
-;; A profile consists of a root profile node and some auxiliary data
-;; used for streaming the profile.
-(struct profile-state (root curr) #:mutable)
+;; A profile consists of a mutable box events, which contains a list of
+;; profile-event? records.
+(struct profile-state (events))
 
-
-;; A profile node is an entry in the dynamic control flow graph of the
-;; profiled code. It contains a pointer to its parent node,
-;; a list of children nodes, and a profile-data struct that contains the
-;; actual data for the profile.
-(struct profile-node (parent children data) #:mutable)
-
-
-;; Profile data for a single procedure invocation.
-;; * The location field stores the location at which the given procedure was
-;;   invoked.
-;; * The procedure field is the invoked procedure
-;; * The inputs and outputs fields are hash maps from features to numbers.
-;;   For each feature in current-features, they store the value of that
-;;   feature for the inputs and outputs of the current invocation.
-;; * The metrics field is a hash map from symbols to numbers, where each
-;;   symbol describes a performance metric collected during symbolic evaluation,
-;;   e.g., cpu time, real time, gc time, the number of merge invocations, the number
-;;   of unions and terms created, etc.
-;; * The start and finish fields track the value of various metrics at the entry
-;;   and exit to the current invocation, respectively.
-(struct profile-data (location procedure inputs outputs metrics start finish)
-  #:mutable)
-
-
-;; Profile streaming data consists of a list of nodes, a map from nodes
-;; to their ID, a list of edges (pairs of node IDs), and a list of nodes
-;; that have been exited (used to track which nodes need to be updated if
-;; output is streamed).
-(struct profile-stream (nodes node->idx edges finished lock)
-  #:mutable)
-
+(struct profile-event ())
+(struct profile-event-enter (location procedure inputs metrics))
+(struct profile-event-exit  (outputs metrics))
 
 ;; Returns a new profile
-(define (make-profile)
-  (let* ([start (hash)]
-         [data (profile-data 'top #f (hash) (hash) (hash) start (hash))]
-         [node (profile-node #f '() data)])
-    (profile-state node node)))
-
-
-;; Returns a new profile stream with a given root profile node
-(define (make-profile-stream root)
-  (profile-stream (list root) (make-hash (list (cons root 0))) '() '() (make-semaphore 1)))
+(define (make-profile-state)
+  (profile-state (box '())))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Profiler run-time state
 
 ;; A parameter that holds the current profile / call stack.
-(define current-profile (make-parameter (make-profile)))
+(define current-profile (make-parameter (make-profile-state)))
 
 ;; A default reporter
 (current-reporter (make-profiler-reporter))
@@ -89,32 +52,28 @@
 ;; have been evaluated, but before the procedure is invoked.
 (define (record-enter! loc proc in)
   (let* ([curr (current-profile)]
-         [curr-node (profile-state-curr curr)]
-         [new-data (entry-data loc proc in)]
-         [new-node (profile-node curr-node '() new-data)])
-    (set-profile-node-children! curr-node (cons new-node
-                                                (profile-node-children curr-node)))
-    (set-profile-state-curr! curr new-node)))
-
-;; Helper to compute profile data on procedure entry
-(define (entry-data loc proc in [rep (current-reporter)])
-  (let ([start (get-current-metrics rep)])
-    (profile-data loc proc (compute-features in) (hash) (hash) start (hash))))
-
+         [inputs (compute-features in)]
+         [events (profile-state-events curr)]
+         [metrics (get-current-metrics)]
+         [old (unbox events)]
+         [new (cons (profile-event-enter loc proc inputs metrics) old)])
+    (let loop ()
+      (unless (box-cas! events old new)
+        (loop)))))
 
 ;; Records a procedure exit by modifying the data for the current profile node.
 ;; This procedure should be called after the profiled procedure call returns.
 (define (record-exit! out cpu real gc)
   (let* ([curr (current-profile)]
-         [curr-node (profile-state-curr curr)]
-         [data (profile-node-data curr-node)]
-         [metrics (profile-data-metrics data)])
-    (set-profile-data-finish! data (get-current-metrics))
-    (set-profile-data-outputs! data (compute-features out))
-    (set-profile-data-metrics! data (hash-union
-                                     (hash 'cpu cpu 'real real 'gc gc)
-                                     (diff-metrics (profile-data-start data) (profile-data-finish data))))
-    (set-profile-state-curr! curr (profile-node-parent curr-node))))
+         [outputs (compute-features out)]
+         [metrics (hash-union (hash 'cpu cpu 'real real 'gc gc)
+                              (get-current-metrics))]
+         [events (profile-state-events curr)]
+         [old (unbox events)]
+         [new (cons (profile-event-exit outputs metrics) old)])
+    (let loop ()
+      (unless (box-cas! events old new)
+        (loop)))))
 
 ;; Helper to compute the difference between entry and exit metrics
 (define (diff-metrics old new)
@@ -159,7 +118,8 @@
 
 ;; Run a thunk and return a profile for its extent
 (define (run-profile-thunk proc profile reporter)
-  (set-profile-node-data! (profile-state-curr profile) (entry-data 'top 'top '() reporter))
+  (set-box! (profile-state-events profile) (cons (profile-event-enter 'top #f (hash) (get-current-metrics reporter))
+                                                 (unbox (profile-state-events profile))))
   (define ret (parameterize ([current-profile profile]
                              [current-reporter reporter])
                 (define-values (out cpu real gc) (time-apply proc '()))
