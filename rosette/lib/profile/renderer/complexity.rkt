@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../record.rkt" "../feature.rkt" "../graph.rkt"
+(require "../record.rkt" "../feature.rkt" "../graph.rkt" "../reporter.rkt"
          "renderer.rkt" 
          "util/stats.rkt" "util/key.rkt")
 (provide make-complexity-renderer)
@@ -28,12 +28,14 @@
    (lambda (node) (hash-ref (profile-data-outputs (profile-node-data node)) feature #f))
    (feature-name feature)))
 
-(define (name->metric name)
+(define (field->metric accessor)
   (procedure-rename
-   (lambda (node) (hash-ref (profile-data-metrics (profile-node-data node)) name #f))
-   name))
+   (lambda (node) (accessor (profile-data-metrics (profile-node-data node))))
+   (object-name accessor)))
 
-(define metrics (map name->metric '(merge-count term-count union-count union-size real)))
+(define metrics (map field->metric 
+                     (list metrics-merge-count metrics-term-count metrics-union-count
+                           metrics-union-size metrics-real)))
 
 ; Create a renderer that outputs information about the complexity of
 ; procedures observed in a profile. If plot? is true, the renderer will

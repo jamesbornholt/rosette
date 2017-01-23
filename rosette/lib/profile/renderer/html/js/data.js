@@ -65,7 +65,7 @@ function eventsToGraph(events) {
         var ret = {};
         var start = node["start"];
         var finish = node["finish"];
-        var _loop_1 = function (k) {
+        var _loop_1 = function(k) {
             var exclKey = k + " (excl.)";
             if (start.hasOwnProperty(k)) {
                 inclSum = finish[k] - start[k];

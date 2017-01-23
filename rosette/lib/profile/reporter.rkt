@@ -1,7 +1,7 @@
 #lang racket
 
 (require rosette/base/core/reporter racket/hash)
-(provide (struct-out profiler-reporter) make-profiler-reporter get-current-metrics)
+(provide (struct-out profiler-reporter) (struct-out metrics) make-profiler-reporter get-current-metrics)
 
 ; The profiler reporter keeps a cumulative count of several metrics, and reports
 ; them when requested to insert into a profile node.
@@ -27,6 +27,15 @@
   (let ([ht (profiler-reporter-metrics reporter)])
     (hash-set! ht key (+ (hash-ref ht key 0) val))))
 
-(define (get-current-metrics [reporter (current-reporter)])
-  (hash-union (hash 'time (current-inexact-milliseconds))
-              (profiler-reporter-metrics reporter)))
+
+; The metrics we use in profiles
+(struct metrics (term-count merge-count union-count union-size cpu real gc time)
+  #:transparent)
+
+(define (get-current-metrics [cpu 0] [real 0] [gc 0])
+  (let ([mets (profiler-reporter-metrics (current-reporter))])
+    (metrics (hash-ref mets 'term-count)
+             (hash-ref mets 'merge-count)
+             (hash-ref mets 'union-count)
+             (hash-ref mets 'union-size)
+             cpu real gc (current-inexact-milliseconds))))

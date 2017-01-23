@@ -1,7 +1,7 @@
 #lang racket
 
-(require racket/hash
-         "record.rkt")
+(require racket/hash racket/struct
+         "record.rkt" "reporter.rkt")
 (provide (except-out (all-defined-out) diff-metrics))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -62,4 +62,6 @@
 
 ;; Helper to compute the difference between entry and exit metrics
 (define (diff-metrics old new)
-  (for/hash ([(k v) new]) (values k (- v (hash-ref old k 0)))))
+  (define old-fields (struct->list old))
+  (define new-fields (struct->list new))
+  (apply metrics (for/list ([o old-fields][n new-fields]) (- n o))))

@@ -66,8 +66,7 @@
 (define (record-exit! out cpu real gc)
   (let* ([curr (current-profile)]
          [outputs (compute-features out)]
-         [metrics (hash-union (hash 'cpu cpu 'real real 'gc gc)
-                              (get-current-metrics))]
+         [metrics (get-current-metrics cpu real gc)]
          [events (profile-state-events curr)]
          [old (unbox events)]
          [new (cons (profile-event-exit outputs metrics) old)])
@@ -118,10 +117,9 @@
 
 ;; Run a thunk and return a profile for its extent
 (define (run-profile-thunk proc profile reporter)
-  (set-box! (profile-state-events profile) (cons (profile-event-enter 'top #f (hash) (get-current-metrics reporter))
-                                                 (unbox (profile-state-events profile))))
   (define ret (parameterize ([current-profile profile]
                              [current-reporter reporter])
+                (record-enter! 'top #f (hash))
                 (define-values (out cpu real gc) (time-apply proc '()))
                 (record-exit! out cpu real gc)
                 out))

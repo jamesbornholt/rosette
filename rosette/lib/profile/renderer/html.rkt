@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../record.rkt" "../feature.rkt" "../graph.rkt"
+(require "../record.rkt" "../feature.rkt" "../graph.rkt" "../reporter.rkt"
          "renderer.rkt"
          "util/key.rkt" "util/srcloc.rkt"
          racket/date json racket/runtime-path racket/hash net/sendurl)
@@ -67,14 +67,13 @@
 ;; passed through unmodified.
 (define (filter-events events [min% 0.001])
   ; determine the minimum time for an event to be included
-  (define (event->time evt [default 0])
+  (define (event->time evt)
     (match evt
-      [(profile-event-enter _ _ _ m) (hash-ref m 'time default)]
-      [(profile-event-exit _ m) (hash-ref m 'time default)]
-      [_ default]))
+      [(profile-event-enter _ _ _ m) (metrics-time m)]
+      [(profile-event-exit _ m) (metrics-time m)]))
   (define (dt enter exit)
-    (- (event->time exit +inf.0)
-       (event->time enter 0)))
+    (- (event->time exit)
+       (event->time enter)))
   (define MIN_TIME (* (dt (first events) (last events)) min%))
 
   ; filter events by building a stack and event list in parallel.
@@ -120,11 +119,11 @@
            'function (key proc)
            'location (syntax-srcloc loc)
            'inputs (profile-hash->jsexpr in)
-           'metrics (profile-hash->jsexpr met))]
+           'metrics (metrics->jsexpr met))]
     [(profile-event-exit out met)
      (hash 'type "EXIT"
            'outputs (profile-hash->jsexpr out)
-           'metrics (profile-hash->jsexpr met))]
+           'metrics (metrics->jsexpr met))]
     [_ (error 'render-event "unknown event ~v" event)]))
 
 
@@ -134,6 +133,14 @@
   (for/hash ([(k v) h])
     (values (*->symbol (if (feature? k) (feature-name k) k)) v)))
 
+
+;; Convert an instance of metrics? to a hash for output
+(define (metrics->jsexpr m)
+  (match-define (metrics term-count merge-count union-count union-size cpu real gc time) m)
+  (hash 'term-count term-count 'merge-count merge-count
+        'union-count union-count 'union-size union-size
+        ; 'cpu cpu 'real real 'gc gc 
+        'time time))
 
 
 ; Render entries to JavaScript

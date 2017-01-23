@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../record.rkt" "../graph.rkt"
+(require "../record.rkt" "../graph.rkt" "../reporter.rkt"
          "renderer.rkt"
          "util/key.rkt")
 
@@ -25,9 +25,9 @@
     (define metrics (profile-data-metrics (profile-node-data node)))
     (printf "~a* ~a (~v ms, ~v merges, ~v unions, ~v terms)\n"
             (indent level) (key node)
-            (hash-ref metrics 'real #f)
-            (hash-ref metrics 'merge-count #f)
-            (hash-ref metrics 'union-count #f)
-            (hash-ref metrics 'term-count #f))
+            (metrics-real metrics)
+            (metrics-merge-count metrics)
+            (metrics-union-count metrics)
+            (metrics-term-count metrics))
     (for ([c (reverse (profile-node-children node))])
       (rec c (add1 level)))))
