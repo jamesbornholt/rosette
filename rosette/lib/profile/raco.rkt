@@ -13,37 +13,50 @@
 ;; raco symprofile (based on raco feature-profile)
 ;; profile the main submodule (if there is one), or the top-level module
 
-(define plot-graphs? (make-parameter #f))
+(define renderer% (make-parameter make-html-renderer))
 (define run-profiler? (make-parameter #t))
 (define module-name (make-parameter 'main))
+(define renderer-options (make-parameter (hash)))
 (define file
   (command-line #:program (short-program+command-name)
-                #:once-any
-                ; Profiler selections
+                #:once-any  ; Profiler selections
                 ["--complexity" "Produce a complexity profile (the default)"
-                                (current-renderer make-complexity-renderer)]
+                                (renderer% make-complexity-renderer)]
                 ["--summary" "Produce a simple summary profile"
-                             (current-renderer make-summary-renderer)]
+                             (renderer% make-summary-renderer)]
                 ["--trace" "Produce a complete execution trace"
-                           (current-renderer make-trace-renderer)]
+                           (renderer% make-trace-renderer)]
                 ["--html" "Produce an interactive HTML profile"
-                          (current-renderer make-html-renderer)]
+                          (renderer% make-html-renderer)]
                 ["--stream" "Run a streaming HTML profiler"
-                            (current-renderer make-stream-renderer)]
+                            (renderer% make-stream-renderer)]
                 #:once-each
+                ; Tool configuration
                 [("-l" "--compiler-only") 
                  "Only install the compile handler; do not run the profiler"
                  (run-profiler? #f)]
                 [("-m" "--module") name
                  "Run submodule <name> (defaults to 'main)"
                  (module-name (string->symbol name))]
-                [("-g" "--graph") "Plot graphs when available"
-                                 (plot-graphs? #t)]
+                ; Renderer-specific configuration
+                [("-p" "--html-profile")
+                 "HTML renderer: also open the Profile page"
+                 (renderer-options (hash-set (renderer-options) 'html-profile #t))]
+                [("-t" "--threshold") t
+                 "Threshold percentage for pruning calls (a number in [0,1])"
+                 (let ([th (string->number t)])
+                   (when (or (eq? th #f) (< th 0) (> th 1))
+                     (raise-argument-error 'threshold "number in [0,1]" th))
+                   (renderer-options (hash-set (renderer-options) 'threshold th)))]
                 #:args (filename . rest)
                 ; pass all unused arguments to the file being run
                 (current-command-line-arguments (list->vector rest))
                 filename))
 
+; Set up the renderer
+(define (renderer source-stx name)
+  ((renderer%) source-stx name (renderer-options)))
+(current-renderer renderer)
 
 (collect-garbage)
 (collect-garbage)

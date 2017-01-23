@@ -13,7 +13,7 @@
                              #:name [name "Profile"])
   (define profile (make-profile-state))
   (define reporter (make-profiler-reporter))
-  (define renderer (renderer% source-stx name (hash)))
+  (define renderer (renderer% source-stx name))
   (start-renderer renderer profile reporter)
   (define-values (prof ret) (run-profile-thunk thunk profile reporter))
   (finish-renderer renderer prof)

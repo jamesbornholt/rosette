@@ -17,19 +17,23 @@
 
 ; The HTML renderer produces a directory containing a webpage version of a profile.
 (define (make-html-renderer source name [options (hash)] [key profile-node-key/srcloc])
-  (html-renderer source name key #t))
+  (define opts (html-renderer-options (hash-ref options 'html-profile #f)
+                                      (hash-ref options 'threshold 0.001)))
+  (html-renderer source name key opts))
 
-(struct html-renderer (source name key open?) 
+(struct html-renderer (source name key opts) 
   #:transparent
   #:methods gen:renderer
   [(define start-renderer void)
    (define (finish-renderer self profile)
-     (match-define (html-renderer source name key open?) self)
-     (render-html profile source name open?))])
+     (match-define (html-renderer source name key opts) self)
+     (render-html profile source name opts))])
+
+(struct html-renderer-options (profile? threshold) #:transparent)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (render-html profile source name open?
+(define (render-html profile source name opts
                      #:directory [dir (build-path (current-directory) "profiles")])
   ; set up output directory
   (define output-dir (build-path dir (make-folder-name source)))
@@ -42,7 +46,7 @@
 
   ; write the JSON data into data.json
   (let ([out (open-output-file (build-path output-dir "data.json"))])
-    (render-json profile source name out)
+    (render-json profile source name out opts)
     (close-output-port out))
 
   ; write the config
@@ -50,11 +54,11 @@
     (fprintf out "Data.config.stream = false;\n")
     (close-output-port out))
 
-  ; open the profile in a web browser
+  ; open the profiles in a web browser
   (printf "Wrote \"~a\" profile to ~a\n" name output-dir)
-  (when open?
-    #;(send-url/file (build-path output-dir "profile.html"))
-    (send-url/file (build-path output-dir "timeline.html"))))
+  (when (html-renderer-options-profile? opts)
+    (send-url/file (build-path output-dir "profile.html")))
+  (send-url/file (build-path output-dir "timeline.html")))
 
 
 ;; Filter a stream of profile-event records to not include event pairs whose
@@ -136,7 +140,7 @@
 ; @parameter entries profile-node?
 ; @parameter source (or/c syntax? #f)
 ; @parameter out output-port?
-(define (render-json state source name out [key profile-node-key/srcloc])
+(define (render-json state source name out opts [key profile-node-key/srcloc])
   (define metadata
     (hash 'name name
           'time (parameterize ([date-display-format 'rfc2822])
@@ -147,7 +151,7 @@
   (write-json metadata out)
   (fprintf out ";\n")
   (define events (reverse (unbox (profile-state-events state))))
-  (define filtered-events (filter-events events))
+  (define filtered-events (filter-events events (html-renderer-options-threshold opts)))
   (fprintf out "Data.events = ")
   (write-json (map render-event filtered-events) out)
   (fprintf out ";\n"))
