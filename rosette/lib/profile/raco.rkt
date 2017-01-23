@@ -8,7 +8,8 @@
          "renderer/summary.rkt" 
          "renderer/trace.rkt"
          "renderer/html.rkt"
-         "renderer/stream.rkt")
+         "renderer/stream.rkt"
+         "renderer/noop.rkt")
 
 ;; raco symprofile (based on raco feature-profile)
 ;; profile the main submodule (if there is one), or the top-level module
@@ -30,6 +31,8 @@
                           (renderer% make-html-renderer)]
                 ["--stream" "Run a streaming HTML profiler"
                             (renderer% make-stream-renderer)]
+                ["--noop" "Produce no profile output (for testing)"
+                          (renderer% make-noop-renderer)]
                 #:once-each
                 ; Tool configuration
                 [("-l" "--compiler-only") 
