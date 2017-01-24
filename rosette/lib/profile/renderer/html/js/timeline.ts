@@ -12,25 +12,26 @@ namespace timeline {
 
     export let Timeline = {
         breaks: [],
-        stacks: [],
         points: [],
+        graph : {
+            root: null,
+            last: null
+        },
         vega: null,
         resizing: false,
         flameGraph: null
     }
 
     export function init() {
-        // Initialize the profile data
-        // initData();
-        // Cache the stacks at each timestep
-        initTimelineData();
-
         // update the profile source info
         document.getElementById("name").innerHTML = "Timeline: " + Data.metadata.name;
         document.getElementById("source").innerHTML = Data.metadata.source;
         document.getElementById("form").innerHTML = Data.metadata.form;
         document.getElementById("time").innerHTML = Data.metadata.time;
         document.title = "Timeline: " + Data.metadata.name;
+
+        // Prepare data for the timeline and flame graph
+        initTimelineData();
 
         // Render the flame graph
         renderFlameGraph();
@@ -42,18 +43,18 @@ namespace timeline {
     }
 
     export function update() {
-        initTimelineData();
-        console.log(Timeline.points.length);
-        Timeline.vega.data("points").remove((d) => true);
-        Timeline.vega.data("points").insert(Timeline.points);
-        Timeline.vega.update();
+        //initTimelineData();
+        //console.log(Timeline.points.length);
+        //Timeline.vega.data("points").remove((d) => true);
+        //Timeline.vega.data("points").insert(Timeline.points);
+        //Timeline.vega.update();
     }
 
     function initTimelineData() {
-        // walk the profile graph
-        let root = Data.graph;
-        let first = root["start"];
-        // compute difference between a point and the first point
+        if (Data.events.length == 0) return;
+
+        // compute delta from first event
+        let first = Data.events[0]["metrics"];
         let computePoint = (p: Object) => {
             let ret = {};
             for (let k of Object.keys(p)) {
@@ -62,40 +63,54 @@ namespace timeline {
             }
             return ret;
         }
-        // push starting point
-        let init = computePoint(first);
-        let stack = [];
-        let breaks = [init["time"]], stacks = [[root]], points = [init];
-        let rec = (node) => {
-            let start = computePoint(node["start"]);
-            // push start data point
-            stack.push(node);
-            let children = node["children"].slice() as Array<any>;
-            children.sort((a, b) => a["start"]["time"] - b["start"]["time"]);
-            for (let c of children) {
-                // before entry, current stack
-                let p = computePoint(c["start"]);
-                breaks.push(p["time"]);
-                stacks.push(stack.slice());
+
+        // build up three things by walking the list of events:
+        //  * a list of points on the graph (in Timeline.points)
+        //  * a list of breakpoints for scrubbing (Timeline.breaks)
+        //  * the callgraph (in Timeline.graph)
+        let breaks = [];
+        let points = [];
+        let graph = Timeline.graph.last;
+        for (let e of Data.events) {
+            if (e["type"] == "ENTER") {
+                let p = computePoint(e["metrics"]);
+                let node = {
+                    "name": e["function"],
+                    "start": p["time"],
+                    "enter": p,
+                    "parentPtr": graph,
+                    "children": []
+                };
+                if (graph === null) {
+                    Timeline.graph.root = node;
+                    node.parentPtr = node;
+                } else {
+                    graph.children.push(node);
+                }
+                graph = node;
                 points.push(p);
-                // recurse on c, will push a pre-exit stack
-                rec(c);
+                breaks.push([p["time"], node, p]);
             }
-            let finish = computePoint(node["finish"]);
-            // push pre-exit stack
-            breaks.push(finish["time"]);
-            stacks.push(stack.slice());
-            points.push(finish);
-            // remove self from stack
-            stack.pop();
-        };
-        rec(root);
-        points = points.concat(Data.samples.map(computePoint));
-        points.sort((a,b) => a["time"] - b["time"]);
+            else if (e["type"] == "EXIT") {
+                let p = computePoint(e["metrics"]);
+                if (graph === null) {
+                    console.error("unbalanced events: EXIT with null graph");
+                    return;
+                }
+                graph["finish"] = p["time"];
+                graph["value"] = p["time"] - graph["start"];
+                graph["exit"] = p;
+                points.push(p);
+                breaks.push([p["time"], graph, p]);
+                graph = graph.parentPtr;
+            }
+        }
+
+        Timeline.graph.last = graph;
         Timeline.points = points;
-        Timeline.stacks = stacks;
         Timeline.breaks = breaks; // done last for race condition
     }
+
 
     function renderTimeline() {
         let timeline = document.getElementById("timeline");
@@ -273,54 +288,63 @@ namespace timeline {
             functions.removeChild(functions.firstChild);
         
         // find the appropriate stack
-        var i = 0;
-        for (i = 0; i < Timeline.breaks.length; i++) {
-            if (value <= Timeline.breaks[i])
+        var i;
+        for (i = 0; i < Timeline.breaks.length - 1; i++) {  // the last entry is the fallback for value > max(time)
+            if (value < Timeline.breaks[i][0])
                 break;
         }
-        let stack = Timeline.stacks[i];
-        var j = 0;
-        for (j = 0; j < Timeline.points.length; j++) {
-            if (value <= Timeline.points[j]["time"])
-                break;
-        }
-        let point = Timeline.points[j];
+        let [_, graphNode, metrics] = Timeline.breaks[i];
 
         // render values
-        let keys = Object.keys(point);
+        let keys = Object.keys(metrics);
         keys.sort();
         for (let k of keys) {
             let node = document.createElement("li");
-            let val = (point[k] % 1 == 0) ? point[k] : point[k].toFixed(2);
+            let val = (metrics[k] % 1 == 0) ? metrics[k] : metrics[k].toFixed(2);
             node.innerHTML = "<b>" + k + "</b>: " + val;
             values.insertAdjacentElement("beforeend", node);
         }
 
-        // render new stack
-        let lastEntry = null;
-        let lastNode = null as HTMLLIElement;
-        for (let entry of stack) {
-            if (lastEntry && entry["function"] == lastEntry["function"]) {
-                var counter = lastNode.querySelector(".counter");
-                if (!counter) {
-                    counter = document.createElement("span");
-                    counter.innerHTML = "0";
-                    counter.classList.add("counter");
-                    lastNode.insertAdjacentElement("beforeend", counter);
+        // figure out the stack
+        let stack = [];
+        while (graphNode.parentPtr != graphNode) {
+            let name = graphNode["name"];
+            graphNode = graphNode.parentPtr;
+
+            if (name == "#f") continue;
+            if (stack.length > 0) {
+                let last = stack[stack.length-1];
+                let lastName = (last instanceof Array ? last[0] : last);
+                if (lastName == name) {
+                    if (!(last instanceof Array))
+                        stack[stack.length-1] = [name, 1];
+                    stack[stack.length-1][1]++;
+                } else {
+                    stack.push(name);
                 }
-                counter.innerHTML = (parseInt(counter.innerHTML) + 1).toString();
             } else {
-                if (entry["function"] == "#f")
-                    continue;
-                let node = document.createElement("li");
-                let code = document.createElement("span");
-                code.innerHTML = getFunctionName(entry["function"]);
-                code.classList.add("code");
-                node.insertAdjacentElement("beforeend", code);
-                functions.insertAdjacentElement("beforeend", node);
-                lastNode = node;
-                lastEntry = entry;
+                stack.push(name);
             }
+        }
+
+        // render the stack
+        for (let entry of stack) {
+            let node = document.createElement("li");
+            let code = document.createElement("span");
+            code.classList.add("code");
+
+            let name = (entry instanceof Array ? entry[0] : entry);
+            code.innerHTML = name;
+            node.insertAdjacentElement("beforeend", code);
+
+            if (entry instanceof Array) {
+                let count = document.createElement("span");
+                count.classList.add("counter");
+                count.innerHTML = entry[1];
+                node.insertAdjacentElement("beforeend", count);
+            }
+
+            functions.insertAdjacentElement("beforeend", node);
         }
 
         // highlight flamegraph
@@ -330,20 +354,7 @@ namespace timeline {
     }
 
     function renderFlameGraph() {
-        let dt = Data.graph["start"]["time"];
-        let rec = (node) => {
-            let children = node["children"].map(rec);
-            children.sort((a, b) => a["start"] - b["start"]);
-            return {
-                "name": node["function"],
-                "value": node["finish"]["time"] - node["start"]["time"],
-                "start": node["start"]["time"] - dt,
-                "finish": node["finish"]["time"] - dt,
-                "children": children
-            };
-        };
-        let graph = rec(Data.graph);
-        Timeline.flameGraph = d3.flameGraph("#flamegraph", graph);
+        Timeline.flameGraph = d3.flameGraph("#flamegraph", Timeline.graph.root);
         Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
         Timeline.flameGraph.hoverAction(flamegraphHoverCallback);
         Timeline.flameGraph.render();
@@ -359,8 +370,10 @@ namespace timeline {
                 let pad = padding.left + padding.right;
                 let newWidth = windowWidth - stackWidth - pad - 80;
                 Timeline.vega.width(newWidth).update();
-                Timeline.flameGraph.size([newWidth, 400]).render();
-                document.getElementById("flamegraph").style.marginLeft = padding.left;
+                if (Timeline.flameGraph) {
+                    Timeline.flameGraph.size([newWidth, 400]).render();
+                    document.getElementById("flamegraph").style.marginLeft = padding.left;
+                }
                 Timeline.resizing = false;
             }, 50);
         }

@@ -3,23 +3,24 @@ var timeline;
 (function (timeline_1) {
     timeline_1.Timeline = {
         breaks: [],
-        stacks: [],
         points: [],
+        graph: {
+            root: null,
+            last: null
+        },
         vega: null,
         resizing: false,
         flameGraph: null
     };
     function init() {
-        // Initialize the profile data
-        // initData();
-        // Cache the stacks at each timestep
-        initTimelineData();
         // update the profile source info
         document.getElementById("name").innerHTML = "Timeline: " + Data.metadata.name;
         document.getElementById("source").innerHTML = Data.metadata.source;
         document.getElementById("form").innerHTML = Data.metadata.form;
         document.getElementById("time").innerHTML = Data.metadata.time;
         document.title = "Timeline: " + Data.metadata.name;
+        // Prepare data for the timeline and flame graph
+        initTimelineData();
         // Render the flame graph
         renderFlameGraph();
         // Render the timeline
@@ -28,18 +29,18 @@ var timeline;
     }
     timeline_1.init = init;
     function update() {
-        initTimelineData();
-        console.log(timeline_1.Timeline.points.length);
-        timeline_1.Timeline.vega.data("points").remove(function (d) { return true; });
-        timeline_1.Timeline.vega.data("points").insert(timeline_1.Timeline.points);
-        timeline_1.Timeline.vega.update();
+        //initTimelineData();
+        //console.log(Timeline.points.length);
+        //Timeline.vega.data("points").remove((d) => true);
+        //Timeline.vega.data("points").insert(Timeline.points);
+        //Timeline.vega.update();
     }
     timeline_1.update = update;
     function initTimelineData() {
-        // walk the profile graph
-        var root = Data.graph;
-        var first = root["start"];
-        // compute difference between a point and the first point
+        if (Data.events.length == 0)
+            return;
+        // compute delta from first event
+        var first = Data.events[0]["metrics"];
         var computePoint = function (p) {
             var ret = {};
             for (var _i = 0, _a = Object.keys(p); _i < _a.length; _i++) {
@@ -49,39 +50,51 @@ var timeline;
             }
             return ret;
         };
-        // push starting point
-        var init = computePoint(first);
-        var stack = [];
-        var breaks = [init["time"]], stacks = [[root]], points = [init];
-        var rec = function (node) {
-            var start = computePoint(node["start"]);
-            // push start data point
-            stack.push(node);
-            var children = node["children"].slice();
-            children.sort(function (a, b) { return a["start"]["time"] - b["start"]["time"]; });
-            for (var _i = 0, children_1 = children; _i < children_1.length; _i++) {
-                var c = children_1[_i];
-                // before entry, current stack
-                var p = computePoint(c["start"]);
-                breaks.push(p["time"]);
-                stacks.push(stack.slice());
+        // build up three things by walking the list of events:
+        //  * a list of points on the graph (in Timeline.points)
+        //  * a list of breakpoints for scrubbing (Timeline.breaks)
+        //  * the callgraph (in Timeline.graph)
+        var breaks = [];
+        var points = [];
+        var graph = timeline_1.Timeline.graph.last;
+        for (var _i = 0, _a = Data.events; _i < _a.length; _i++) {
+            var e = _a[_i];
+            if (e["type"] == "ENTER") {
+                var p = computePoint(e["metrics"]);
+                var node = {
+                    "name": e["function"],
+                    "start": p["time"],
+                    "enter": p,
+                    "parentPtr": graph,
+                    "children": []
+                };
+                if (graph === null) {
+                    timeline_1.Timeline.graph.root = node;
+                    node.parentPtr = node;
+                }
+                else {
+                    graph.children.push(node);
+                }
+                graph = node;
                 points.push(p);
-                // recurse on c, will push a pre-exit stack
-                rec(c);
+                breaks.push([p["time"], node, p]);
             }
-            var finish = computePoint(node["finish"]);
-            // push pre-exit stack
-            breaks.push(finish["time"]);
-            stacks.push(stack.slice());
-            points.push(finish);
-            // remove self from stack
-            stack.pop();
-        };
-        rec(root);
-        points = points.concat(Data.samples.map(computePoint));
-        points.sort(function (a, b) { return a["time"] - b["time"]; });
+            else if (e["type"] == "EXIT") {
+                var p = computePoint(e["metrics"]);
+                if (graph === null) {
+                    console.error("unbalanced events: EXIT with null graph");
+                    return;
+                }
+                graph["finish"] = p["time"];
+                graph["value"] = p["time"] - graph["start"];
+                graph["exit"] = p;
+                points.push(p);
+                breaks.push([p["time"], graph, p]);
+                graph = graph.parentPtr;
+            }
+        }
+        timeline_1.Timeline.graph.last = graph;
         timeline_1.Timeline.points = points;
-        timeline_1.Timeline.stacks = stacks;
         timeline_1.Timeline.breaks = breaks; // done last for race condition
     }
     function renderTimeline() {
@@ -255,55 +268,61 @@ var timeline;
         while (functions.firstChild)
             functions.removeChild(functions.firstChild);
         // find the appropriate stack
-        var i = 0;
-        for (i = 0; i < timeline_1.Timeline.breaks.length; i++) {
-            if (value <= timeline_1.Timeline.breaks[i])
+        var i;
+        for (i = 0; i < timeline_1.Timeline.breaks.length - 1; i++) {
+            if (value < timeline_1.Timeline.breaks[i][0])
                 break;
         }
-        var stack = timeline_1.Timeline.stacks[i];
-        var j = 0;
-        for (j = 0; j < timeline_1.Timeline.points.length; j++) {
-            if (value <= timeline_1.Timeline.points[j]["time"])
-                break;
-        }
-        var point = timeline_1.Timeline.points[j];
+        var _a = timeline_1.Timeline.breaks[i], _ = _a[0], graphNode = _a[1], metrics = _a[2];
         // render values
-        var keys = Object.keys(point);
+        var keys = Object.keys(metrics);
         keys.sort();
         for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
             var k = keys_1[_i];
             var node = document.createElement("li");
-            var val = (point[k] % 1 == 0) ? point[k] : point[k].toFixed(2);
+            var val = (metrics[k] % 1 == 0) ? metrics[k] : metrics[k].toFixed(2);
             node.innerHTML = "<b>" + k + "</b>: " + val;
             values.insertAdjacentElement("beforeend", node);
         }
-        // render new stack
-        var lastEntry = null;
-        var lastNode = null;
-        for (var _a = 0, stack_1 = stack; _a < stack_1.length; _a++) {
-            var entry = stack_1[_a];
-            if (lastEntry && entry["function"] == lastEntry["function"]) {
-                var counter = lastNode.querySelector(".counter");
-                if (!counter) {
-                    counter = document.createElement("span");
-                    counter.innerHTML = "0";
-                    counter.classList.add("counter");
-                    lastNode.insertAdjacentElement("beforeend", counter);
+        // figure out the stack
+        var stack = [];
+        while (graphNode.parentPtr != graphNode) {
+            var name_1 = graphNode["name"];
+            graphNode = graphNode.parentPtr;
+            if (name_1 == "#f")
+                continue;
+            if (stack.length > 0) {
+                var last = stack[stack.length - 1];
+                var lastName = (last instanceof Array ? last[0] : last);
+                if (lastName == name_1) {
+                    if (!(last instanceof Array))
+                        stack[stack.length - 1] = [name_1, 1];
+                    stack[stack.length - 1][1]++;
                 }
-                counter.innerHTML = (parseInt(counter.innerHTML) + 1).toString();
+                else {
+                    stack.push(name_1);
+                }
             }
             else {
-                if (entry["function"] == "#f")
-                    continue;
-                var node = document.createElement("li");
-                var code = document.createElement("span");
-                code.innerHTML = getFunctionName(entry["function"]);
-                code.classList.add("code");
-                node.insertAdjacentElement("beforeend", code);
-                functions.insertAdjacentElement("beforeend", node);
-                lastNode = node;
-                lastEntry = entry;
+                stack.push(name_1);
             }
+        }
+        // render the stack
+        for (var _b = 0, stack_1 = stack; _b < stack_1.length; _b++) {
+            var entry = stack_1[_b];
+            var node = document.createElement("li");
+            var code = document.createElement("span");
+            code.classList.add("code");
+            var name_2 = (entry instanceof Array ? entry[0] : entry);
+            code.innerHTML = name_2;
+            node.insertAdjacentElement("beforeend", code);
+            if (entry instanceof Array) {
+                var count = document.createElement("span");
+                count.classList.add("counter");
+                count.innerHTML = entry[1];
+                node.insertAdjacentElement("beforeend", count);
+            }
+            functions.insertAdjacentElement("beforeend", node);
         }
         // highlight flamegraph
         if (timeline_1.Timeline.flameGraph) {
@@ -311,20 +330,7 @@ var timeline;
         }
     }
     function renderFlameGraph() {
-        var dt = Data.graph["start"]["time"];
-        var rec = function (node) {
-            var children = node["children"].map(rec);
-            children.sort(function (a, b) { return a["start"] - b["start"]; });
-            return {
-                "name": node["function"],
-                "value": node["finish"]["time"] - node["start"]["time"],
-                "start": node["start"]["time"] - dt,
-                "finish": node["finish"]["time"] - dt,
-                "children": children
-            };
-        };
-        var graph = rec(Data.graph);
-        timeline_1.Timeline.flameGraph = d3.flameGraph("#flamegraph", graph);
+        timeline_1.Timeline.flameGraph = d3.flameGraph("#flamegraph", timeline_1.Timeline.graph.root);
         timeline_1.Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
         timeline_1.Timeline.flameGraph.hoverAction(flamegraphHoverCallback);
         timeline_1.Timeline.flameGraph.render();
@@ -339,8 +345,10 @@ var timeline;
                 var pad = padding.left + padding.right;
                 var newWidth = windowWidth - stackWidth - pad - 80;
                 timeline_1.Timeline.vega.width(newWidth).update();
-                timeline_1.Timeline.flameGraph.size([newWidth, 400]).render();
-                document.getElementById("flamegraph").style.marginLeft = padding.left;
+                if (timeline_1.Timeline.flameGraph) {
+                    timeline_1.Timeline.flameGraph.size([newWidth, 400]).render();
+                    document.getElementById("flamegraph").style.marginLeft = padding.left;
+                }
                 timeline_1.Timeline.resizing = false;
             }, 50);
         }
