@@ -32,8 +32,8 @@
 (struct metrics (term-count merge-count union-count union-size cpu real gc time)
   #:transparent)
 
-(define (get-current-metrics [cpu 0] [real 0] [gc 0])
-  (let ([mets (profiler-reporter-metrics (current-reporter))])
+(define (get-current-metrics [cpu 0] [real 0] [gc 0] #:reporter [reporter (current-reporter)])
+  (let ([mets (profiler-reporter-metrics reporter)])
     (metrics (hash-ref mets 'term-count)
              (hash-ref mets 'merge-count)
              (hash-ref mets 'union-count)

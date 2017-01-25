@@ -28,6 +28,7 @@
 (struct profile-event ())
 (struct profile-event-enter (location procedure inputs metrics))
 (struct profile-event-exit  (outputs metrics))
+(struct profile-event-sample (metrics))
 
 ;; Returns a new profile
 (define (make-profile-state)

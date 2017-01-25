@@ -16,17 +16,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; The HTML renderer produces a directory containing a webpage version of a profile.
-(define (make-html-renderer source name [options (hash)] [key profile-node-key/srcloc])
+(define (make-html-renderer source name [options (hash)])
   (define opts (html-renderer-options (hash-ref options 'html-profile #f)
                                       (hash-ref options 'threshold 0.001)))
-  (html-renderer source name key opts))
+  (html-renderer source name opts))
 
-(struct html-renderer (source name key opts) 
+(struct html-renderer (source name opts) 
   #:transparent
   #:methods gen:renderer
   [(define start-renderer void)
    (define (finish-renderer self profile)
-     (match-define (html-renderer source name key opts) self)
+     (match-define (html-renderer source name opts) self)
      (render-html profile source name opts))])
 
 (struct html-renderer-options (profile? threshold) #:transparent)
@@ -70,7 +70,8 @@
   (define (event->time evt)
     (match evt
       [(profile-event-enter _ _ _ m) (metrics-time m)]
-      [(profile-event-exit _ m) (metrics-time m)]))
+      [(profile-event-exit _ m) (metrics-time m)]
+      [(profile-event-sample m) (metrics-time m)]))
   (define (dt enter exit)
     (- (event->time exit)
        (event->time enter)))
@@ -104,9 +105,6 @@
           [else
            (set! new-events (cons e new-events))
            (set! n (add1 n))]))
-  ; include any unmatched events for streaming purposes
-  (unless (null? stack)
-    (set! new-events (append (reverse stack) new-events)))
 
   (reverse new-events))
 
@@ -123,6 +121,9 @@
     [(profile-event-exit out met)
      (hash 'type "EXIT"
            'outputs (profile-hash->jsexpr out)
+           'metrics (metrics->jsexpr met))]
+    [(profile-event-sample met)
+     (hash 'type "SAMPLE"
            'metrics (metrics->jsexpr met))]
     [_ (error 'render-event "unknown event ~v" event)]))
 
@@ -147,7 +148,7 @@
 ; @parameter entries profile-node?
 ; @parameter source (or/c syntax? #f)
 ; @parameter out output-port?
-(define (render-json state source name out opts [key profile-node-key/srcloc])
+(define (render-json state source name out opts)
   (define metadata
     (hash 'name name
           'time (parameterize ([date-display-format 'rfc2822])

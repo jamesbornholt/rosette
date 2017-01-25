@@ -49,8 +49,14 @@
                  "Threshold percentage for pruning calls (a number in [0,1])"
                  (let ([th (string->number t)])
                    (when (or (eq? th #f) (< th 0) (> th 1))
-                     (raise-argument-error 'threshold "number in [0,1]" th))
+                     (raise-argument-error 'threshold "number in [0,1]" t))
                    (renderer-options (hash-set (renderer-options) 'threshold th)))]
+                [("-d" "--delay") d
+                 "Streaming renderer: delay between samples, in seconds"
+                 (let ([de (string->number d)])
+                   (when (or (eq? de #f) (<= de 0))
+                     (raise-argument-error 'delay "number > 0" d))
+                   (renderer-options (hash-set (renderer-options) 'interval de)))]
                 #:args (filename . rest)
                 ; pass all unused arguments to the file being run
                 (current-command-line-arguments (list->vector rest))

@@ -1,9 +1,9 @@
 #lang racket
 
-(require "../record.rkt"
+(require "../record.rkt" "../reporter.rkt"
          "renderer.rkt"
          "util/key.rkt" "util/srcloc.rkt"
-         ;(only-in "html.rkt" compute-graph render-entry)
+         (only-in "html.rkt" filter-events render-event)
          net/rfc6455 net/sendurl
          racket/date json racket/runtime-path racket/hash)
 (provide make-stream-renderer)
@@ -16,34 +16,99 @@
 ; The stream renderer produces a directory containing a webpage version of a profile
 ; that is updated via a streaming websocket.
 (define (make-stream-renderer source name [options (hash)] [key profile-node-key/srcloc])
-  (stream-renderer source name key 2.0 #f))
+  (define opts (stream-renderer-options (hash-ref options 'threshold 0.001)
+                                        (hash-ref options 'interval 2.0)))
+  (stream-renderer source name opts #f))
 
-(struct stream-renderer (source name key interval [thd #:mutable])
-  #:transparent )#|
+(struct stream-renderer (source name opts [thd #:mutable])
+  #:transparent
   #:methods gen:renderer
   [(define (start-renderer self profile reporter)
      (set-stream-renderer-thd!
       self
       (streaming-data-thread self profile reporter)))
    (define (finish-renderer self profile)
-     (match-define (stream-renderer _ _ _ _ thd) self)
-     (printf "done\n")
+     (match-define (stream-renderer _ _ _ thd) self)
      (thread-send thd 'done)
-     (printf "waiting for thread...\n")
-     (thread-wait thd)
-     (printf "done!\n"))])
+     (thread-wait thd))])
 
+(struct stream-renderer-options (threshold interval) #:transparent)
 
 ; The streaming data thread reads data from the profile-state, and sends that
 ; data to registered client threads.
 (define (streaming-data-thread renderer profile reporter)
   (thread
    (thunk
-    (match-define (stream-renderer _ _ key interval _) renderer)
+    (match-define (stream-renderer _ _ opts _) renderer)
+    (match-define (stream-renderer-options threshold interval) opts)
     
-    (define clients '())
-    
-    (define server-shutdown! (ws-serve #:port 8081 (make-streaming-client (current-thread))))
+    (define server-shutdown!
+      (ws-serve #:port 8081
+                (make-streaming-client (current-thread) renderer profile reporter)))
+
+    (create-profile-directory renderer)
+
+    (define client #f)
+
+    (let loop ()
+      (sync/enable-break (thread-receive-evt))
+      (match (thread-receive)
+        [(and t (? thread?))
+         ; new client connection... reject it if we already have one
+         (if client
+             (thread-send t 'quit #f)
+             (begin
+               (set! client t)
+               (thread-send t 'go)))
+         (loop)]
+        ['done
+         (when (and (thread? client) (not (thread-dead? client)))
+           (thread-send client 'done #f)
+           (thread-wait client))
+         (server-shutdown!)])))))
+
+
+(define (make-streaming-client parent renderer profile reporter)
+  (match-define (stream-renderer _ _ opts _) renderer)
+  (match-define (stream-renderer-options threshold interval) opts)
+  (define events-box (profile-state-events profile))
+  (lambda (conn state)
+    ; register with the streaming data thread
+    (printf "Streaming client connected.\n")
+    (thread-send parent (current-thread))
+    (define res (thread-receive))
+    (when (eq? res 'go)
+      ; wait for messages
+      (let loop ()
+        (define sync-result (sync/timeout/enable-break interval (thread-receive-evt)))
+        ; get the current events
+        (define events
+          (reverse
+           (cons (profile-event-sample (get-current-metrics #:reporter reporter))
+                 (let loop ()
+                   (define evts (unbox events-box))
+                   (if (box-cas! events-box evts '())
+                       evts
+                       (loop))))))
+        (define filtered-events
+          (if (null? events) events (filter-events events threshold)))
+        ; compute the json
+        (define msg (jsexpr->bytes (hash 'events (map render-event filtered-events))))
+        ; send on the connection
+        (with-handlers ([exn:fail? void])
+          (ws-send! conn msg)
+          ; loop if we should
+          (unless sync-result
+            (loop)))))
+    ; close connection and go away
+    (ws-close! conn)))
+
+
+
+
+
+#|
+      (match (sync/enable-break (thread-receive-evt))
 
     ; spawn the profiler page
     (create-profile-directory renderer)
@@ -51,15 +116,27 @@
     (define (get-next-sample-evt)
       (alarm-evt (+ (current-inexact-milliseconds) (* interval 1000))))
     (define thread-rec-evt (thread-receive-evt))
+    (define events-box (profile-state-events profile))
+
+    (define total-evts 0)
 
     (define (pump-updates)
-      ; get the current profile
-      (define-values (nodes edges) (compute-graph (profile-state-root profile) (stream-renderer-key renderer)))
+      ; get the current events
+      (define events
+        (reverse
+          ;(cons (profile-event-sample (get-current-metrics #:reporter reporter))
+                (let loop ()
+                  (define evts (unbox events-box))
+                  (if (box-cas! events-box evts '())
+                      evts
+                      (loop)))));)
+      (define filtered-events
+        (if (null? events) events (filter-events events threshold)))
       ; compute the json
-      (define msg
-        (jsexpr->bytes
-         (hash 'nodes (for/list ([n nodes]) (render-entry (key n) n))
-               'edges edges)))
+      (define msg (jsexpr->bytes (hash 'events (map render-event filtered-events))))
+      (set! total-evts (+ total-evts (length filtered-events)))
+      (printf "events: ~v\n" total-evts)
+      ;(printf "first 10: ~v\n" (take filtered-events (min 10 (length filtered-events))))
 
       ; send message to all threads
       (for ([t clients] #:when (thread-running? t))
@@ -84,12 +161,12 @@
         [_
          (pump-updates)
          (loop (get-next-sample-evt))])))))
-
+|#
 
 (define (create-profile-directory renderer
                                   #:directory [dir (build-path (current-directory) "profiles")])
   ; get metadata
-  (match-define (stream-renderer source name _ _ _) renderer)
+  (match-define (stream-renderer source name _ _) renderer)
   (define top-dict
     (hash 'name name
           'time (parameterize ([date-display-format 'rfc2822])
@@ -117,50 +194,3 @@
   ; open the profile in a web browser
   (printf "Wrote \"~a\" profile to ~a\n" name output-dir)
   (send-url/file (build-path output-dir "timeline.html")))
-
-  
-(define (make-streaming-client parent)
-  (lambda (conn state)
-    ; register with the streaming data thread
-    (thread-send parent (current-thread))
-    (printf "streaming client is waiting...\n")
-    ; wait for messages
-    (let loop ()
-      (match (thread-receive)
-        ['done  ; wrap up
-         (printf "streaming client is going away\n")
-         (ws-close! conn)]
-        [msg  ; send message to client
-         (printf "streaming client got a message\n")
-         (with-handlers ([exn:fail? (lambda (e) (ws-close! conn))])
-           (ws-send! conn msg)
-           (loop))]))))
-
-|#
-
-#|
-(define (stream-renderer-thread profile reporter)
-  (thread
-   (thunk
-    (define shutdown-server #f)
-    (define done-chan (make-channel))
-    (define (serve conn state)
-      (define sum 0)
-      (let loop ()
-        (define evt (sync/timeout/enable-break 2 done-chan))
-        (define stream-data (profile-state-stream profile))
-        (define finished (profile-stream-finished stream-data))
-        (set-profile-stream-finished! stream-data '())
-        (define len (length finished))
-        (set! sum (+ sum len))
-        (printf "stream-renderer-thread... ~v (~v)\n" len sum)
-        (ws-send! conn (format "finished ~v (~v)" len sum))
-        (match evt
-          [#f (loop)]
-          [_ (channel-put done-chan 'done)])))
-    (set! shutdown-server (ws-serve #:port 8081 serve))
-    (match (thread-receive)
-      ['done (channel-put done-chan 'done)  ; tell thread to shut down
-             (channel-get done-chan)  ; wait until it's done
-             (shutdown-server)]))))  ; shutdown the websocket
-|#

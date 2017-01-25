@@ -38,12 +38,13 @@ function dataOnload(initCb, updateCb) {
             var init = false;
             ws.onmessage = (evt) => {
                 let data = JSON.parse(evt.data);
-                Data.events = data.events;
+                for (let e of data.events) Data.events.push(e);
+                // console.log("new events:", data.events.length);
                 initData();
                 if (init) {
-                    updateCb();
+                    updateCb(data.events);
                 } else {
-                    initCb();
+                    initCb(data.events);
                     init = true;
                 }
             }
@@ -51,7 +52,7 @@ function dataOnload(initCb, updateCb) {
             let scr = document.createElement("script");
             scr.onload = () => {
                 initData();
-                initCb();
+                initCb(Data.events);
             }
             scr.src = "data.json";
             document.head.appendChild(scr);
@@ -110,6 +111,7 @@ function eventsToGraph(events: Array<any>) {
 }
 
 function initData() {
+    /*
     Data["graph"] = eventsToGraph(Data["events"]);
     // populate the "functions" aggregated list
     let worklist = [Data.graph];
@@ -129,6 +131,7 @@ function initData() {
     Data.inputs = findUnique("inputs");
     Data.outputs = findUnique("outputs");
     Data.metrics = findUnique("metrics");
+    */
 }
 
 function getFunctionName(func: string) {

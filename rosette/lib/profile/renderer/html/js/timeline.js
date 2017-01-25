@@ -4,6 +4,7 @@ var timeline;
     timeline_1.Timeline = {
         breaks: [],
         points: [],
+        firstEvent: null,
         graph: {
             root: null,
             last: null
@@ -12,7 +13,7 @@ var timeline;
         resizing: false,
         flameGraph: null
     };
-    function init() {
+    function init(events) {
         // update the profile source info
         document.getElementById("name").innerHTML = "Timeline: " + Data.metadata.name;
         document.getElementById("source").innerHTML = Data.metadata.source;
@@ -20,7 +21,7 @@ var timeline;
         document.getElementById("time").innerHTML = Data.metadata.time;
         document.title = "Timeline: " + Data.metadata.name;
         // Prepare data for the timeline and flame graph
-        initTimelineData();
+        computeTimelineData(events);
         // Render the flame graph
         renderFlameGraph();
         // Render the timeline
@@ -28,25 +29,46 @@ var timeline;
         window.addEventListener("resize", windowResizeCallback);
     }
     timeline_1.init = init;
-    function update() {
-        //initTimelineData();
+    function update(events) {
+        var oldPoints = timeline_1.Timeline.points.length;
+        computeTimelineData(events);
+        if (timeline_1.Timeline.points.length - oldPoints > 0) {
+            var newPoints = timeline_1.Timeline.points.slice(oldPoints);
+            timeline_1.Timeline.vega.data("points").insert(newPoints);
+            var first = timeline_1.Timeline.points[0]["time"];
+            var last = timeline_1.Timeline.points[timeline_1.Timeline.points.length - 1]["time"];
+            var duration = last == first ? 1 : last - first;
+            var width = timeline_1.Timeline.vega.width();
+            var dt_1 = duration / width / 2; // fudge factor
+            var mostRecent = -dt_1;
+            timeline_1.Timeline.vega.data("points").remove(function (p) {
+                if (p["time"] >= mostRecent + dt_1) {
+                    mostRecent = p["time"];
+                    return false;
+                }
+                return true;
+            });
+            timeline_1.Timeline.vega.update();
+        }
+        renderFlameGraph();
         //console.log(Timeline.points.length);
         //Timeline.vega.data("points").remove((d) => true);
         //Timeline.vega.data("points").insert(Timeline.points);
         //Timeline.vega.update();
     }
     timeline_1.update = update;
-    function initTimelineData() {
-        if (Data.events.length == 0)
+    function computeTimelineData(events) {
+        if (events.length == 0)
             return;
         // compute delta from first event
-        var first = Data.events[0]["metrics"];
+        if (timeline_1.Timeline.firstEvent === null)
+            timeline_1.Timeline.firstEvent = events[0]["metrics"];
         var computePoint = function (p) {
             var ret = {};
             for (var _i = 0, _a = Object.keys(p); _i < _a.length; _i++) {
                 var k = _a[_i];
-                if (first.hasOwnProperty(k))
-                    ret[k] = p[k] - first[k];
+                if (timeline_1.Timeline.firstEvent.hasOwnProperty(k))
+                    ret[k] = p[k] - timeline_1.Timeline.firstEvent[k];
             }
             return ret;
         };
@@ -57,8 +79,8 @@ var timeline;
         var breaks = [];
         var points = [];
         var graph = timeline_1.Timeline.graph.last;
-        for (var _i = 0, _a = Data.events; _i < _a.length; _i++) {
-            var e = _a[_i];
+        for (var _i = 0, events_1 = events; _i < events_1.length; _i++) {
+            var e = events_1[_i];
             if (e["type"] == "ENTER") {
                 var p = computePoint(e["metrics"]);
                 var node = {
@@ -92,10 +114,29 @@ var timeline;
                 breaks.push([p["time"], graph, p]);
                 graph = graph.parentPtr;
             }
+            else if (e["type"] == "SAMPLE") {
+                var p = computePoint(e["metrics"]);
+                points.push(p);
+                breaks.push([p["time"], graph, p]);
+            }
+        }
+        // insert fake finish times into un-closed graph nodes
+        var finish = events[events.length - 1]["metrics"]["time"] - timeline_1.Timeline.firstEvent["time"];
+        var curr = graph;
+        while (curr != curr.parentPtr) {
+            curr["finish"] = finish;
+            curr["value"] = finish - curr["start"];
+            curr = curr.parentPtr;
         }
         timeline_1.Timeline.graph.last = graph;
-        timeline_1.Timeline.points = points;
-        timeline_1.Timeline.breaks = breaks; // done last for race condition
+        for (var _a = 0, points_1 = points; _a < points_1.length; _a++) {
+            var p = points_1[_a];
+            timeline_1.Timeline.points.push(p);
+        }
+        for (var _b = 0, breaks_1 = breaks; _b < breaks_1.length; _b++) {
+            var b = breaks_1[_b];
+            timeline_1.Timeline.breaks.push(b);
+        }
     }
     function renderTimeline() {
         var timeline = document.getElementById("timeline");
@@ -330,9 +371,23 @@ var timeline;
         }
     }
     function renderFlameGraph() {
-        timeline_1.Timeline.flameGraph = d3.flameGraph("#flamegraph", timeline_1.Timeline.graph.root);
+        var dt = timeline_1.Timeline.graph.root["start"];
+        var rec = function (node) {
+            var children = node["children"].map(rec);
+            return {
+                "name": node["name"],
+                "start": node["start"],
+                "finish": node["finish"],
+                "value": node["value"],
+                "children": children
+            };
+        };
+        var root = rec(timeline_1.Timeline.graph.root);
+        var size = timeline_1.Timeline.flameGraph ? timeline_1.Timeline.flameGraph.size() : undefined;
+        timeline_1.Timeline.flameGraph = d3.flameGraph("#flamegraph", root);
         timeline_1.Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
         timeline_1.Timeline.flameGraph.hoverAction(flamegraphHoverCallback);
+        timeline_1.Timeline.flameGraph.size(size);
         timeline_1.Timeline.flameGraph.render();
     }
     function windowResizeCallback() {

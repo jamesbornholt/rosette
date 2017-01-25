@@ -13,6 +13,7 @@ namespace timeline {
     export let Timeline = {
         breaks: [],
         points: [],
+        firstEvent: null,
         graph : {
             root: null,
             last: null
@@ -22,7 +23,7 @@ namespace timeline {
         flameGraph: null
     }
 
-    export function init() {
+    export function init(events) {
         // update the profile source info
         document.getElementById("name").innerHTML = "Timeline: " + Data.metadata.name;
         document.getElementById("source").innerHTML = Data.metadata.source;
@@ -31,7 +32,7 @@ namespace timeline {
         document.title = "Timeline: " + Data.metadata.name;
 
         // Prepare data for the timeline and flame graph
-        initTimelineData();
+        computeTimelineData(events);
 
         // Render the flame graph
         renderFlameGraph();
@@ -42,24 +43,44 @@ namespace timeline {
         window.addEventListener("resize", windowResizeCallback);
     }
 
-    export function update() {
-        //initTimelineData();
+    export function update(events) {
+        let oldPoints = Timeline.points.length;
+        computeTimelineData(events);
+        if (Timeline.points.length - oldPoints > 0) {
+            let newPoints = Timeline.points.slice(oldPoints);
+            Timeline.vega.data("points").insert(newPoints);
+            let first = Timeline.points[0]["time"];
+            let last  = Timeline.points[Timeline.points.length - 1]["time"];
+            let duration = last == first ? 1 : last - first;
+            let width = Timeline.vega.width();
+            let dt = duration / width / 2;  // fudge factor
+            var mostRecent = -dt;
+            Timeline.vega.data("points").remove((p) => {
+                if (p["time"] >= mostRecent + dt) {
+                    mostRecent = p["time"];
+                    return false;
+                }
+                return true;
+            });
+            Timeline.vega.update();
+        }
+        renderFlameGraph();
         //console.log(Timeline.points.length);
         //Timeline.vega.data("points").remove((d) => true);
         //Timeline.vega.data("points").insert(Timeline.points);
         //Timeline.vega.update();
     }
 
-    function initTimelineData() {
-        if (Data.events.length == 0) return;
+    function computeTimelineData(events) {
+        if (events.length == 0) return;
 
         // compute delta from first event
-        let first = Data.events[0]["metrics"];
+        if (Timeline.firstEvent === null) Timeline.firstEvent = events[0]["metrics"];
         let computePoint = (p: Object) => {
             let ret = {};
             for (let k of Object.keys(p)) {
-                if (first.hasOwnProperty(k))
-                    ret[k] = p[k] - first[k];
+                if (Timeline.firstEvent.hasOwnProperty(k))
+                    ret[k] = p[k] - Timeline.firstEvent[k];
             }
             return ret;
         }
@@ -71,7 +92,7 @@ namespace timeline {
         let breaks = [];
         let points = [];
         let graph = Timeline.graph.last;
-        for (let e of Data.events) {
+        for (let e of events) {
             if (e["type"] == "ENTER") {
                 let p = computePoint(e["metrics"]);
                 let node = {
@@ -90,8 +111,7 @@ namespace timeline {
                 graph = node;
                 points.push(p);
                 breaks.push([p["time"], node, p]);
-            }
-            else if (e["type"] == "EXIT") {
+            } else if (e["type"] == "EXIT") {
                 let p = computePoint(e["metrics"]);
                 if (graph === null) {
                     console.error("unbalanced events: EXIT with null graph");
@@ -103,12 +123,25 @@ namespace timeline {
                 points.push(p);
                 breaks.push([p["time"], graph, p]);
                 graph = graph.parentPtr;
+            } else if (e["type"] == "SAMPLE") {
+                let p = computePoint(e["metrics"]);
+                points.push(p);
+                breaks.push([p["time"], graph, p]);
             }
         }
 
+        // insert fake finish times into un-closed graph nodes
+        let finish = events[events.length-1]["metrics"]["time"] - Timeline.firstEvent["time"];
+        let curr = graph;
+        while (curr != curr.parentPtr) {
+            curr["finish"] = finish;
+            curr["value"] = finish - curr["start"];
+            curr = curr.parentPtr;
+        }
+
         Timeline.graph.last = graph;
-        Timeline.points = points;
-        Timeline.breaks = breaks; // done last for race condition
+        for (let p of points) Timeline.points.push(p);
+        for (let b of breaks) Timeline.breaks.push(b);
     }
 
 
@@ -354,9 +387,23 @@ namespace timeline {
     }
 
     function renderFlameGraph() {
-        Timeline.flameGraph = d3.flameGraph("#flamegraph", Timeline.graph.root);
+        let dt = Timeline.graph.root["start"];
+        let rec = (node) => {
+            let children = node["children"].map(rec);
+            return {
+                "name": node["name"],
+                "start": node["start"],
+                "finish": node["finish"],
+                "value": node["value"],
+                "children": children
+            };
+        };
+        let root = rec(Timeline.graph.root);
+        let size = Timeline.flameGraph ? Timeline.flameGraph.size() : undefined;
+        Timeline.flameGraph = d3.flameGraph("#flamegraph", root);
         Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
         Timeline.flameGraph.hoverAction(flamegraphHoverCallback);
+        Timeline.flameGraph.size(size);
         Timeline.flameGraph.render();
     }
 

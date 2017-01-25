@@ -38,13 +38,17 @@ function dataOnload(initCb, updateCb) {
             var init = false;
             ws.onmessage = function (evt) {
                 var data = JSON.parse(evt.data);
-                Data.events = data.events;
+                for (var _i = 0, _a = data.events; _i < _a.length; _i++) {
+                    var e = _a[_i];
+                    Data.events.push(e);
+                }
+                // console.log("new events:", data.events.length);
                 initData();
                 if (init) {
-                    updateCb();
+                    updateCb(data.events);
                 }
                 else {
-                    initCb();
+                    initCb(data.events);
                     init = true;
                 }
             };
@@ -53,7 +57,7 @@ function dataOnload(initCb, updateCb) {
             var scr = document.createElement("script");
             scr.onload = function () {
                 initData();
-                initCb();
+                initCb(Data.events);
             };
             scr.src = "data.json";
             document.head.appendChild(scr);
@@ -115,24 +119,27 @@ function eventsToGraph(events) {
     return node;
 }
 function initData() {
+    /*
     Data["graph"] = eventsToGraph(Data["events"]);
     // populate the "functions" aggregated list
-    var worklist = [Data.graph];
-    var functions = {};
+    let worklist = [Data.graph];
+    let functions = {};
     while (worklist.length > 0) {
-        var node = worklist.pop();
-        var func = node["function"];
+        let node = worklist.pop();
+        let func = node["function"];
         if (!functions.hasOwnProperty(func))
-            functions[func] = { "name": func, "calls": [] };
+            functions[func] = {"name": func, "calls": []};
         functions[func]["calls"].push(node);
         if (node.hasOwnProperty("children"))
-            worklist.push.apply(worklist, node["children"]);
+            worklist.push(...node["children"]);
     }
-    Data.functions = Object.keys(functions).map(function (k) { return functions[k]; });
+    Data.functions = Object.keys(functions).map((k) => functions[k]);
+
     // find inputs, outputs, metrics
     Data.inputs = findUnique("inputs");
     Data.outputs = findUnique("outputs");
     Data.metrics = findUnique("metrics");
+    */
 }
 function getFunctionName(func) {
     return func.split(" ")[0];
