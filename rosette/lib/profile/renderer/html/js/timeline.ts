@@ -402,6 +402,7 @@ namespace timeline {
             Timeline.flameGraph.data(root);
         } else {
             Timeline.flameGraph = d3.flameGraph("#flamegraph", root);
+            Timeline.flameGraph.size([800, 300]);
             Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
             Timeline.flameGraph.hoverAction(flamegraphHoverCallback);
         }
@@ -419,7 +420,7 @@ namespace timeline {
                 let newWidth = windowWidth - stackWidth - pad - 80;
                 Timeline.vega.width(newWidth).update();
                 if (Timeline.flameGraph) {
-                    Timeline.flameGraph.size([newWidth, 400]).render();
+                    Timeline.flameGraph.size([newWidth, 300]).render();
                     document.getElementById("flamegraph").style.marginLeft = padding.left;
                 }
                 Timeline.resizing = false;

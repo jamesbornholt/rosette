@@ -5,11 +5,11 @@ h3,
 h4,
 h5,
 h6 {
-    font-family: "Source Sans Pro", sans-serif;
+    font-family: "San Francisco", sans-serif;
 }
 
 body {
-    margin: 1em;
+    margin: 0;
 }
 
 p, ol, ul {
@@ -67,29 +67,46 @@ h4 {
 }
 
 #content {
-    margin-left: auto;
-    margin-right: auto;
     margin: 1em auto;
 }
 
-.vega-actions a {
-    margin-right: 1em;
-    font-size: 75%;
+#header {
+    background: #002546;
+    color: white;
+    padding: 1em;
 }
 
-#panel {
-    /*display: flex*/
+#header ul {
+    padding: 0;
+    margin: 0;
+}
+#header li {
+    padding: 0;
+    margin: 0;
+    margin-right: 1em;
+    list-style: none;
+    /*display: inline;*/
+}
+
+#header code {
+    background: inherit;
+}
+
+.vega-actions {
+    margin-left: 1em;
+}
+.vega-actions a {
+    margin-right: 1em;
+    font-size: 60%;
 }
 
 #timeline-panel {
     float: left;
-    /*flex: 1 0 0;*/
 }
 
 #stack {
     width: 20em;
     float: left;
-    /*flex: 0 0 auto;*/
 }
 
 .counter::before {

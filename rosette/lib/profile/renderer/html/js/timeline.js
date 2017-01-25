@@ -386,6 +386,7 @@ var timeline;
         }
         else {
             timeline_1.Timeline.flameGraph = d3.flameGraph("#flamegraph", root);
+            timeline_1.Timeline.flameGraph.size([800, 300]);
             timeline_1.Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
             timeline_1.Timeline.flameGraph.hoverAction(flamegraphHoverCallback);
         }
@@ -402,7 +403,7 @@ var timeline;
                 var newWidth = windowWidth - stackWidth - pad - 80;
                 timeline_1.Timeline.vega.width(newWidth).update();
                 if (timeline_1.Timeline.flameGraph) {
-                    timeline_1.Timeline.flameGraph.size([newWidth, 400]).render();
+                    timeline_1.Timeline.flameGraph.size([newWidth, 300]).render();
                     document.getElementById("flamegraph").style.marginLeft = padding.left;
                 }
                 timeline_1.Timeline.resizing = false;

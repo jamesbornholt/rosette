@@ -157,6 +157,9 @@ d3.flameGraph = (selector, root, debug = false) ->
       d3.select(@_selector).select('.flame-graph')
         .attr('width', @_size[0])
         .attr('height', @_size[1])
+      d3.select(@_selector).select('.border-rect')
+        .attr('width', @_size[0] - (@_margin.left + @_margin.right))
+        .attr('height', @_size[1] - (@_margin.top + @_margin.bottom))
       @
 
     root: (root) ->
