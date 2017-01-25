@@ -88,7 +88,6 @@ var timeline;
                 };
                 if (graph === null) {
                     timeline_1.Timeline.graph.root = node;
-                    node.parentPtr = node;
                 }
                 else {
                     graph.children.push(node);
@@ -119,7 +118,7 @@ var timeline;
         // insert fake finish times into un-closed graph nodes
         var finish = events[events.length - 1]["metrics"]["time"] - timeline_1.Timeline.firstEvent["time"];
         var curr = graph;
-        while (curr != curr.parentPtr) {
+        while (curr) {
             curr["finish"] = finish;
             curr["value"] = finish - curr["start"];
             curr = curr.parentPtr;
@@ -323,7 +322,7 @@ var timeline;
         }
         // figure out the stack
         var stack = [];
-        while (graphNode.parentPtr != graphNode) {
+        while (graphNode) {
             var name_1 = graphNode["name"];
             graphNode = graphNode.parentPtr;
             if (name_1 == "#f")
@@ -367,9 +366,12 @@ var timeline;
         }
     }
     function renderFlameGraph() {
-        var dt = timeline_1.Timeline.graph.root["start"];
+        var rootStart = timeline_1.Timeline.graph.root["start"];
+        var rootFinish = timeline_1.Timeline.graph.root["finish"];
+        var width = timeline_1.Timeline.flameGraph ? timeline_1.Timeline.flameGraph.size()[0] : 1200;
+        var minTime = (rootFinish - rootStart) / width;
         var rec = function (node) {
-            var children = node["children"].map(rec);
+            var children = node["children"].filter(function (n) { return n["finish"] - n["start"] > minTime; }).map(rec);
             return {
                 "name": node["name"],
                 "start": node["start"],
