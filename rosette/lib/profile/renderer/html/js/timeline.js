@@ -51,10 +51,6 @@ var timeline;
             timeline_1.Timeline.vega.update();
         }
         renderFlameGraph();
-        //console.log(Timeline.points.length);
-        //Timeline.vega.data("points").remove((d) => true);
-        //Timeline.vega.data("points").insert(Timeline.points);
-        //Timeline.vega.update();
     }
     timeline_1.update = update;
     function computeTimelineData(events) {
@@ -383,11 +379,14 @@ var timeline;
             };
         };
         var root = rec(timeline_1.Timeline.graph.root);
-        var size = timeline_1.Timeline.flameGraph ? timeline_1.Timeline.flameGraph.size() : undefined;
-        timeline_1.Timeline.flameGraph = d3.flameGraph("#flamegraph", root);
-        timeline_1.Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
-        timeline_1.Timeline.flameGraph.hoverAction(flamegraphHoverCallback);
-        timeline_1.Timeline.flameGraph.size(size);
+        if (timeline_1.Timeline.flameGraph) {
+            timeline_1.Timeline.flameGraph.data(root);
+        }
+        else {
+            timeline_1.Timeline.flameGraph = d3.flameGraph("#flamegraph", root);
+            timeline_1.Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
+            timeline_1.Timeline.flameGraph.hoverAction(flamegraphHoverCallback);
+        }
         timeline_1.Timeline.flameGraph.render();
     }
     function windowResizeCallback() {

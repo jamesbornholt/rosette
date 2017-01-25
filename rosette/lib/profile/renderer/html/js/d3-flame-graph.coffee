@@ -167,6 +167,11 @@ d3.flameGraph = (selector, root, debug = false) ->
       @console.timeEnd('partition')
       @
 
+    data: (root) ->
+      @original = d3.flameGraphUtils.augment(root, '0')
+      @root(@original)
+      @
+
     hide: (predicate, unhide = false) ->
       matches = @select(predicate, false)
       return if not matches.length
@@ -282,22 +287,22 @@ d3.flameGraph = (selector, root, debug = false) ->
         .attr('class', 'border-rect')
 
     _renderNodes: (containers, attrs, enter = false) ->
-      targetRects = containers.selectAll('rect') if not enter
+      targetRects = containers.select('rect') if not enter
       targetRects = containers.append('rect') if enter
       targetRects
         .attr('fill', (d) => @_color(d))
-        .transition()
+        #.transition()
           .attr('width', attrs.width)
           .attr('height', @cellHeight())
           .attr('x', attrs.x)
           .attr('y', attrs.y)
 
-      targetLabels = containers.selectAll('text') if not enter
+      targetLabels = containers.select('text') if not enter
       targetLabels = containers.append('text') if enter
       containers.selectAll('text')
         .attr('class', 'label')
         .style('font-size', "#{@fontSize}em")
-        .transition()
+        #.transition()
           .attr('dy', "#{@fontSize / 2}em")
           .attr('x', (d) => attrs.x(d) + 2)
           .attr('y', (d, idx) => attrs.y(d, idx) + @cellHeight() / 2)

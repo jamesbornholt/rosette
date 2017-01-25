@@ -65,10 +65,6 @@ namespace timeline {
             Timeline.vega.update();
         }
         renderFlameGraph();
-        //console.log(Timeline.points.length);
-        //Timeline.vega.data("points").remove((d) => true);
-        //Timeline.vega.data("points").insert(Timeline.points);
-        //Timeline.vega.update();
     }
 
     function computeTimelineData(events) {
@@ -399,11 +395,14 @@ namespace timeline {
             };
         };
         let root = rec(Timeline.graph.root);
-        let size = Timeline.flameGraph ? Timeline.flameGraph.size() : undefined;
-        Timeline.flameGraph = d3.flameGraph("#flamegraph", root);
-        Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
-        Timeline.flameGraph.hoverAction(flamegraphHoverCallback);
-        Timeline.flameGraph.size(size);
+
+        if (Timeline.flameGraph) {
+            Timeline.flameGraph.data(root);
+        } else {
+            Timeline.flameGraph = d3.flameGraph("#flamegraph", root);
+            Timeline.flameGraph.zoomAction(flamegraphZoomCallback);
+            Timeline.flameGraph.hoverAction(flamegraphHoverCallback);
+        }
         Timeline.flameGraph.render();
     }
 
