@@ -18,7 +18,8 @@
 ; The HTML renderer produces a directory containing a webpage version of a profile.
 (define (make-html-renderer source name [options (hash)])
   (define opts (html-renderer-options (hash-ref options 'html-profile #f)
-                                      (hash-ref options 'threshold 0.001)))
+                                      (hash-ref options 'threshold 0.001)
+                                      (hash-ref options 'symlink #f)))
   (html-renderer source name opts))
 
 (struct html-renderer (source name opts) 
@@ -29,20 +30,27 @@
      (match-define (html-renderer source name opts) self)
      (render-html profile source name opts))])
 
-(struct html-renderer-options (profile? threshold) #:transparent)
+(struct html-renderer-options (profile? threshold symlink?) #:transparent)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (render-html profile source name opts
-                     #:directory [dir (build-path (current-directory) "profiles")])
+(define (render-html profile source name opts)
+  (match-define (html-renderer-options open-profile? _ symlink?) opts)
+
   ; set up output directory
-  (define output-dir (build-path dir (make-folder-name source)))
+  (define output-dir 
+    (if symlink?
+        (build-path (current-directory) "profiles" (make-folder-name source))
+        (build-path (find-system-path 'temp-dir) (make-folder-name source))))
   (make-directory* output-dir)
 
   ; link the template files into the output directory
+  (define copy-or-symlink (if symlink?
+                              make-file-or-directory-link
+                              copy-directory/files))
   (let ([src (path->complete-path template-dir)])
     (for ([n (list "profile.html" "timeline.html" "css" "js")])
-      (make-file-or-directory-link (build-path src n) (build-path output-dir n))))
+      (copy-or-symlink (build-path src n) (build-path output-dir n))))
 
   ; write the JSON data into data.json
   (let ([out (open-output-file (build-path output-dir "data.json"))])
@@ -56,7 +64,7 @@
 
   ; open the profiles in a web browser
   (printf "Wrote \"~a\" profile to ~a\n" name output-dir)
-  (when (html-renderer-options-profile? opts)
+  (when open-profile?
     (send-url/file (build-path output-dir "profile.html")))
   (send-url/file (build-path output-dir "timeline.html")))
 

@@ -57,6 +57,9 @@
                    (when (or (eq? de #f) (<= de 0))
                      (raise-argument-error 'delay "number > 0" d))
                    (renderer-options (hash-set (renderer-options) 'interval de)))]
+                [("-s" "--symlink-html")
+                 "HTML and streaming renderer: symlink template instead of copying"
+                 (renderer-options (hash-set (renderer-options) 'symlink #t))]
                 #:args (filename . rest)
                 ; pass all unused arguments to the file being run
                 (current-command-line-arguments (list->vector rest))
