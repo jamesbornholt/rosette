@@ -1,0 +1,35 @@
+#lang rosette
+
+(require "../litmus/sigs.rkt"
+         "../ocelot/ocelot.rkt"
+         rosette/lib/angelic)
+
+(provide (all-defined-out))
+
+(define (trivial-sketch . models)
+  (apply choose* models))
+
+
+(define (make-ppo-sketch depth ops terminals)
+  (& po (expression-sketch depth 2 ops terminals)))
+
+(define (make-grf-sketch depth ops terminals)
+  (let* ([rf (declare-relation 2 "rf")]
+        [terminals (append (for/list ([t terminals])
+                             (if (procedure? t) (t rf) t))
+                           (list rf))])
+    (& rf (expression-sketch depth 2 ops terminals))))
+
+(define (make-ab-sketch depth ops terminals)
+  (expression-sketch depth 2 ops terminals))
+
+
+(define (rfi rf)  ; rf edges on the same processor
+  (& rf (join proc (~ proc))))
+
+(define (rfe rf)  ; rf edges not on the same processor
+  (- rf (join proc (~ proc))))
+
+(define SameAddr
+  (prefab (lambda (k) (if (= k 2) '((1)) '()))
+          (lambda (A) (& (-> A A) (join loc (~ loc))))))
