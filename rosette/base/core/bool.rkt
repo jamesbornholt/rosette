@@ -1,11 +1,11 @@
 #lang racket
 
-(require "term.rkt" "union.rkt")
+(require "term.rkt" "union.rkt" "reporter.rkt")
 
 (provide @boolean? @false? 
          ! && || => <=> @! @&& @|| @=> @<=> @exists @forall
          and-&& or-|| instance-of?
-         @assert pc with-asserts with-asserts-only 
+         @assert pc with-pc with-asserts with-asserts-only 
          (rename-out [export-asserts asserts]) clear-asserts!
          T*->boolean?)
 
@@ -282,6 +282,17 @@
          (error 'pc "expected a boolean path condition, given a ~s" (type-of new-pc)))
      (or (&& (pc) new-pc)
          (error 'pc "infeasible path condition")))))
+
+(define-syntax (with-pc stx)
+  (syntax-case stx ()
+    [(_ [new-pc] expr1 expr ...)
+     (syntax/loc stx
+       (dynamic-wind (thunk ((current-reporter) 'push-pc new-pc))
+                     (thunk (parameterize ([pc new-pc])
+                              (let ()
+                                expr1
+                                expr ...)))
+                     (thunk ((current-reporter) 'pop-pc))))]))
 
 (define-syntax (@assert stx)
   (syntax-case stx ()

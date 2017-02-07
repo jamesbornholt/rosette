@@ -3,7 +3,7 @@
 (require racket/splicing (for-syntax racket/syntax) 
          (only-in racket/unsafe/ops [unsafe-car car] [unsafe-cdr cdr])
          (only-in "merge.rkt" merge merge*)
-         (only-in "bool.rkt" ! || pc)
+         (only-in "bool.rkt" ! || with-pc)
          (only-in "union.rkt" union)
          (only-in "effects.rkt" speculate* location=? location-final-value)
          "safe.rkt")
@@ -83,7 +83,7 @@
     (define val (cdr gv))
     (define-values (output state) 
       (speculate* 
-       (parameterize ([pc guard]) 
+       (with-pc [guard]
          (proc val))))
     (cond [state (values (cons guard guards) (cons output outputs) (cons state states))]
           [else  (assert (! guard) (thunk (error 'for/all "all paths infeasible")))

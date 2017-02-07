@@ -7,7 +7,7 @@
 ; them when requested to insert into a profile node.
 (define (make-profiler-reporter)
   (profiler-reporter
-   (make-hash (map (curryr cons 0) '(term-count merge-count union-count union-size)))))
+   (make-hash (map (curryr cons 0) '(term-count merge-count union-count union-size pc)))))
 
 (struct profiler-reporter (metrics)
   #:transparent
@@ -15,21 +15,28 @@
   (lambda (self . rest)
     (match rest
       [(list 'new-term)
-       (incr! self 'term-count 1)]
+       (inc! self 'term-count 1)]
       [(list 'merge)
-       (incr! self 'merge-count 1)]
+       (inc! self 'merge-count 1)]
       [(list 'new-union union-size)
-       (incr! self 'union-count 1)
-       (incr! self 'union-size union-size)]
+       (inc! self 'union-count 1)
+       (inc! self 'union-size union-size)]
+      [(list 'push-pc new-pc)
+       (inc! self 'pc 1)]
+      [(list 'pop-pc)
+       (dec! self 'pc 1)]
       [_ void])))
 
-(define-syntax-rule (incr! reporter key val)
+(define-syntax-rule (inc! reporter key val)
   (let ([ht (profiler-reporter-metrics reporter)])
     (hash-set! ht key (+ (hash-ref ht key 0) val))))
+(define-syntax-rule (dec! reporter key val)
+  (let ([ht (profiler-reporter-metrics reporter)])
+    (hash-set! ht key (- (hash-ref ht key 0) val))))
 
 
 ; The metrics we use in profiles
-(struct metrics (term-count merge-count union-count union-size cpu real gc time)
+(struct metrics (term-count merge-count union-count union-size pc-size cpu real gc time)
   #:transparent)
 
 (define (get-current-metrics [cpu 0] [real 0] [gc 0] #:reporter [reporter (current-reporter)])
@@ -38,4 +45,5 @@
              (hash-ref mets 'merge-count)
              (hash-ref mets 'union-count)
              (hash-ref mets 'union-size)
+             (hash-ref mets 'pc)
              cpu real gc (current-inexact-milliseconds))))
