@@ -15,10 +15,10 @@ var timeline;
     };
     function init(events) {
         // update the profile source info
-        document.getElementById("name").innerHTML = "Timeline: " + Data.metadata.name;
-        document.getElementById("source").innerHTML = Data.metadata.source;
-        document.getElementById("form").innerHTML = Data.metadata.form;
-        document.getElementById("time").innerHTML = Data.metadata.time;
+        document.getElementById("name").innerHTML = "Timeline: " + escapeHtml(Data.metadata.name);
+        document.getElementById("source").innerHTML = escapeHtml(Data.metadata.source);
+        document.getElementById("form").innerHTML = escapeHtml(Data.metadata.form);
+        document.getElementById("time").innerHTML = escapeHtml(Data.metadata.time);
         document.title = "Timeline: " + Data.metadata.name;
         // Prepare data for the timeline and flame graph
         computeTimelineData(events);

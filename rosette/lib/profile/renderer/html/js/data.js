@@ -144,4 +144,17 @@ function initData() {
 function getFunctionName(func) {
     return func.split(" ")[0];
 }
+var entityMap = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': '&quot;',
+    "'": '&#39;',
+    "/": '&#x2F;'
+};
+function escapeHtml(string) {
+    return String(string).replace(/[&<>"'\/]/g, function (s) {
+        return entityMap[s];
+    });
+}
 //# sourceMappingURL=data.js.map

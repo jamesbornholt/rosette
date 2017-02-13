@@ -119,19 +119,6 @@ var profile;
         }
         return entries;
     }
-    var entityMap = {
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': '&quot;',
-        "'": '&#39;',
-        "/": '&#x2F;'
-    };
-    function escapeHtml(string) {
-        return String(string).replace(/[&<>"'\/]/g, function (s) {
-            return entityMap[s];
-        });
-    }
     function makeCell(str, row, escape) {
         if (escape === void 0) { escape = true; }
         var elt = document.createElement("td");
