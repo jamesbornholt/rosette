@@ -87,7 +87,12 @@ namespace timeline {
         //  * the callgraph (in Timeline.graph)
         let breaks = [];
         let points = [];
-        let graph = Timeline.graph.last;
+        Timeline.graph.root = {
+            "name": "root",
+            "start": 0,
+            "children": []
+        };
+        let graph = Timeline.graph.root;
         for (let e of events) {
             if (e["type"] == "ENTER") {
                 let p = computePoint(e["metrics"]);
@@ -98,17 +103,13 @@ namespace timeline {
                     "parentPtr": graph,
                     "children": []
                 };
-                if (graph === null) {
-                    Timeline.graph.root = node;
-                } else {
-                    graph.children.push(node);
-                }
+                graph.children.push(node);
                 graph = node;
                 points.push(p);
                 breaks.push([p["time"], node, p]);
             } else if (e["type"] == "EXIT") {
                 let p = computePoint(e["metrics"]);
-                if (graph === null) {
+                if (graph === Timeline.graph.root) {
                     console.error("unbalanced events: EXIT with null graph");
                     return;
                 }
@@ -201,7 +202,7 @@ namespace timeline {
                     "expr": "clamp(eventX(), 0, eventGroup('root').width)",
                     "scale": { "name": "x", "invert": true }
                 }]
-            }, 
+            },
             {"name": "xmin"},
             {"name": "xmax"},
             {"name": "xminhover"},
@@ -245,8 +246,8 @@ namespace timeline {
             }],
             "marks": [{
                 "type": "group",
-                "from": { 
-                    "data": "points", 
+                "from": {
+                    "data": "points",
                     "transform": [{
                         "type": "facet",
                         "groupby": ["key"]
@@ -314,7 +315,7 @@ namespace timeline {
             values.removeChild(values.firstChild);
         while (functions.firstChild)
             functions.removeChild(functions.firstChild);
-        
+
         // find the appropriate stack
         var i;
         for (i = 0; i < Timeline.breaks.length - 1; i++) {  // the last entry is the fallback for value > max(time)
