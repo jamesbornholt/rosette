@@ -74,6 +74,14 @@ var timeline;
         //  * the callgraph (in Timeline.graph)
         var breaks = [];
         var points = [];
+        if (timeline_1.Timeline.graph.root == null) {
+            timeline_1.Timeline.graph.root = {
+                "name": "root",
+                "start": 0,
+                "children": []
+            };
+            timeline_1.Timeline.graph.last = timeline_1.Timeline.graph.root;
+        }
         var graph = timeline_1.Timeline.graph.last;
         for (var _i = 0, events_1 = events; _i < events_1.length; _i++) {
             var e = events_1[_i];
@@ -86,19 +94,14 @@ var timeline;
                     "parentPtr": graph,
                     "children": []
                 };
-                if (graph === null) {
-                    timeline_1.Timeline.graph.root = node;
-                }
-                else {
-                    graph.children.push(node);
-                }
+                graph.children.push(node);
                 graph = node;
                 points.push(p);
                 breaks.push([p["time"], node, p]);
             }
             else if (e["type"] == "EXIT") {
                 var p = computePoint(e["metrics"]);
-                if (graph === null) {
+                if (graph === timeline_1.Timeline.graph.root) {
                     console.error("unbalanced events: EXIT with null graph");
                     return;
                 }
