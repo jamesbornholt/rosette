@@ -39,10 +39,10 @@ var timeline;
             var last = timeline_1.Timeline.points[timeline_1.Timeline.points.length - 1]["time"];
             var duration = last == first ? 1 : last - first;
             var width = timeline_1.Timeline.vega.width();
-            var dt = duration / width / 2; // fudge factor
-            var mostRecent = -dt;
+            var dt_1 = duration / width / 2; // fudge factor
+            var mostRecent = -dt_1;
             timeline_1.Timeline.vega.data("points").remove(function (p) {
-                if (p["time"] >= mostRecent + dt) {
+                if (p["time"] >= mostRecent + dt_1) {
                     mostRecent = p["time"];
                     return false;
                 }
@@ -74,14 +74,17 @@ var timeline;
         //  * the callgraph (in Timeline.graph)
         var breaks = [];
         var points = [];
-        timeline_1.Timeline.graph.root = {
-            "name": "root",
-            "start": 0,
-            "children": []
-        };
-        var graph = timeline_1.Timeline.graph.root;
-        for (var _i = 0; _i < events.length; _i++) {
-            var e = events[_i];
+        if (timeline_1.Timeline.graph.root == null) {
+            timeline_1.Timeline.graph.root = {
+                "name": "root",
+                "start": 0,
+                "children": []
+            };
+            timeline_1.Timeline.graph.last = timeline_1.Timeline.graph.root;
+        }
+        var graph = timeline_1.Timeline.graph.last;
+        for (var _i = 0, events_1 = events; _i < events_1.length; _i++) {
+            var e = events_1[_i];
             if (e["type"] == "ENTER") {
                 var p = computePoint(e["metrics"]);
                 var node = {
@@ -124,12 +127,12 @@ var timeline;
             curr = curr.parentPtr;
         }
         timeline_1.Timeline.graph.last = graph;
-        for (var _a = 0; _a < points.length; _a++) {
-            var p = points[_a];
+        for (var _a = 0, points_1 = points; _a < points_1.length; _a++) {
+            var p = points_1[_a];
             timeline_1.Timeline.points.push(p);
         }
-        for (var _b = 0; _b < breaks.length; _b++) {
-            var b = breaks[_b];
+        for (var _b = 0, breaks_1 = breaks; _b < breaks_1.length; _b++) {
+            var b = breaks_1[_b];
             timeline_1.Timeline.breaks.push(b);
         }
     }
@@ -313,8 +316,8 @@ var timeline;
         // render values
         var keys = Object.keys(metrics);
         keys.sort();
-        for (var _i = 0; _i < keys.length; _i++) {
-            var k = keys[_i];
+        for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
+            var k = keys_1[_i];
             var node = document.createElement("li");
             var val = (metrics[k] % 1 == 0) ? metrics[k] : metrics[k].toFixed(2);
             node.innerHTML = "<b>" + k + "</b>: " + val;
@@ -344,8 +347,8 @@ var timeline;
             }
         }
         // render the stack
-        for (var _b = 0; _b < stack.length; _b++) {
-            var entry = stack[_b];
+        for (var _b = 0, stack_1 = stack; _b < stack_1.length; _b++) {
+            var entry = stack_1[_b];
             var node = document.createElement("li");
             var code = document.createElement("span");
             code.classList.add("code");
@@ -433,3 +436,4 @@ var timeline;
     }
 })(timeline || (timeline = {})); // /namespace
 document.addEventListener("DOMContentLoaded", dataOnload(timeline.init, timeline.update));
+//# sourceMappingURL=timeline.js.map

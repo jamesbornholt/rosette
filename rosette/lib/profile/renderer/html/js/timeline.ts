@@ -87,12 +87,15 @@ namespace timeline {
         //  * the callgraph (in Timeline.graph)
         let breaks = [];
         let points = [];
-        Timeline.graph.root = {
-            "name": "root",
-            "start": 0,
-            "children": []
-        };
-        let graph = Timeline.graph.root;
+        if (Timeline.graph.root == null) {
+            Timeline.graph.root = {
+                "name": "root",
+                "start": 0,
+                "children": []
+            };
+            Timeline.graph.last = Timeline.graph.root;
+        }
+        let graph = Timeline.graph.last;
         for (let e of events) {
             if (e["type"] == "ENTER") {
                 let p = computePoint(e["metrics"]);

@@ -69,9 +69,8 @@ function eventsToGraph(events) {
         var ret = {};
         var start = node["start"];
         var finish = node["finish"];
-        for (var k in finish) {
+        var _loop_1 = function (k) {
             var exclKey = k + " (excl.)";
-            var inclSum;
             if (start.hasOwnProperty(k)) {
                 inclSum = finish[k] - start[k];
             }
@@ -81,12 +80,16 @@ function eventsToGraph(events) {
             var childSum = node["children"].map(function (c) { return c["metrics"][k]; }).reduce(function (a, b) { return a + b; }, 0);
             ret[k] = inclSum;
             ret[exclKey] = inclSum - childSum;
+        };
+        var inclSum;
+        for (var k in finish) {
+            _loop_1(k);
         }
         return ret;
     };
     var node;
-    for (var _i = 0; _i < events.length; _i++) {
-        var e = events[_i];
+    for (var _i = 0, events_1 = events; _i < events_1.length; _i++) {
+        var e = events_1[_i];
         if (e["type"] == "ENTER") {
             var evt = {
                 "function": e["function"],
@@ -154,3 +157,4 @@ function escapeHtml(string) {
         return entityMap[s];
     });
 }
+//# sourceMappingURL=data.js.map
