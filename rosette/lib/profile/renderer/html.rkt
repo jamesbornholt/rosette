@@ -148,7 +148,7 @@
   (match-define (metrics term-count merge-count union-count union-size pc-size cpu real gc time) m)
   (hash 'term-count term-count 'merge-count merge-count
         'union-count union-count 'union-size union-size
-        'pc-size pc-size
+        ;'pc-size pc-size
         ; 'cpu cpu 'real real 'gc gc 
         'time time))
 
