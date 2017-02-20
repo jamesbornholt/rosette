@@ -2,7 +2,8 @@
 
 (require "record.rkt" "reporter.rkt"
          "pc-event.rkt" "infeasible-pc-stats.rkt"
-         "renderer/renderer.rkt" "renderer/html.rkt")
+         "renderer/renderer.rkt" "renderer/renderer-infeasible-pc.rkt"
+         "renderer/html.rkt")
 (provide (all-defined-out))
 
 ; The selected renderer
@@ -20,8 +21,14 @@
   (define-values (prof ret)
     (parameterize ([current-pc-events pc-events])
       (run-profile-thunk thunk profile reporter)))
-  (finish-renderer renderer prof)
-  (display-infeasible-pc-stats (get-pc-events pc-events))
+  (cond
+    [(renderer/infeasible-pc? renderer)
+     (finish-renderer/infeasible-pc
+      renderer
+      prof
+      (compute-infeasible-pc-stats (get-pc-events pc-events)))]
+    [else
+     (finish-renderer renderer prof)])
   (apply values ret))
 
 

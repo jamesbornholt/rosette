@@ -1,7 +1,8 @@
 #lang racket
 
 (require "../record.rkt" "../feature.rkt" "../graph.rkt" "../reporter.rkt"
-         "renderer.rkt"
+         "../infeasible-pc-stats.rkt"
+         "renderer.rkt" "renderer-infeasible-pc.rkt"
          "util/key.rkt" "util/srcloc.rkt"
          racket/date json racket/runtime-path racket/hash net/sendurl)
 (provide make-html-renderer filter-events render-event)
@@ -28,7 +29,12 @@
   [(define start-renderer void)
    (define (finish-renderer self profile)
      (match-define (html-renderer source name opts) self)
-     (render-html profile source name opts))])
+     (render-html profile source name opts))]
+  #:methods gen:renderer/infeasible-pc
+  [(define (finish-renderer/infeasible-pc self profile infeasible-pc-info)
+     ;; TODO: Incorporate infeasible-pc-info into actual rendering
+     (finish-renderer self profile)
+     (display-infeasible-pc-info infeasible-pc-info))])
 
 (struct html-renderer-options (profile? threshold symlink?) #:transparent)
 
