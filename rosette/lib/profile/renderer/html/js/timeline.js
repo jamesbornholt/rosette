@@ -4,6 +4,7 @@ var timeline;
     timeline_1.Timeline = {
         breaks: [],
         points: [],
+        highlightRegions: [],
         firstEvent: null,
         graph: {
             root: null,
@@ -170,6 +171,10 @@ var timeline;
                         { "type": "fold", "fields": keyNames },
                         { "type": "sort", "by": "-time" }
                     ]
+                },
+                {
+                    "name": "highlight",
+                    "values": timeline_1.Timeline.highlightRegions
                 }],
             "scales": [{
                     "name": "x",
@@ -185,6 +190,19 @@ var timeline;
                     "name": "color",
                     "type": "ordinal",
                     "domain": { "data": "points", "field": "key" },
+                    "range": "category10"
+                },
+                {
+                    "name": "highlight",
+                    "type": "linear",
+                    "domain": [0, 1],
+                    "range": "height",
+                    "round": true
+                },
+                {
+                    "name": "highlight-color",
+                    "type": "ordinal",
+                    "domain": { "data": "highlight", "field": "type" },
                     "range": "category10"
                 }].concat(scales),
             "signals": [{
@@ -229,12 +247,23 @@ var timeline;
                     "orient": "right"
                 }],
             "legends": [{
+                    "title": "Metrics",
                     "fill": "color",
-                    "orient": "left",
-                    "offset": -150,
+                    "orient": "right",
+                    "offset": 0,
                     "properties": {
                         "labels": { "fontSize": { "value": 12 } },
                         "symbols": { "stroke": { "value": "transparent" } }
+                    }
+                },
+                {
+                    "title": "Highlights",
+                    "fill": "highlight-color",
+                    "orient": "right",
+                    "offset": 0,
+                    "properties": {
+                        "labels": { "fontSize": { "value": 12 } },
+                        "symbols": { "stroke": { "value": "transparent" }, "fillOpacity": { "value": 0.3 } }
                     }
                 }],
             "marks": [{
@@ -255,6 +284,30 @@ var timeline;
                                     "y": { "scale": { "datum": "key" }, "field": "value" },
                                     "stroke": { "scale": "color", "field": "key" },
                                     "strokeWidth": { "value": 2 }
+                                }
+                            }
+                        }]
+                },
+                {
+                    "type": "group",
+                    "from": {
+                        "data": "highlight",
+                        "transform": [{
+                                "type": "facet",
+                                "groupby": ["type"]
+                            }]
+                    },
+                    "marks": [{
+                            "name": "highlight",
+                            "type": "area",
+                            "properties": {
+                                "update": {
+                                    "x": { "scale": "x", "field": "time" },
+                                    "y": { "scale": "highlight", "field": "value" },
+                                    "y2": { "scale": "highlight", "value": 0 },
+                                    "interpolate": { "value": "step-after" },
+                                    "fill": { "scale": "highlight-color", "field": "type" },
+                                    "fillOpacity": { "value": 0.3 }
                                 }
                             }
                         }]
