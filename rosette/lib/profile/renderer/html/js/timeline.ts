@@ -86,9 +86,11 @@ namespace timeline {
         // build up three things by walking the list of events:
         //  * a list of points on the graph (in Timeline.points)
         //  * a list of breakpoints for scrubbing (Timeline.breaks)
+        //  * a list of highlightRegion events (in Timeline.highlightRegions)
         //  * the callgraph (in Timeline.graph)
         let breaks = [];
         let points = [];
+        let highlightRegions = [];
         if (Timeline.graph.root == null) {
             Timeline.graph.root = {
                 "name": "root",
@@ -131,6 +133,19 @@ namespace timeline {
             }
         }
 
+        for (let ipt of Data.infeasiblePCInfo) {
+            highlightRegions.push({
+                "time": ipt.start,
+                "value": 1, // 1 means "start highlight"
+                "type": "infeasible pc" // category of highlight
+            });
+            highlightRegions.push({
+                "time": ipt.end,
+                "value": 0, // 0 means "end highlight"
+                "type": "infeasible pc" // category of highlight
+            });
+        }
+
         // insert fake finish times into un-closed graph nodes
         let finish = events[events.length-1]["metrics"]["time"] - Timeline.firstEvent["time"];
         let curr = graph;
@@ -143,6 +158,7 @@ namespace timeline {
         Timeline.graph.last = graph;
         for (let p of points) Timeline.points.push(p);
         for (let b of breaks) Timeline.breaks.push(b);
+        for (let h of highlightRegions) Timeline.highlightRegions.push(h);
     }
 
 

@@ -40,10 +40,10 @@ var timeline;
             var last = timeline_1.Timeline.points[timeline_1.Timeline.points.length - 1]["time"];
             var duration = last == first ? 1 : last - first;
             var width = timeline_1.Timeline.vega.width();
-            var dt_1 = duration / width / 2; // fudge factor
-            var mostRecent = -dt_1;
+            var dt = duration / width / 2; // fudge factor
+            var mostRecent = -dt;
             timeline_1.Timeline.vega.data("points").remove(function (p) {
-                if (p["time"] >= mostRecent + dt_1) {
+                if (p["time"] >= mostRecent + dt) {
                     mostRecent = p["time"];
                     return false;
                 }
@@ -72,9 +72,11 @@ var timeline;
         // build up three things by walking the list of events:
         //  * a list of points on the graph (in Timeline.points)
         //  * a list of breakpoints for scrubbing (Timeline.breaks)
+        //  * a list of highlightRegion events (in Timeline.highlightRegions)
         //  * the callgraph (in Timeline.graph)
         var breaks = [];
         var points = [];
+        var highlightRegions = [];
         if (timeline_1.Timeline.graph.root == null) {
             timeline_1.Timeline.graph.root = {
                 "name": "root",
@@ -84,8 +86,8 @@ var timeline;
             timeline_1.Timeline.graph.last = timeline_1.Timeline.graph.root;
         }
         var graph = timeline_1.Timeline.graph.last;
-        for (var _i = 0, events_1 = events; _i < events_1.length; _i++) {
-            var e = events_1[_i];
+        for (var _i = 0; _i < events.length; _i++) {
+            var e = events[_i];
             if (e["type"] == "ENTER") {
                 var p = computePoint(e["metrics"]);
                 var node = {
@@ -119,6 +121,19 @@ var timeline;
                 breaks.push([p["time"], graph, p]);
             }
         }
+        for (var _a = 0, _b = Data.infeasiblePCInfo; _a < _b.length; _a++) {
+            var ipt = _b[_a];
+            highlightRegions.push({
+                "time": ipt.start,
+                "value": 1,
+                "type": "infeasible pc" // category of highlight
+            });
+            highlightRegions.push({
+                "time": ipt.end,
+                "value": 0,
+                "type": "infeasible pc" // category of highlight
+            });
+        }
         // insert fake finish times into un-closed graph nodes
         var finish = events[events.length - 1]["metrics"]["time"] - timeline_1.Timeline.firstEvent["time"];
         var curr = graph;
@@ -128,13 +143,17 @@ var timeline;
             curr = curr.parentPtr;
         }
         timeline_1.Timeline.graph.last = graph;
-        for (var _a = 0, points_1 = points; _a < points_1.length; _a++) {
-            var p = points_1[_a];
+        for (var _c = 0; _c < points.length; _c++) {
+            var p = points[_c];
             timeline_1.Timeline.points.push(p);
         }
-        for (var _b = 0, breaks_1 = breaks; _b < breaks_1.length; _b++) {
-            var b = breaks_1[_b];
+        for (var _d = 0; _d < breaks.length; _d++) {
+            var b = breaks[_d];
             timeline_1.Timeline.breaks.push(b);
+        }
+        for (var _e = 0; _e < highlightRegions.length; _e++) {
+            var h = highlightRegions[_e];
+            timeline_1.Timeline.highlightRegions.push(h);
         }
     }
     function renderTimeline() {
@@ -369,8 +388,8 @@ var timeline;
         // render values
         var keys = Object.keys(metrics);
         keys.sort();
-        for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
-            var k = keys_1[_i];
+        for (var _i = 0; _i < keys.length; _i++) {
+            var k = keys[_i];
             var node = document.createElement("li");
             var val = (metrics[k] % 1 == 0) ? metrics[k] : metrics[k].toFixed(2);
             node.innerHTML = "<b>" + k + "</b>: " + val;
@@ -400,8 +419,8 @@ var timeline;
             }
         }
         // render the stack
-        for (var _b = 0, stack_1 = stack; _b < stack_1.length; _b++) {
-            var entry = stack_1[_b];
+        for (var _b = 0; _b < stack.length; _b++) {
+            var entry = stack[_b];
             var node = document.createElement("li");
             var code = document.createElement("span");
             code.classList.add("code");
@@ -489,4 +508,3 @@ var timeline;
     }
 })(timeline || (timeline = {})); // /namespace
 document.addEventListener("DOMContentLoaded", dataOnload(timeline.init, timeline.update));
-//# sourceMappingURL=timeline.js.map
