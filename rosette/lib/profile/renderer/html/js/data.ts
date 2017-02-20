@@ -2,6 +2,7 @@
 let Data = {
     // populated by Racket
     events: [],
+    infeasiblePCInfo: [],
     metadata: null,
     samples: [],
     config: {
