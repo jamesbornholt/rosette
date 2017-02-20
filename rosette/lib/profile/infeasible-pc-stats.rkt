@@ -1,6 +1,8 @@
 #lang agile
 
-(provide display-infeasible-pc-stats)
+(provide display-infeasible-pc-stats
+         compute-infeasible-pc-stats
+         (struct-out infeasible-pc-time))
 
 (require (only-in rosette/base/core/safe assert)
          (only-in rosette/base/form/control @and)
@@ -24,11 +26,15 @@
 (define (display-infeasible-pc-stats events)
   (printf "Computing feasibility of path conditions...\n")
   (display-infeasible-pc-info
-   (compute-infeasible-pc-stats events '() '())))
+   (compute-infeasible-pc-stats events)))
 
-;; compute-infeasible-pc-stats :
+;; compute-infeasible-pc-stats : (Listof PCEvent) -> InfeasiblePCInfo
+(define (compute-infeasible-pc-stats events)
+  (compute-infeasible-pc-stats/acc events '() '()))
+
+;; compute-infeasible-pc-stats/acc :
 ;; (Listof PCEvent) PCStack InfeasiblePCInfo -> InfeasiblePCInfo
-(define (compute-infeasible-pc-stats events stack acc)
+(define (compute-infeasible-pc-stats/acc events stack acc)
   (match events
     [(list)
      (reverse acc)]
@@ -36,7 +42,7 @@
      (match e
        [(pc-push-event pc metrics)
         (define pc+ (@and (stack-existing-pc stack) pc))
-        (compute-infeasible-pc-stats
+        (compute-infeasible-pc-stats/acc
          es
          (cons (if (or (stack-infeasible? stack) (pc-infeasible? pc+))
                    (pc-stack-frame/infeasible (metrics-time metrics))
@@ -46,12 +52,12 @@
        [(pc-pop-event metrics)
         (match (first stack)
           [(pc-stack-frame/feasible _)
-           (compute-infeasible-pc-stats
+           (compute-infeasible-pc-stats/acc
             es
             (rest stack)
             acc)]
           [(pc-stack-frame/infeasible start-time)
-           (compute-infeasible-pc-stats
+           (compute-infeasible-pc-stats/acc
             es
             (rest stack)
             (cons (infeasible-pc-time start-time (metrics-time metrics))
