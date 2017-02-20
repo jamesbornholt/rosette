@@ -28,19 +28,19 @@
   #:methods gen:renderer
   [(define start-renderer void)
    (define (finish-renderer self profile)
-     (match-define (html-renderer source name opts) self)
-     (render-html profile source name opts))]
+     (finish-renderer/infeasible-pc self profile '()))]
   #:methods gen:renderer/infeasible-pc
   [(define (finish-renderer/infeasible-pc self profile infeasible-pc-info)
-     ;; TODO: Incorporate infeasible-pc-info into actual rendering
-     (finish-renderer self profile)
-     (display-infeasible-pc-info infeasible-pc-info))])
+     (match-define (html-renderer source name opts) self)
+     (render-html profile infeasible-pc-info source name opts))])
 
 (struct html-renderer-options (profile? threshold symlink?) #:transparent)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (render-html profile source name opts)
+;; render-html :
+;; ProfileState InfeasiblePCInfo (U Stx #f) String HtmlRendererOpts -> Void
+(define (render-html profile infeasible-pc-info source name opts)
   (match-define (html-renderer-options open-profile? _ symlink?) opts)
 
   ; set up output directory
@@ -60,7 +60,7 @@
 
   ; write the JSON data into data.json
   (let ([out (open-output-file (build-path output-dir "data.json"))])
-    (render-json profile source name out opts)
+    (render-json profile infeasible-pc-info source name out opts)
     (close-output-port out))
 
   ; write the config
@@ -141,6 +141,14 @@
            'metrics (metrics->jsexpr met))]
     [_ (error 'render-event "unknown event ~v" event)]))
 
+;; render-infeasible-pc-time : InfeasiblePCTime -> JSExpr
+;; Render a InfeasiblePCTime struct to a jsexpr? dictionary
+(define (render-infeasible-pc-time ipt)
+  (match ipt
+    [(infeasible-pc-time start end)
+     (hash 'start start
+           'end end)]))
+
 
 ;; Helper to convert a hash to a jsexpr?, including converting features to
 ;; their names.
@@ -160,10 +168,11 @@
 
 
 ; Render entries to JavaScript
-; @parameter entries profile-node?
+; @parameter state profile-state?
+; @parameter infeasible-pc-info (listof infeasible-pc-time?)
 ; @parameter source (or/c syntax? #f)
 ; @parameter out output-port?
-(define (render-json state source name out opts)
+(define (render-json state infeasible-pc-info source name out opts)
   (define metadata
     (hash 'name name
           'time (parameterize ([date-display-format 'rfc2822])
@@ -177,4 +186,8 @@
   (define filtered-events (filter-events events (html-renderer-options-threshold opts)))
   (fprintf out "Data.events = ")
   (write-json (map render-event filtered-events) out)
+  (fprintf out ";\n")
+
+  (fprintf out "Data.infeasiblePCInfo = ")
+  (write-json (map render-infeasible-pc-time infeasible-pc-info) out)
   (fprintf out ";\n"))
