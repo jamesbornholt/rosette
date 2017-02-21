@@ -135,12 +135,12 @@ namespace timeline {
 
         for (let ipt of Data.infeasiblePCInfo) {
             highlightRegions.push({
-                "time": ipt.start,
+                "time": ipt.start - Timeline.firstEvent["time"],
                 "value": 1, // 1 means "start highlight"
                 "type": "infeasible pc" // category of highlight
             });
             highlightRegions.push({
-                "time": ipt.end,
+                "time": ipt.end - Timeline.firstEvent["time"],
                 "value": 0, // 0 means "end highlight"
                 "type": "infeasible pc" // category of highlight
             });

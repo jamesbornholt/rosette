@@ -124,12 +124,12 @@ var timeline;
         for (var _a = 0, _b = Data.infeasiblePCInfo; _a < _b.length; _a++) {
             var ipt = _b[_a];
             highlightRegions.push({
-                "time": ipt.start,
+                "time": ipt.start - timeline_1.Timeline.firstEvent["time"],
                 "value": 1,
                 "type": "infeasible pc" // category of highlight
             });
             highlightRegions.push({
-                "time": ipt.end,
+                "time": ipt.end - timeline_1.Timeline.firstEvent["time"],
                 "value": 0,
                 "type": "infeasible pc" // category of highlight
             });
