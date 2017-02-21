@@ -9,6 +9,10 @@
 ; The selected renderer
 (define current-renderer (make-parameter make-html-renderer))
 
+;; compute-infeasible-pcs? : (Parameterof Boolean)
+;; Determines whether it calculates feasibility of path conditions
+(define compute-infeasible-pcs? (make-parameter #false))
+
 ; Executes the given thunk and prints the profile data generated during execution.
 (define (profile-thunk thunk #:renderer [renderer% (current-renderer)]
                              #:source [source-stx #f]
@@ -22,7 +26,7 @@
     (parameterize ([current-pc-events pc-events])
       (run-profile-thunk thunk profile reporter)))
   (cond
-    [(renderer/infeasible-pc? renderer)
+    [(and (compute-infeasible-pcs?) (renderer/infeasible-pc? renderer))
      (finish-renderer/infeasible-pc
       renderer
       prof

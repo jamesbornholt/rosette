@@ -60,6 +60,10 @@
                 [("-s" "--symlink-html")
                  "HTML and streaming renderer: symlink template instead of copying"
                  (renderer-options (hash-set (renderer-options) 'symlink #t))]
+                ; Determines whether it tries to calculate whether pcs are feasible
+                [("--pc-feasibility")
+                 "Path Condition feasibility: find computations with infeasible path conditions"
+                 (compute-infeasible-pcs? #true)]
                 #:args (filename . rest)
                 ; pass all unused arguments to the file being run
                 (current-command-line-arguments (list->vector rest))
