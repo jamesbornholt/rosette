@@ -26,13 +26,15 @@
 
 (define (num-solved-inc!)
   (define num (unbox num-solved))
-  (box-cas! num-solved num (add1 num)))
+  (unless (box-cas! num-solved num (add1 num))
+    (error 'bad)))
 
 (define (maybe-print-num-solved)
   (when (print-num-solved?)
     (define prev (unbox prev-t))
     (when (<= (+ prev NUM-SOLVED-PRINTING-TIME-INTERVAL) (current-seconds))
-      (box-cas! prev-t prev (current-seconds))
+      (unless (box-cas! prev-t prev (current-seconds))
+        (error 'bad))
       (printf "num-solved: ~v\n" (unbox num-solved)))))
 
 (module+ num-solved
