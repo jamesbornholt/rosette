@@ -8,7 +8,7 @@
 (require (only-in rosette/base/core/safe assert)
          (only-in rosette/base/form/control @and)
          (only-in rosette/solver/solution unsat?)
-         (only-in rosette/query/form solve)
+         (only-in rosette/query/form solve solve+)
          "pc-event.rkt"
          "reporter.rkt")
 
@@ -61,36 +61,55 @@
 
 ;; compute-infeasible-pc-stats : (Listof PCEvent) -> InfeasiblePCInfo
 (define (compute-infeasible-pc-stats events)
-  (compute-infeasible-pc-stats/acc events '() '()))
+  (define gen (solve+))
+  (compute-infeasible-pc-stats/acc events gen '() '()))
 
 ;; compute-infeasible-pc-stats/acc :
-;; (Listof PCEvent) PCStack InfeasiblePCInfo -> InfeasiblePCInfo
-(define (compute-infeasible-pc-stats/acc events stack acc)
+;; (Listof PCEvent) PCStack SolverGen InfeasiblePCInfo -> InfeasiblePCInfo
+(define (compute-infeasible-pc-stats/acc events gen stack acc)
   (match events
     [(list)
      (reverse acc)]
     [(cons e es)
      (match e
        [(pc-push-event pc metrics)
-        (define pc+ (@and (stack-existing-pc stack) pc))
-        (compute-infeasible-pc-stats/acc
-         es
-         (cons (if (or (stack-infeasible? stack) (pc-infeasible? pc+))
-                   (pc-stack-frame/infeasible (metrics-time metrics))
-                   (pc-stack-frame/feasible pc+))
-               stack)
-         acc)]
+        (cond
+          [(stack-infeasible? stack)
+           (compute-infeasible-pc-stats/acc
+            es
+            gen
+            (cons (pc-stack-frame/infeasible (metrics-time metrics)) stack)
+            acc)]
+          [(pc-infeasible? gen pc)
+           (compute-infeasible-pc-stats/acc
+            es
+            ; TODO: This gen is now dead. Is this right?
+            gen
+            (cons (pc-stack-frame/infeasible (metrics-time metrics)) stack)
+            acc)]
+          [else
+           (define pc+ (@and (stack-existing-pc stack) pc))
+           (compute-infeasible-pc-stats/acc
+            es
+            gen
+            (cons (pc-stack-frame/feasible pc+) stack)
+            acc)])]
        [(pc-pop-event metrics)
+        (define pop-stack (rest stack))
+        (define pop-gen (solve+))
+        (pop-gen (list (stack-existing-pc pop-stack)))
         (match (first stack)
           [(pc-stack-frame/feasible _)
            (compute-infeasible-pc-stats/acc
             es
-            (rest stack)
+            pop-gen
+            pop-stack
             acc)]
           [(pc-stack-frame/infeasible start-time)
            (compute-infeasible-pc-stats/acc
             es
-            (rest stack)
+            pop-gen
+            pop-stack
             (cons (infeasible-pc-time start-time (metrics-time metrics))
                   acc))])])]))
 
@@ -99,10 +118,10 @@
   (and (not (empty? stack))
        (pc-stack-frame/infeasible? (first stack))))
 
-;; pc-infeasible? : SymBool -> ConcreteBool
-(define (pc-infeasible? pc)
+;; pc-infeasible? : SolverGen SymBool -> ConcreteBool
+(define (pc-infeasible? gen pc)
   (begin0
-    (unsat? (solve (assert pc)))
+    (unsat? (gen (list pc)))
     (num-solved-inc!)
     (maybe-print-num-solved)))
 
