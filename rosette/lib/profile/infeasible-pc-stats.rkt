@@ -7,7 +7,7 @@
 
 (require (only-in rosette/base/core/safe assert)
          (only-in rosette/base/form/control @and)
-         (only-in rosette/solver/solution unsat?)
+         (only-in rosette/solver/solution unsat unsat?)
          (only-in rosette/query/form solve solve+)
          "pc-event.rkt"
          "reporter.rkt")
@@ -64,8 +64,12 @@
   (define gen (solve+))
   (compute-infeasible-pc-stats/acc events gen '() '()))
 
+(define (gen-unsat v)
+  (unsat))
+
 ;; compute-infeasible-pc-stats/acc :
 ;; (Listof PCEvent) PCStack SolverGen InfeasiblePCInfo -> InfeasiblePCInfo
+;; ASSUME that gen is not dead
 (define (compute-infeasible-pc-stats/acc events gen stack acc)
   (match events
     [(list)
@@ -77,14 +81,14 @@
           [(stack-infeasible? stack)
            (compute-infeasible-pc-stats/acc
             es
-            gen
+            gen-unsat
             (cons (pc-stack-frame/infeasible (metrics-time metrics)) stack)
             acc)]
           [(pc-infeasible? gen pc)
            (compute-infeasible-pc-stats/acc
             es
             ; TODO: This gen is now dead. Is this right?
-            gen
+            gen-unsat
             (cons (pc-stack-frame/infeasible (metrics-time metrics)) stack)
             acc)]
           [else
@@ -96,8 +100,10 @@
             acc)])]
        [(pc-pop-event metrics)
         (define pop-stack (rest stack))
-        (define pop-gen (solve+))
-        (pop-gen (list (stack-existing-pc pop-stack)))
+        ;; close the existing gen before possibly creating a new one
+        (gen (list #false))
+        (define pop-gen
+          (stack-make-gen pop-stack))
         (match (first stack)
           [(pc-stack-frame/feasible _)
            (compute-infeasible-pc-stats/acc
@@ -131,6 +137,16 @@
     [(list) #true]
     [(cons (pc-stack-frame/infeasible _) _) #false]
     [(cons (pc-stack-frame/feasible pc) _) pc]))
+
+;; stack-make-gen : PCStack -> SolverGen
+(define (stack-make-gen stack)
+  (match stack
+    [(list) (solve+)]
+    [(cons (pc-stack-frame/infeasible _) _) gen-unsat]
+    [(cons (pc-stack-frame/feasible pc) _)
+     (define gen (solve+))
+     (gen (list pc))
+     gen]))
 
 ;; display-infeasible-pc-info : InfeasiblePCInfo
 (define (display-infeasible-pc-info info)
