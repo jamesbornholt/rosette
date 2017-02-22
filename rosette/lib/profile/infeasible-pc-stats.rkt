@@ -12,6 +12,34 @@
          "pc-event.rkt"
          "reporter.rkt")
 
+;; ----------------------------------------------------------------------------
+
+;; Printing the number of pcs solved so far, to give more information about
+;; what's wrong when it takes a long time to solve them.
+
+(define print-num-solved? (make-parameter #false))
+
+(define NUM-SOLVED-PRINTING-TIME-INTERVAL 15)
+
+(define num-solved (box 0))
+(define prev-t (box (current-seconds)))
+
+(define (num-solved-inc!)
+  (define num (unbox num-solved))
+  (box-cas! num-solved num (add1 num)))
+
+(define (maybe-print-num-solved)
+  (when (print-num-solved?)
+    (define prev (unbox prev-t))
+    (when (<= (+ prev NUM-SOLVED-PRINTING-TIME-INTERVAL) (current-seconds))
+      (box-cas! prev-t prev (current-seconds))
+      (printf "num-solved: ~v\n" (unbox num-solved)))))
+
+(module+ num-solved
+  (provide print-num-solved?))
+
+;; ----------------------------------------------------------------------------
+
 ;; type PCStack = (Listof PCStackFrame)
 ;; A PCStackFrame is one of:
 ;;  - (pc-stack-frame/infeasible Number)
@@ -71,7 +99,10 @@
 
 ;; pc-infeasible? : SymBool -> ConcreteBool
 (define (pc-infeasible? pc)
-  (unsat? (solve (assert pc))))
+  (begin0
+    (unsat? (solve (assert pc)))
+    (num-solved-inc!)
+    (maybe-print-num-solved)))
 
 ;; stack-existing-pc : PCStack -> SymBool
 (define (stack-existing-pc stack)
