@@ -41,7 +41,7 @@
        (set-box! infeas-pc-info-box (cons ipt (unbox infeas-pc-info-box))))
      add-infeasible-pc!)
    (define (finish-renderer/infeasible-pc self profile infeasible-pc-info)
-     (match-define (stream-renderer source name opts ipts thd) self)
+     (match-define (stream-renderer _ _ _ _ thd) self)
      (thread-send thd 'done)
      (thread-wait thd))])
 
