@@ -2,7 +2,7 @@
 
 (require "record.rkt" "reporter.rkt"
          "pc-event.rkt" "infeasible-pc-stats.rkt"
-         (submod "infeasible-pc-stats.rkt" num-solved)
+         (submod "infeasible-pc-stats.rkt" print-solving-stats)
          "renderer/renderer.rkt" "renderer/renderer-infeasible-pc.rkt"
          "renderer/html.rkt")
 (provide (all-defined-out))
@@ -31,8 +31,10 @@
      (finish-renderer/infeasible-pc
       renderer
       prof
-      (parameterize ([print-num-solved? #true])
-        (compute-infeasible-pc-stats (get-pc-events pc-events))))]
+      (parameterize ([record-solving-stats (new-solving-stats)])
+        (begin0
+          (time (compute-infeasible-pc-stats (get-pc-events pc-events)))
+          (print-solving-stats))))]
     [else
      (finish-renderer renderer prof)])
   (apply values ret))

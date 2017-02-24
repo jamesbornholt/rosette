@@ -14,39 +14,83 @@
 
 ;; ----------------------------------------------------------------------------
 
+(module+ print-solving-stats
+  (provide print-solving-stats?
+           print-solving-stats
+           record-solving-stats
+           new-solving-stats))
+
 ;; Printing the number of pcs solved so far, to give more information about
 ;; what's wrong when it takes a long time to solve them.
 
-(define print-num-solved? (make-parameter #false))
+;; print-solving-stats? : (Parameterof Boolean)
+(define print-solving-stats? (make-parameter #false))
 
-(define NUM-SOLVED-PRINTING-TIME-INTERVAL 15)
+(define PRINTING-TIME-INTERVAL 15)
 
-(define num-solved (box 0))
+;; prev-t : (Boxof Number)
 (define prev-t (box (current-seconds)))
 
-(define (num-solved-inc!)
-  (define num (unbox num-solved))
-  (unless (box-cas! num-solved num (add1 num))
-    (error 'bad)))
-
-(define (maybe-print-num-solved)
-  (when (print-num-solved?)
+;; maybe-print-solving-stats : -> Void
+(define (maybe-print-solving-stats)
+  (when (print-solving-stats?)
     (define prev (unbox prev-t))
-    (when (<= (+ prev NUM-SOLVED-PRINTING-TIME-INTERVAL) (current-seconds))
-      (unless (box-cas! prev-t prev (current-seconds))
-        (error 'bad))
-      (printf "num-solved: ~v\n" (unbox num-solved)))))
+    (when (<= (+ prev PRINTING-TIME-INTERVAL) (current-seconds))
+      (set-box! prev-t (current-seconds))
+      (print-solving-stats))))
 
-(module+ num-solved
-  (provide print-num-solved?))
+;; ------------------------------------------------------------------------
+
+;; record-solving-stats : (Parameterof (U #false SolvingStats))
+(define record-solving-stats (make-parameter #false))
+
+;; new-solving-stats : -> SolvingStats
+(define (new-solving-stats)
+  (solving-stats 0 0 0 0))
+
+;; A SolvingStats is a (solving-stats Nat Nat Number)
+(struct solving-stats
+  [num-solved num-infeasible total-solver-time infeasible-solver-time]
+  #:transparent #:mutable)
+
+;; record-solving-stats! : Boolean Number -> Void
+(define (record-solving-stats! infeasible? ∆t)
+  (define stats (record-solving-stats))
+  (match stats
+    [#false (void)]
+    [(solving-stats num num-infeas time infeas-time)
+     (set-solving-stats-num-solved! stats (add1 num))
+     (set-solving-stats-total-solver-time! stats (+ time ∆t))
+     (when infeasible?
+       (set-solving-stats-num-infeasible! stats (add1 num-infeas))
+       (set-solving-stats-infeasible-solver-time! stats (+ infeas-time ∆t)))]))
+
+;; print-solving-stats : -> Void
+(define (print-solving-stats)
+  (match-define (solving-stats num num-infeas time time-infeas)
+    (record-solving-stats))
+  (printf (string-append
+           "num-solved:      ~v\n"
+           "num-infeasible:  ~v\n"
+           "time-solving:    ~v\n"
+           "time-infeasible: ~v\n"
+           "average-time:    ~v\n")
+          num
+          num-infeas
+          time
+          time-infeas
+          (and (not (zero? num))
+               (real->double-flonum (/ time num)))))
 
 ;; ----------------------------------------------------------------------------
 
 ;; type PCStack = (Listof PCStackFrame)
 ;; A PCStackFrame is one of:
 ;;  - (pc-stack-frame/infeasible Number)
+;;  - (pc-stack-frame/infeasible-deep)
 ;;  - (pc-stack-frame/feasible SymBool)
 (struct pc-stack-frame/infeasible [start-time] #:transparent)
+(struct pc-stack-frame/infeasible-deep [] #:transparent)
 (struct pc-stack-frame/feasible [pc] #:transparent)
 
 ;; type InfeasiblePCInfo = (Listof InfeasiblePCTime)
@@ -65,6 +109,7 @@
   (compute-infeasible-pc-stats/acc events gen '() '()))
 
 (define (gen-unsat v)
+  (error 'gen-unsat)
   (unsat))
 
 ;; compute-infeasible-pc-stats/acc :
@@ -82,7 +127,7 @@
            (compute-infeasible-pc-stats/acc
             es
             gen-unsat
-            (cons (pc-stack-frame/infeasible (metrics-time metrics)) stack)
+            (cons (pc-stack-frame/infeasible-deep) stack)
             acc)]
           [(pc-infeasible? gen pc)
            (compute-infeasible-pc-stats/acc
@@ -117,25 +162,37 @@
             pop-gen
             pop-stack
             (cons (infeasible-pc-time start-time (metrics-time metrics))
-                  acc))])])]))
+                  acc))]
+          [(pc-stack-frame/infeasible-deep)
+           (compute-infeasible-pc-stats/acc
+            es
+            pop-gen
+            pop-stack
+            acc)])])]))
 
 ;; stack-infeasible? : PCStack -> ConcreteBool
 (define (stack-infeasible? stack)
   (and (not (empty? stack))
-       (pc-stack-frame/infeasible? (first stack))))
+       (or (pc-stack-frame/infeasible? (first stack))
+           (pc-stack-frame/infeasible-deep? (first stack)))))
 
 ;; pc-infeasible? : SolverGen SymBool -> ConcreteBool
 (define (pc-infeasible? gen pc)
+  ;; lst-sol is a list containing one element, the solution
+  (define-values [lst-sol cpu real gc]
+    (time-apply gen (list (list pc))))
+  (define res (unsat? (first lst-sol)))
   (begin0
-    (unsat? (gen (list pc)))
-    (num-solved-inc!)
-    (maybe-print-num-solved)))
+    res
+    (record-solving-stats! res cpu)
+    (maybe-print-solving-stats)))
 
 ;; stack-existing-pc : PCStack -> SymBool
 (define (stack-existing-pc stack)
   (match stack
     [(list) #true]
     [(cons (pc-stack-frame/infeasible _) _) #false]
+    [(cons (pc-stack-frame/infeasible-deep) _) #false]
     [(cons (pc-stack-frame/feasible pc) _) pc]))
 
 ;; stack-make-gen : PCStack -> SolverGen
@@ -143,6 +200,7 @@
   (match stack
     [(list) (solve+)]
     [(cons (pc-stack-frame/infeasible _) _) gen-unsat]
+    [(cons (pc-stack-frame/infeasible-deep) _) gen-unsat]
     [(cons (pc-stack-frame/feasible pc) _)
      (define gen (solve+))
      (gen (list pc))
