@@ -104,18 +104,10 @@
         (define events
           (reverse
            (cons (profile-event-sample (get-current-metrics #:reporter reporter))
-                 (let loop ()
-                   (define evts (unbox events-box))
-                   (if (box-cas! events-box evts '())
-                       evts
-                       (loop))))))
+                 (unbox/replace! events-box '()))))
         (define infeas-pc-times
           (reverse
-           (let loop ()
-             (define ipts (unbox infeas-pc-info-box))
-             (if (box-cas! infeas-pc-info-box ipts '())
-                 ipts
-                 (loop)))))
+           (unbox/replace! infeas-pc-info-box '())))
         (define filtered-events
           (if (null? events) events (filter-events events threshold)))
         (define msg
@@ -128,6 +120,17 @@
           (unless sync-result  ; loop if sync-result = #f ==> triggered by timeout
             (loop)))))
     (ws-close! conn)))
+
+
+;; unbox/replace! : (Boxof A) A -> A
+;; Gets the current value in the box and replaces that value with the new-val.
+;; If the box is modified in between getting and replacing, it tries again.
+;; This ensures that no information is lost in replacing the value.
+(define (unbox/replace! box new-val)
+  (define v (unbox box))
+  (if (box-cas! box v new-val)
+      v
+      (unbox/replace! box new-val)))
 
 
 ; Create the output directory and seed it with the configuration data, then open
