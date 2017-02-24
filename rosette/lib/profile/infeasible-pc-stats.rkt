@@ -109,7 +109,6 @@
   (compute-infeasible-pc-stats/acc events gen '() '()))
 
 (define (gen-unsat v)
-  (error 'gen-unsat)
   (unsat))
 
 ;; compute-infeasible-pc-stats/acc :
