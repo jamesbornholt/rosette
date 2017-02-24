@@ -21,6 +21,10 @@ function dataOnload(initCb, updateCb) {
                     var e = _a[_i];
                     Data.events.push(e);
                 }
+                for (var _b = 0, _c = data.infeasiblePCInfo; _b < _c.length; _b++) {
+                    var ipt = _c[_b];
+                    Data.infeasiblePCInfo.push(ipt);
+                }
                 if (init) {
                     updateCb(data.events);
                 }
