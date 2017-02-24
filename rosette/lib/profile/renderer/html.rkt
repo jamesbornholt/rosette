@@ -5,7 +5,8 @@
          "renderer.rkt" "renderer-infeasible-pc.rkt"
          "util/key.rkt" "util/srcloc.rkt"
          racket/date json racket/runtime-path racket/hash net/sendurl)
-(provide make-html-renderer filter-events render-event)
+(provide make-html-renderer filter-events render-event
+         render-infeasible-pc-time)
 
 ; Source of the HTML template
 (define-runtime-path template-dir "html")
@@ -30,7 +31,8 @@
    (define (finish-renderer self profile)
      (finish-renderer/infeasible-pc self profile '()))]
   #:methods gen:renderer/infeasible-pc
-  [(define (finish-renderer/infeasible-pc self profile infeasible-pc-info)
+  [(define (get-infeasible-pc-callback self) void)
+   (define (finish-renderer/infeasible-pc self profile infeasible-pc-info)
      (match-define (html-renderer source name opts) self)
      (render-html profile infeasible-pc-info source name opts))])
 

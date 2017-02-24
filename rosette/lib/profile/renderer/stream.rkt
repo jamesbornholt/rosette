@@ -1,9 +1,11 @@
 #lang racket
 
 (require "../record.rkt" "../reporter.rkt"
-         "renderer.rkt"
+         "renderer.rkt" "renderer-infeasible-pc.rkt"
          "util/key.rkt" "util/srcloc.rkt"
-         (only-in "html.rkt" filter-events render-event)
+         (only-in "html.rkt"
+                  filter-events render-event
+                  render-infeasible-pc-time)
          net/rfc6455 net/sendurl
          racket/date json racket/runtime-path racket/hash)
 (provide make-stream-renderer)
@@ -19,9 +21,9 @@
   (define opts (stream-renderer-options (hash-ref options 'threshold 0.001)
                                         (hash-ref options 'interval 2.0)
                                         (hash-ref options 'symlink #f)))
-  (stream-renderer source name opts #f))
+  (stream-renderer source name opts (box '()) #f))
 
-(struct stream-renderer (source name opts [thd #:mutable])
+(struct stream-renderer (source name opts infeas-pc-info-box [thd #:mutable])
   #:transparent
   #:methods gen:renderer
   [(define (start-renderer self profile reporter)
@@ -29,7 +31,17 @@
       self
       (streaming-data-thread self profile reporter)))
    (define (finish-renderer self profile)
-     (match-define (stream-renderer _ _ _ thd) self)
+     (match-define (stream-renderer _ _ _ _ thd) self)
+     (thread-send thd 'done)
+     (thread-wait thd))]
+  #:methods gen:renderer/infeasible-pc
+  [(define (get-infeasible-pc-callback self)
+     (match-define (stream-renderer _ _ _ infeas-pc-info-box _) self)
+     (define (add-infeasible-pc! ipt)
+       (set-box! infeas-pc-info-box (cons ipt (unbox infeas-pc-info-box))))
+     add-infeasible-pc!)
+   (define (finish-renderer/infeasible-pc self profile infeasible-pc-info)
+     (match-define (stream-renderer source name opts ipts thd) self)
      (thread-send thd 'done)
      (thread-wait thd))])
 
@@ -41,7 +53,7 @@
 (define (streaming-data-thread renderer profile reporter)
   (thread
    (thunk
-    (match-define (stream-renderer _ _ opts _) renderer)
+    (match-define (stream-renderer _ _ opts _ _) renderer)
     (match-define (stream-renderer-options threshold interval _) opts)
     
     (define server-shutdown!
@@ -76,7 +88,7 @@
 ; initial message received from the parent thread will not be 'go, and the
 ; client will disconnect immediately.
 (define (make-streaming-client parent renderer profile reporter)
-  (match-define (stream-renderer _ _ opts _) renderer)
+  (match-define (stream-renderer _ _ opts infeas-pc-info-box _) renderer)
   (match-define (stream-renderer-options threshold interval _) opts)
   (define events-box (profile-state-events profile))
   (lambda (conn state)
@@ -97,9 +109,19 @@
                    (if (box-cas! events-box evts '())
                        evts
                        (loop))))))
+        (define infeas-pc-times
+          (reverse
+           (let loop ()
+             (define ipts (unbox infeas-pc-info-box))
+             (if (box-cas! infeas-pc-info-box ipts '())
+                 ipts
+                 (loop)))))
         (define filtered-events
           (if (null? events) events (filter-events events threshold)))
-        (define msg (jsexpr->bytes (hash 'events (map render-event filtered-events))))
+        (define msg
+          (jsexpr->bytes
+           (hash 'events (map render-event filtered-events)
+                 'infeasiblePCInfo (map render-infeasible-pc-time infeas-pc-times))))
         ; send on the connection. if sending fails, bail out of the loop.
         (with-handlers ([exn:fail? void])
           (ws-send! conn msg)
@@ -111,7 +133,7 @@
 ; Create the output directory and seed it with the configuration data, then open
 ; the webpage in a browser.
 (define (create-profile-directory renderer)
-  (match-define (stream-renderer source name opts _) renderer)
+  (match-define (stream-renderer source name opts _ _) renderer)
   (match-define (stream-renderer-options _ _ symlink?) opts)
   
   ; get metadata for this profile

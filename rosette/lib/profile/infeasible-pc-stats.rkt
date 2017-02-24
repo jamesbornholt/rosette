@@ -97,24 +97,26 @@
 ;; A InfeasiblePCTime is a (infeasible-pc-time Number Number)
 (struct infeasible-pc-time [start end] #:transparent)
 
-;; display-infeasible-pc-stats : (Listof PCEvent) -> Void
-(define (display-infeasible-pc-stats events)
+;; display-infeasible-pc-stats :
+;; (Listof PCEvent) InfeasiblePCCallback -> Void
+(define (display-infeasible-pc-stats events cb)
   (printf "Computing feasibility of path conditions...\n")
   (display-infeasible-pc-info
-   (compute-infeasible-pc-stats events)))
+   (compute-infeasible-pc-stats events cb)))
 
-;; compute-infeasible-pc-stats : (Listof PCEvent) -> InfeasiblePCInfo
-(define (compute-infeasible-pc-stats events)
+;; compute-infeasible-pc-stats :
+;; (Listof PCEvent) InfeasiblePCCallback -> InfeasiblePCInfo
+(define (compute-infeasible-pc-stats events cb)
   (define gen (solve+))
-  (compute-infeasible-pc-stats/acc events gen '() '()))
+  (compute-infeasible-pc-stats/acc events cb gen '() '()))
 
 (define (gen-unsat v)
   (unsat))
 
 ;; compute-infeasible-pc-stats/acc :
-;; (Listof PCEvent) PCStack SolverGen InfeasiblePCInfo -> InfeasiblePCInfo
+;; (Listof PCEvent) InfeasiblePCCallback PCStack SolverGen InfeasiblePCInfo -> InfeasiblePCInfo
 ;; ASSUME that gen is not dead
-(define (compute-infeasible-pc-stats/acc events gen stack acc)
+(define (compute-infeasible-pc-stats/acc events cb gen stack acc)
   (match events
     [(list)
      (reverse acc)]
@@ -125,12 +127,14 @@
           [(stack-infeasible? stack)
            (compute-infeasible-pc-stats/acc
             es
+            cb
             gen-unsat
             (cons (pc-stack-frame/infeasible-deep) stack)
             acc)]
           [(pc-infeasible? gen pc)
            (compute-infeasible-pc-stats/acc
             es
+            cb
             ; TODO: This gen is now dead. Is this right?
             gen-unsat
             (cons (pc-stack-frame/infeasible (metrics-time metrics)) stack)
@@ -139,6 +143,7 @@
            (define pc+ (@and (stack-existing-pc stack) pc))
            (compute-infeasible-pc-stats/acc
             es
+            cb
             gen
             (cons (pc-stack-frame/feasible pc+) stack)
             acc)])]
@@ -152,19 +157,23 @@
           [(pc-stack-frame/feasible _)
            (compute-infeasible-pc-stats/acc
             es
+            cb
             pop-gen
             pop-stack
             acc)]
           [(pc-stack-frame/infeasible start-time)
+           (define ipt (infeasible-pc-time start-time (metrics-time metrics)))
+           (cb ipt)
            (compute-infeasible-pc-stats/acc
             es
+            cb
             pop-gen
             pop-stack
-            (cons (infeasible-pc-time start-time (metrics-time metrics))
-                  acc))]
+            (cons ipt acc))]
           [(pc-stack-frame/infeasible-deep)
            (compute-infeasible-pc-stats/acc
             es
+            cb
             pop-gen
             pop-stack
             acc)])])]))

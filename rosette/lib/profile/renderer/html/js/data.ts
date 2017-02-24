@@ -19,6 +19,7 @@ function dataOnload(initCb, updateCb) {
             ws.onmessage = (evt) => {
                 let data = JSON.parse(evt.data);
                 for (let e of data.events) Data.events.push(e);
+                for (let ipt of data.infeasiblePCInfo) Data.infeasiblePCInfo.push(ipt);
                 if (init) {
                     updateCb(data.events);
                 } else {

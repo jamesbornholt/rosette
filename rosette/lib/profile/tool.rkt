@@ -33,7 +33,9 @@
       prof
       (parameterize ([record-solving-stats (new-solving-stats)])
         (begin0
-          (time (compute-infeasible-pc-stats (get-pc-events pc-events)))
+          (time (compute-infeasible-pc-stats
+                 (get-pc-events pc-events)
+                 (get-infeasible-pc-callback renderer)))
           (print-solving-stats))))]
     [else
      (finish-renderer renderer prof)])
