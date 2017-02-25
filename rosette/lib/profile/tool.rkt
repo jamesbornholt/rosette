@@ -26,6 +26,7 @@
   (define-values (prof ret)
     (parameterize ([current-pc-events pc-events])
       (run-profile-thunk thunk profile reporter)))
+  (done-running renderer)
   (cond
     [(and (compute-infeasible-pcs?) (renderer/infeasible-pc? renderer))
      (finish-renderer/infeasible-pc

@@ -28,6 +28,7 @@
   #:transparent
   #:methods gen:renderer
   [(define start-renderer void)
+   (define done-running void)
    (define (finish-renderer self profile)
      (finish-renderer/infeasible-pc self profile '()))]
   #:methods gen:renderer/infeasible-pc

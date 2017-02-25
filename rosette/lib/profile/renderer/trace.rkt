@@ -10,6 +10,7 @@
   #:transparent
   #:methods gen:renderer
   [(define start-renderer void)
+   (define done-running void)
    (define (finish-renderer self profile)
      (match-define (trace-renderer source name key) self)
      (render-trace (profile-state->graph profile) source name key))])

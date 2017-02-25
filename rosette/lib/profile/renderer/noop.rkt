@@ -12,5 +12,6 @@
   #:transparent
   #:methods gen:renderer
   [(define start-renderer void)
+   (define done-running void)
    (define (finish-renderer self profile)
      (printf "Profiled ~v events.\n" (length (unbox (profile-state-events profile)))))])

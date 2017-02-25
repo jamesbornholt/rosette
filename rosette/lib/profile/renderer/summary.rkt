@@ -14,6 +14,7 @@
   #:transparent
   #:methods gen:renderer
   [(define start-renderer void)
+   (define done-running void)
    (define (finish-renderer self profile)
      (match-define (summary-renderer source name key) self)
      (define graph (profile-state->graph profile))
