@@ -12,6 +12,31 @@
          "pc-event.rkt"
          "reporter.rkt")
 
+;; ------------------------------------------------------------------------
+
+;; make-solver-gen : -> SolverGen
+;; Uses the ∃-solve+ interface described in rosette/query/core.rkt
+(define (make-solver-gen)
+  (solve+))
+
+;; gen-push : SolverGen SymBool -> Solution
+;; Uses the ∃-solve+ interface described in rosette/query/core.rkt
+;; to push a new constraint formula and get the new solution
+(define (gen-push gen formula)
+  (gen formula))
+
+;; gen-pop : SolverGen -> Solution
+;; Uses the ∃-solve+ interface described in rosette/query/core.rkt
+;; to pop the last constraint formula
+(define (gen-pop gen)
+  (gen 1))
+
+;; gen-shutdown : SolverGen -> Any
+;; Uses the ∃-solve+ interface described in rosette/query/core.rkt
+;; to shutdown the solver
+(define (gen-shutdown gen)
+  (gen 'shutdown))
+
 ;; ----------------------------------------------------------------------------
 
 (module+ print-solving-stats
@@ -91,7 +116,7 @@
 ;;  - (pc-stack-frame/feasible SymBool)
 (struct pc-stack-frame/infeasible [start-time] #:transparent)
 (struct pc-stack-frame/infeasible-deep [] #:transparent)
-(struct pc-stack-frame/feasible [pc] #:transparent)
+(struct pc-stack-frame/feasible [] #:transparent)
 
 ;; type InfeasiblePCInfo = (Listof InfeasiblePCTime)
 ;; A InfeasiblePCTime is a (infeasible-pc-time Number Number)
@@ -107,74 +132,76 @@
 ;; compute-infeasible-pc-stats :
 ;; (Listof PCEvent) InfeasiblePCCallback -> InfeasiblePCInfo
 (define (compute-infeasible-pc-stats events cb)
-  (define gen (solve+))
+  (define gen (make-solver-gen))
   (compute-infeasible-pc-stats/acc events cb gen '() '()))
-
-(define (gen-unsat v)
-  (unsat))
 
 ;; compute-infeasible-pc-stats/acc :
 ;; (Listof PCEvent) InfeasiblePCCallback PCStack SolverGen InfeasiblePCInfo -> InfeasiblePCInfo
-;; ASSUME that gen is not dead
+;; At the end, this shuts gown the solver gen.
 (define (compute-infeasible-pc-stats/acc events cb gen stack acc)
   (match events
     [(list)
+     (gen-shutdown gen)
      (reverse acc)]
     [(cons e es)
      (match e
        [(pc-push-event pc metrics)
         (cond
           [(stack-infeasible? stack)
-           (compute-infeasible-pc-stats/acc
-            es
-            cb
-            gen-unsat
-            (cons (pc-stack-frame/infeasible-deep) stack)
-            acc)]
-          [(pc-infeasible? gen pc)
-           (compute-infeasible-pc-stats/acc
-            es
-            cb
-            ; TODO: This gen is now dead. Is this right?
-            gen-unsat
-            (cons (pc-stack-frame/infeasible (metrics-time metrics)) stack)
-            acc)]
-          [else
-           (define pc+ (@and (stack-existing-pc stack) pc))
+           ;; if the stack is already infeasible,
+           ;; shouldn't need to push another formula
            (compute-infeasible-pc-stats/acc
             es
             cb
             gen
-            (cons (pc-stack-frame/feasible pc+) stack)
-            acc)])]
-       [(pc-pop-event metrics)
-        (define pop-stack (rest stack))
-        ;; close the existing gen before possibly creating a new one
-        (gen (list #false))
-        (define pop-gen
-          (stack-make-gen pop-stack))
-        (match (first stack)
-          [(pc-stack-frame/feasible _)
+            (cons (pc-stack-frame/infeasible-deep) stack)
+            acc)]
+          ;; this pushes another formula and checks the resulting solution
+          [(pc-infeasible? gen pc)
+           ;; in this branch the formula has been pushed and resulted in unsat
            (compute-infeasible-pc-stats/acc
             es
             cb
-            pop-gen
+            gen
+            (cons (pc-stack-frame/infeasible (metrics-time metrics)) stack)
+            acc)]
+          [else
+           ;; in this branch the formula has been pushed and was feasible
+           (compute-infeasible-pc-stats/acc
+            es
+            cb
+            gen
+            (cons (pc-stack-frame/feasible) stack)
+            acc)])]
+       [(pc-pop-event metrics)
+        (define pop-stack (rest stack))
+        (match (first stack)
+          [(pc-stack-frame/infeasible-deep)
+           ;; The last constraint wasn't pushed, so shouldn't pop
+           (compute-infeasible-pc-stats/acc
+            es
+            cb
+            gen
             pop-stack
             acc)]
           [(pc-stack-frame/infeasible start-time)
+           ;; pop the last constraint from the solver stack
+           (gen-pop gen)
            (define ipt (infeasible-pc-time start-time (metrics-time metrics)))
            (cb ipt)
            (compute-infeasible-pc-stats/acc
             es
             cb
-            pop-gen
+            gen
             pop-stack
             (cons ipt acc))]
-          [(pc-stack-frame/infeasible-deep)
+          [(pc-stack-frame/feasible)
+           ;; pop the last constraint from the solver stack
+           (gen-pop gen)
            (compute-infeasible-pc-stats/acc
             es
             cb
-            pop-gen
+            gen
             pop-stack
             acc)])])]))
 
@@ -188,31 +215,12 @@
 (define (pc-infeasible? gen pc)
   ;; lst-sol is a list containing one element, the solution
   (define-values [lst-sol cpu real gc]
-    (time-apply gen (list (list pc))))
+    (time-apply gen-push (list gen pc)))
   (define res (unsat? (first lst-sol)))
   (begin0
     res
     (record-solving-stats! res cpu)
     (maybe-print-solving-stats)))
-
-;; stack-existing-pc : PCStack -> SymBool
-(define (stack-existing-pc stack)
-  (match stack
-    [(list) #true]
-    [(cons (pc-stack-frame/infeasible _) _) #false]
-    [(cons (pc-stack-frame/infeasible-deep) _) #false]
-    [(cons (pc-stack-frame/feasible pc) _) pc]))
-
-;; stack-make-gen : PCStack -> SolverGen
-(define (stack-make-gen stack)
-  (match stack
-    [(list) (solve+)]
-    [(cons (pc-stack-frame/infeasible _) _) gen-unsat]
-    [(cons (pc-stack-frame/infeasible-deep) _) gen-unsat]
-    [(cons (pc-stack-frame/feasible pc) _)
-     (define gen (solve+))
-     (gen (list pc))
-     gen]))
 
 ;; display-infeasible-pc-info : InfeasiblePCInfo
 (define (display-infeasible-pc-info info)
