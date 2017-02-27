@@ -6,29 +6,8 @@ let Data = {
     samples: [],
     config: {
         stream: false
-    },
-    // populated by initData
-    inputs: [],
-    outputs: [],
-    metrics: [],
-    functions: [],
-    graph: null
-};
-
-// collate all unique entries in the profile data
-function findUnique(key: string): Array<any> {
-    var vals = [];
-    for (let func of Data.functions) {
-        for (let fcall of func["calls"]) {
-            for (let val in fcall[key]) {
-                if (vals.indexOf(val) == -1) {
-                    vals.push(val);
-                }
-            }
-        }
     }
-    return vals;
-}
+};
 
 // create the onload event handler
 function dataOnload(initCb, updateCb) {
@@ -39,8 +18,6 @@ function dataOnload(initCb, updateCb) {
             ws.onmessage = (evt) => {
                 let data = JSON.parse(evt.data);
                 for (let e of data.events) Data.events.push(e);
-                // console.log("new events:", data.events.length);
-                initData();
                 if (init) {
                     updateCb(data.events);
                 } else {
@@ -51,7 +28,6 @@ function dataOnload(initCb, updateCb) {
         } else {
             let scr = document.createElement("script");
             scr.onload = () => {
-                initData();
                 initCb(Data.events);
             }
             scr.src = "data.json";
@@ -108,30 +84,6 @@ function eventsToGraph(events: Array<any>) {
     }
 
     return node;
-}
-
-function initData() {
-    /*
-    Data["graph"] = eventsToGraph(Data["events"]);
-    // populate the "functions" aggregated list
-    let worklist = [Data.graph];
-    let functions = {};
-    while (worklist.length > 0) {
-        let node = worklist.pop();
-        let func = node["function"];
-        if (!functions.hasOwnProperty(func))
-            functions[func] = {"name": func, "calls": []};
-        functions[func]["calls"].push(node);
-        if (node.hasOwnProperty("children"))
-            worklist.push(...node["children"]);
-    }
-    Data.functions = Object.keys(functions).map((k) => functions[k]);
-
-    // find inputs, outputs, metrics
-    Data.inputs = findUnique("inputs");
-    Data.outputs = findUnique("outputs");
-    Data.metrics = findUnique("metrics");
-    */
 }
 
 function getFunctionName(func: string) {

@@ -4,16 +4,22 @@
 interface NodeList extends Array<Node> { }
 
 namespace profile {
-
+    
     declare var vg;            // vega
     declare var regression;    // regression.js
     declare var Tablesort;     // tablesort.js
-
+    
     let defaultInput = "heap-size";
     let defaultOutput = "term-count";
-
+    
     // global state
     export let Profile = {
+        // populated by initData
+        inputs: [],
+        outputs: [],
+        metrics: [],
+        functions: [],
+        graph: null,
         entries: [],
         selected: {
             input: null,
@@ -22,7 +28,22 @@ namespace profile {
         },
         sorter: null
     };
-
+    
+    // collate all unique entries in the profile data
+    function findUnique(key: string): Array<any> {
+        var vals = [];
+        for (let func of Profile.functions) {
+            for (let fcall of func["calls"]) {
+                for (let val in fcall[key]) {
+                    if (vals.indexOf(val) == -1) {
+                        vals.push(val);
+                    }
+                }
+            }
+        }
+        return vals;
+    }
+    
     // update a select element to contain the given options, preserving the
     // currently selected option if possible
     function updateSelect(select: HTMLSelectElement, lst: Array<any>, defaultOption: string) {
@@ -52,40 +73,62 @@ namespace profile {
             select.selectedIndex = defaultIndex;
         }
     }
-
+    
     export function init() {
         // Initialize the profile data
         initData();
-
+        
         // update the profile source info
         document.getElementById("name").innerHTML = Data.metadata.name;
         document.getElementById("source").innerHTML = Data.metadata.source;
         document.getElementById("form").innerHTML = Data.metadata.form;
         document.getElementById("time").innerHTML = Data.metadata.time;
         document.title = "Profile: " + Data.metadata.name;
-
+        
         // populate available inputs
         let input_select = document.getElementById("input");
-        updateSelect(input_select as HTMLSelectElement, Data.inputs, defaultInput);
+        updateSelect(input_select as HTMLSelectElement, Profile.inputs, defaultInput);
         // populate available outputs
         let output_select = document.getElementById("output");
-        updateSelect(output_select as HTMLSelectElement, Data.outputs.concat(Data.metrics), defaultOutput);
+        updateSelect(output_select as HTMLSelectElement, Profile.outputs.concat(Profile.metrics), defaultOutput);
         // hook the input/output dropdowns to re-render the table
         input_select.addEventListener('change', renderTable);
         output_select.addEventListener('change', renderTable);
-
+        
         // render the initial table
         Profile.sorter = new Tablesort(document.getElementById("profile"), { descending: true });
         renderTable();
-
+        
         // highlight important entries
         findImportantEntries();
     }
-
+    
+    function initData() {
+        Profile.graph = eventsToGraph(Data["events"]);
+        // populate the "functions" aggregated list
+        let worklist = [Profile.graph];
+        let functions = {};
+        while (worklist.length > 0) {
+            let node = worklist.pop();
+            let func = node["function"];
+            if (!functions.hasOwnProperty(func))
+                functions[func] = {"name": func, "calls": []};
+            functions[func]["calls"].push(node);
+            if (node.hasOwnProperty("children"))
+                worklist.push(...node["children"]);
+        }
+        Profile.functions = Object.keys(functions).map((k) => functions[k]);
+        
+        // find inputs, outputs, metrics
+        Profile.inputs = findUnique("inputs");
+        Profile.outputs = findUnique("outputs");
+        Profile.metrics = findUnique("metrics");
+    }
+    
     function getSelectedOption(elt) {
         return elt.options[elt.selectedIndex].value;
     }
-
+    
     function selectProfilePoints(data, input, output) {
         var pts = [];
         for (let fcall of data) {
@@ -93,15 +136,15 @@ namespace profile {
             var i = fcall["inputs"][input];
             var o;
             if (fcall["outputs"].hasOwnProperty(output))
-                o = fcall["outputs"][output];
+            o = fcall["outputs"][output];
             else if (fcall["metrics"].hasOwnProperty(output))
-                o = fcall["metrics"][output];
+            o = fcall["metrics"][output];
             else continue;
             pts.push([i, o, fcall["location"]]);
         }
         return pts;
     }
-
+    
     function findBestFit(pts) {
         let shifted = pts.map((v) => [v[0], v[1] + 1]);
         let reg_pwr = regression('power', shifted);
@@ -118,10 +161,10 @@ namespace profile {
             return reg_lin;
         }
     }
-
+    
     function generateProfile(input, output) {
         var entries = [];
-        for (let func of Data.functions) {
+        for (let func of Profile.functions) {
             let pts = selectProfilePoints(func.calls, input, output);
             let reg = findBestFit(pts);
             let sum = pts.map((v) => v[1]).reduce((a, b) => a + b, 0);
@@ -129,38 +172,38 @@ namespace profile {
         }
         return entries;
     }
-
+    
     function makeCell(str, row, escape = true) {
         let elt = document.createElement("td");
         elt.innerHTML = escape ? escapeHtml(str) : str;
         row.insertAdjacentElement('beforeend', elt);
         return elt;
     }
-
+    
     function renderTable() {
         // get the selected input/output
         Profile.selected.input = getSelectedOption(document.getElementById("input"));
         Profile.selected.output = getSelectedOption(document.getElementById("output"));
-
+        
         // update the output column
         document.getElementById("output-col").innerHTML = "Avg " + Profile.selected.output;
-
+        
         // generate the profile entries using these metrics
         let entries = generateProfile(Profile.selected.input, Profile.selected.output);
         // sort in decreasing R^2 order, with NaNs last
         entries.sort(function (a, b) {
             if (!isFinite(b.fit.r2 - a.fit.r2))
-                return !isFinite(a.fit.r2) ? 1 : -1;
+            return !isFinite(a.fit.r2) ? 1 : -1;
             else return b.fit.r2 - a.fit.r2;
         });
-
+        
         // remove all table rows
         for (let node of document.querySelectorAll("table#profile tbody tr")) {
             node.parentNode.removeChild(node);
         }
         let tbody = document.querySelectorAll("table#profile tbody")[0] as HTMLElement;
         Profile.entries = [];
-
+        
         // render new table rows
         for (let entry of entries) {
             // render the row
@@ -168,8 +211,8 @@ namespace profile {
             // 1. function name
             let func = makeCell(entry.name.split(" ")[0], row);
             func.title = entry.name.indexOf(" ") > -1 ?
-                entry.name.slice(entry.name.indexOf(" ") + 1) :
-                "<no source info>";
+            entry.name.slice(entry.name.indexOf(" ") + 1) :
+            "<no source info>";
             func.classList.add("code");
             // 2. curve
             let fit = entry.fit;
@@ -184,18 +227,18 @@ namespace profile {
             // 5. avg output
             let avgCell = makeCell(entry.output.toFixed(2), row);
             avgCell.classList.add("numeric");
-
+            
             // store the entry in the profile state
             entry.row = row;
             Profile.entries.push(entry);
             row["entry"] = entry;
-
+            
             // set up event listener for clicks on this row to change graph
             row.addEventListener('click', profileEntryClick);
-
+            
             tbody.insertAdjacentElement('beforeend', row);
         }
-
+        
         // maintain the selection if possible, otherwise select the
         // first element in the list
         var new_selection = null;
@@ -211,36 +254,36 @@ namespace profile {
             new_selection = Profile.entries[0];
         }
         selectEntry(new_selection);
-
+        
         // sort the table
         Profile.sorter.refresh();
     }
-
+    
     function renderSubTable(input, output, entry) {
         // aggregate by callsite
         let callSites = {};
         for (let pt of entry.points) {
             if (!callSites.hasOwnProperty(pt[2]))
-                callSites[pt[2]] = [];
+            callSites[pt[2]] = [];
             callSites[pt[2]].push(pt);
         }
         let callSiteNames = Object.keys(callSites);
         callSiteNames.sort();
-
+        
         // update the output column
         document.getElementById("suboutput-col").innerHTML = "Avg " + Profile.selected.output;
-
+        
         // update the header
         for (let elt of document.querySelectorAll(".selected-function")) {
             elt.innerHTML = escapeHtml(entry.name.split(" ")[0]);
         }
-
+        
         // remove existing rows
         for (let node of document.querySelectorAll("table#subprofile tbody tr")) {
             node.parentNode.removeChild(node);
         }
         let tbody = document.querySelectorAll("table#subprofile tbody")[0] as HTMLElement;
-
+        
         // render row for each callsite
         for (let callSite of callSiteNames) {
             let row = document.createElement("tr");
@@ -248,7 +291,7 @@ namespace profile {
             // fit the data
             let reg = findBestFit(pts);
             let sum = pts.map((v) => v[1]).reduce((a, b) => a + b, 0);
-
+            
             // 1. call site name
             makeCell(callSite, row);
             // 2. fit
@@ -259,24 +302,24 @@ namespace profile {
             makeCell(pts.length, row);
             // 5. avg output
             makeCell((sum / pts.length).toFixed(2), row);
-
+            
             tbody.insertAdjacentElement('beforeend', row);
         }
     }
-
+    
     function findImportantEntries() {
         // aggregate all fcalls by callsite
         let callSites = {};
-        for (let func of Data.functions) {
+        for (let func of Profile.functions) {
             if (!callSites.hasOwnProperty(func.name))
-                callSites[func.name] = {};
+            callSites[func.name] = {};
             for (let fcall of func["calls"]) {
                 if (!callSites[func.name].hasOwnProperty(fcall.location))
-                    callSites[func.name][fcall.location] = [];
+                callSites[func.name][fcall.location] = [];
                 callSites[func.name][fcall.location].push(fcall);
             }
         }
-
+        
         let mergeCounts = [];
         let heapSizes = [];
         for (let func in callSites) {
@@ -288,7 +331,7 @@ namespace profile {
                         myMergeCounts.push(fcall.metrics["merge-count (excl.)"]);
                     }
                     if (fcall.inputs.hasOwnProperty("heap-size")
-                        && fcall.outputs.hasOwnProperty("heap-size")) {
+                    && fcall.outputs.hasOwnProperty("heap-size")) {
                         ioHeapSizes.push([fcall.inputs["heap-size"], fcall.outputs["heap-size"]]);
                     }
                 }
@@ -309,9 +352,9 @@ namespace profile {
                 heapSizes.push({ func: func, loc: loc, ratio: myMax });
             }
         }
-
+        
         let highlights = [];
-
+        
         if (heapSizes.length > 0) {
             heapSizes.sort((a, b) => a.ratio < b.ratio ? 1 : (a.ratio > b.ratio ? -1 : 0));
             let top5pct = Math.min(Math.ceil(heapSizes.length / 20), 4);
@@ -332,7 +375,7 @@ namespace profile {
                 }
             }
         }
-
+        
         let tbody = document.querySelector("#important tbody");
         for (let hi of highlights) {
             let row = document.createElement("tr");
@@ -341,16 +384,16 @@ namespace profile {
             let body = "<code>" + escapeHtml(name) + "</code> (called at " + escapeHtml(hi.loc) + ")";
             let func = makeCell(body, row, false);
             func.title = hi.func.indexOf(" ") > -1 ?
-                hi.func.slice(hi.func.indexOf(" ") + 1) :
-                "<no source info>";
+            hi.func.slice(hi.func.indexOf(" ") + 1) :
+            "<no source info>";
             // 2. reason
             makeCell(hi.reason, row);
-
+            
             tbody.insertAdjacentElement("beforeend", row);
         }
         console.log("highlights", highlights);
     }
-
+    
     function selectEntry(entry) {
         Profile.selected.entry = entry;
         // highlight the selected row
@@ -363,18 +406,18 @@ namespace profile {
             renderSubTable(Profile.selected.input, Profile.selected.output, entry);
         }
     }
-
+    
     function renderGraph(input, output, entry) {
         let old_graph = document.getElementById("graph");
         let graph = document.createElement("div");
         graph.id = "graph";
-
+        
         // gather the data into a list of the form [{x: x, y: y}]
         let data = [];
         for (let pt of entry.points) {
             data.push({ "x": pt[0], "y": pt[1], "location": pt[2] });
         }
-
+        
         // render the vega spec
         let spec = {
             "data": {
@@ -408,16 +451,16 @@ namespace profile {
             }
         };
         vg.embed(graph, { mode: "vega-lite", spec: spec }, function (err, res) { });
-
+        
         // swap out the graph element
         old_graph.parentNode.replaceChild(graph, old_graph);
     }
-
+    
     function profileEntryClick(evt) {
         let row = this;
         selectEntry(row.entry);
     }
-
+    
 }
 
 document.addEventListener("DOMContentLoaded", profile.init);

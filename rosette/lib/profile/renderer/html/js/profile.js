@@ -5,6 +5,12 @@ var profile;
     var defaultOutput = "term-count";
     // global state
     profile.Profile = {
+        // populated by initData
+        inputs: [],
+        outputs: [],
+        metrics: [],
+        functions: [],
+        graph: null,
         entries: [],
         selected: {
             input: null,
@@ -13,6 +19,22 @@ var profile;
         },
         sorter: null
     };
+    // collate all unique entries in the profile data
+    function findUnique(key) {
+        var vals = [];
+        for (var _i = 0, _a = profile.Profile.functions; _i < _a.length; _i++) {
+            var func = _a[_i];
+            for (var _b = 0, _c = func["calls"]; _b < _c.length; _b++) {
+                var fcall = _c[_b];
+                for (var val in fcall[key]) {
+                    if (vals.indexOf(val) == -1) {
+                        vals.push(val);
+                    }
+                }
+            }
+        }
+        return vals;
+    }
     // update a select element to contain the given options, preserving the
     // currently selected option if possible
     function updateSelect(select, lst, defaultOption) {
@@ -56,10 +78,10 @@ var profile;
         document.title = "Profile: " + Data.metadata.name;
         // populate available inputs
         var input_select = document.getElementById("input");
-        updateSelect(input_select, Data.inputs, defaultInput);
+        updateSelect(input_select, profile.Profile.inputs, defaultInput);
         // populate available outputs
         var output_select = document.getElementById("output");
-        updateSelect(output_select, Data.outputs.concat(Data.metrics), defaultOutput);
+        updateSelect(output_select, profile.Profile.outputs.concat(profile.Profile.metrics), defaultOutput);
         // hook the input/output dropdowns to re-render the table
         input_select.addEventListener('change', renderTable);
         output_select.addEventListener('change', renderTable);
@@ -70,6 +92,26 @@ var profile;
         findImportantEntries();
     }
     profile.init = init;
+    function initData() {
+        profile.Profile.graph = eventsToGraph(Data["events"]);
+        // populate the "functions" aggregated list
+        var worklist = [profile.Profile.graph];
+        var functions = {};
+        while (worklist.length > 0) {
+            var node = worklist.pop();
+            var func = node["function"];
+            if (!functions.hasOwnProperty(func))
+                functions[func] = { "name": func, "calls": [] };
+            functions[func]["calls"].push(node);
+            if (node.hasOwnProperty("children"))
+                worklist.push.apply(worklist, node["children"]);
+        }
+        profile.Profile.functions = Object.keys(functions).map(function (k) { return functions[k]; });
+        // find inputs, outputs, metrics
+        profile.Profile.inputs = findUnique("inputs");
+        profile.Profile.outputs = findUnique("outputs");
+        profile.Profile.metrics = findUnique("metrics");
+    }
     function getSelectedOption(elt) {
         return elt.options[elt.selectedIndex].value;
     }
@@ -110,7 +152,7 @@ var profile;
     }
     function generateProfile(input, output) {
         var entries = [];
-        for (var _i = 0, _a = Data.functions; _i < _a.length; _i++) {
+        for (var _i = 0, _a = profile.Profile.functions; _i < _a.length; _i++) {
             var func = _a[_i];
             var pts = selectProfilePoints(func.calls, input, output);
             var reg = findBestFit(pts);
@@ -247,7 +289,7 @@ var profile;
     function findImportantEntries() {
         // aggregate all fcalls by callsite
         var callSites = {};
-        for (var _i = 0, _a = Data.functions; _i < _a.length; _i++) {
+        for (var _i = 0, _a = profile.Profile.functions; _i < _a.length; _i++) {
             var func = _a[_i];
             if (!callSites.hasOwnProperty(func.name))
                 callSites[func.name] = {};
