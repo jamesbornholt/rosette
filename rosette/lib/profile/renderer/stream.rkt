@@ -28,9 +28,12 @@
   #:transparent
   #:methods gen:renderer
   [(define (start-renderer self profile reporter)
+     (define ch (make-channel))
      (set-stream-renderer-thd!
       self
-      (streaming-data-thread self profile reporter)))
+      (streaming-data-thread self ch profile reporter))
+     (unless (eq? 'connected (channel-get ch))
+       (error 'stream-renderer "failed to connect")))
    (define (done-running self)
      (match-define (stream-renderer _ _ _ _ done-running? _) self)
      (set-box! done-running? #true))
@@ -52,9 +55,11 @@
 (struct stream-renderer-options (threshold interval symlink?) #:transparent)
 
 
+;; streaming-data-thread :
+;; StreamRenderer (Channelof Any) ProfileState Reporter -> Thread
 ; The streaming data thread reads data from the profile-state, and sends that
 ; data to registered client threads.
-(define (streaming-data-thread renderer profile reporter)
+(define (streaming-data-thread renderer channel profile reporter)
   (thread
    (thunk
     (match-define (stream-renderer _ _ opts _ _ _) renderer)
@@ -62,7 +67,7 @@
     
     (define server-shutdown!
       (ws-serve #:port 8081
-                (make-streaming-client (current-thread) renderer profile reporter)))
+                (make-streaming-client (current-thread) channel renderer profile reporter)))
 
     (create-profile-directory renderer)
 
@@ -86,12 +91,15 @@
          (server-shutdown!)])))))
 
 
+;; make-streaming-client :
+;; Thread (Channelof Any) StreamRenderer ProfileState Reporter
+;; -> [WSConn Request -> Void]
 ; Create a procedure which can be invoked by the WebSocket server to start
 ; feeding data to a new client.
 ; Only one client can be connected at a time. If a second client connects, the
 ; initial message received from the parent thread will not be 'go, and the
 ; client will disconnect immediately.
-(define (make-streaming-client parent renderer profile reporter)
+(define (make-streaming-client parent channel renderer profile reporter)
   (match-define (stream-renderer _ _ opts infeas-pc-info-box done-running? _)
     renderer)
   (match-define (stream-renderer-options threshold interval _) opts)
@@ -100,6 +108,7 @@
     ; register with the streaming data thread
     (printf "Streaming client connected.\n")
     (thread-send parent (current-thread))
+    (channel-put channel 'connected)
     (define res (thread-receive))
     (when (eq? res 'go)
       (let loop ()
