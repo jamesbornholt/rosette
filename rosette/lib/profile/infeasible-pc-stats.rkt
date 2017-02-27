@@ -113,7 +113,7 @@
 ;; A PCStackFrame is one of:
 ;;  - (pc-stack-frame/infeasible Number)
 ;;  - (pc-stack-frame/infeasible-deep)
-;;  - (pc-stack-frame/feasible SymBool)
+;;  - (pc-stack-frame/feasible)
 (struct pc-stack-frame/infeasible [start-time] #:transparent)
 (struct pc-stack-frame/infeasible-deep [] #:transparent)
 (struct pc-stack-frame/feasible [] #:transparent)
