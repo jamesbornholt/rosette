@@ -32,6 +32,7 @@ var timeline;
     timeline_1.init = init;
     function update(events) {
         var oldPoints = timeline_1.Timeline.points.length;
+        var oldRegions = timeline_1.Timeline.highlightRegions.length;
         computeTimelineData(events);
         if (timeline_1.Timeline.points.length - oldPoints > 0) {
             var newPoints = timeline_1.Timeline.points.slice(oldPoints);
@@ -49,8 +50,12 @@ var timeline;
                 }
                 return true;
             });
-            timeline_1.Timeline.vega.update();
         }
+        if (timeline_1.Timeline.highlightRegions.length - oldRegions > 0) {
+            var newRegions = timeline_1.Timeline.highlightRegions.slice(oldRegions);
+            timeline_1.Timeline.vega.data("highlight").insert(newRegions);
+        }
+        timeline_1.Timeline.vega.update();
         renderFlameGraph();
     }
     timeline_1.update = update;

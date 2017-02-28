@@ -46,6 +46,7 @@ namespace timeline {
 
     export function update(events) {
         let oldPoints = Timeline.points.length;
+        let oldRegions = Timeline.highlightRegions.length;
         computeTimelineData(events);
         if (Timeline.points.length - oldPoints > 0) {
             let newPoints = Timeline.points.slice(oldPoints);
@@ -63,8 +64,12 @@ namespace timeline {
                 }
                 return true;
             });
-            Timeline.vega.update();
         }
+        if (Timeline.highlightRegions.length - oldRegions > 0) {
+            let newRegions = Timeline.highlightRegions.slice(oldRegions);
+            Timeline.vega.data("highlight").insert(newRegions);
+        }
+        Timeline.vega.update();
         renderFlameGraph();
     }
 
