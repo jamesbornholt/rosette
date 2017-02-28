@@ -110,15 +110,16 @@
 ;; ----------------------------------------------------------------------------
 
 ;; a PCStack is one of:
-;;  - #false
-;;  - (pc-stack-infeasible Number Nat)
-;; Where #false represents a feasible stack, and
-;; (pc-stack-infeasible start-time depth) reprosents an
+;;  - (pc-stack-feasible (Listof SymBool))
+;;  - (pc-stack-infeasible (Listof SymBool) Number Nat)
+;; Where (pc-stack-feasible feas-pcs) represents a feasible stack, and
+;; (pc-stack-infeasible feas-pcs start-time depth) represents an
 ;; infeasible stack beginning at time `start-time` that
 ;; has gone `depth` levels deeper into infeasible pcs.
 ;; A depth of zero signifies that this stack is at the
 ;; level where popping will result in a feasible stack.
-(struct pc-stack-infeasible [start-time depth] #:transparent)
+(struct pc-stack-feasible [feas-pcs] #:transparent)
+(struct pc-stack-infeasible [feas-pcs start-time depth] #:transparent)
 
 ;; type InfeasiblePCInfo = (Listof InfeasiblePCTime)
 ;; A InfeasiblePCTime is a (infeasible-pc-time Number Number)
@@ -135,7 +136,7 @@
 ;; (Listof PCEvent) InfeasiblePCCallback -> InfeasiblePCInfo
 (define (compute-infeasible-pc-stats events cb)
   (define gen (make-solver-gen))
-  (compute-infeasible-pc-stats/acc events cb gen #false '()))
+  (compute-infeasible-pc-stats/acc events cb gen (pc-stack-feasible '()) '()))
 
 ;; compute-infeasible-pc-stats/acc :
 ;; (Listof PCEvent) InfeasiblePCCallback SolverGen PCStack InfeasiblePCInfo -> InfeasiblePCInfo
@@ -149,36 +150,43 @@
      (match e
        [(pc-push-event pc metrics)
         (match stack
-          [#false
+          [(pc-stack-feasible feas-pcs)
+           (define new-gen
+             (cond [(empty? feas-pcs)
+                    (gen-shutdown gen)
+                    (printf "shutting down old generator and creating a new one\n")
+                    (make-solver-gen)]
+                   [else
+                    gen]))
            ;; The stack is feasible.
            ;; This pushes another formula and checks the resulting solution
            (cond
-             [(pc-infeasible? gen pc)
+             [(pc-infeasible? new-gen pc)
               (compute-infeasible-pc-stats/acc
                es
                cb
-               gen
-               (pc-stack-infeasible (metrics-time metrics) 0)
+               new-gen
+               (pc-stack-infeasible feas-pcs (metrics-time metrics) 0)
                acc)]
              [else
               (compute-infeasible-pc-stats/acc
                es
                cb
-               gen
-               #false ; the new stack is still feasible
+               new-gen
+               (pc-stack-feasible (cons pc feas-pcs)) ; the new stack is still feasible
                acc)])]
-          [(pc-stack-infeasible start-time depth)
+          [(pc-stack-infeasible feas-pcs start-time depth)
            ;; if the stack is already infeasible,
            ;; shouldn't need to push another formula
            (compute-infeasible-pc-stats/acc
             es
             cb
             gen
-            (pc-stack-infeasible start-time (add1 depth))
+            (pc-stack-infeasible feas-pcs start-time (add1 depth))
             acc)])]
        [(pc-pop-event metrics)
         (match stack
-          [#false
+          [(pc-stack-feasible feas-pcs)
            ;; the stack is feasible
            ;; pop the last constraint from the solver stack
            (gen-pop gen)
@@ -186,9 +194,9 @@
             es
             cb
             gen
-            #false
+            (pc-stack-feasible (rest feas-pcs))
             acc)]
-          [(pc-stack-infeasible start-time depth)
+          [(pc-stack-infeasible feas-pcs start-time depth)
            (cond
              [(zero? depth)
               ;; the stack is shallowly infeasible, so this pop event will
@@ -201,7 +209,7 @@
                es
                cb
                gen
-               #false ; after this pop, the stack is feasible again
+               (pc-stack-feasible feas-pcs) ; after this pop, the stack is feasible again
                (cons ipt acc))]
              [else
               ;; the stack is deeply infeasible, so this pop event will
@@ -211,7 +219,7 @@
                es
                cb
                gen
-               (pc-stack-infeasible start-time (sub1 depth))
+               (pc-stack-infeasible feas-pcs start-time (sub1 depth))
                acc)])])])]))
 
 ;; pc-infeasible? : SolverGen SymBool -> ConcreteBool

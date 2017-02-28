@@ -2,6 +2,8 @@
 
 (require rosette/lib/angelic)
 
+;(current-bitwidth #false)
+
 
 ;; A tree is represented as nested lists, with accessor functions defined below:
 (define node-parent-child car)    ; The name of this child node with respect to
