@@ -26,10 +26,10 @@ function dataOnload(initCb, updateCb) {
                     Data.infeasiblePCInfo.push(ipt);
                 }
                 if (init) {
-                    updateCb(data.events);
+                    updateCb(data.events, data.infeasiblePCInfo);
                 }
                 else {
-                    initCb(data.events);
+                    initCb(data.events, data.infeasiblePCInfo);
                     init = true;
                 }
             };
@@ -37,7 +37,7 @@ function dataOnload(initCb, updateCb) {
         else {
             var scr = document.createElement("script");
             scr.onload = function () {
-                initCb(Data.events);
+                initCb(Data.events, Data.infeasiblePCInfo);
             };
             scr.src = "data.json";
             document.head.appendChild(scr);

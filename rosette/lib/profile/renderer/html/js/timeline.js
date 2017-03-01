@@ -14,7 +14,8 @@ var timeline;
         resizing: false,
         flameGraph: null
     };
-    function init(events) {
+    // ipts stands for infeasible pc times
+    function init(events, ipts) {
         // update the profile source info
         document.getElementById("name").innerHTML = "Timeline: " + escapeHtml(Data.metadata.name);
         document.getElementById("source").innerHTML = escapeHtml(Data.metadata.source);
@@ -23,6 +24,7 @@ var timeline;
         document.title = "Timeline: " + Data.metadata.name;
         // Prepare data for the timeline and flame graph
         computeTimelineData(events);
+        computeHighlightRegions(ipts);
         // Render the flame graph
         renderFlameGraph();
         // Render the timeline
@@ -30,10 +32,12 @@ var timeline;
         window.addEventListener("resize", windowResizeCallback);
     }
     timeline_1.init = init;
-    function update(events) {
+    // ipts stands for infeasible pc times
+    function update(events, ipts) {
         var oldPoints = timeline_1.Timeline.points.length;
         var oldRegions = timeline_1.Timeline.highlightRegions.length;
         computeTimelineData(events);
+        computeHighlightRegions(ipts);
         if (timeline_1.Timeline.points.length - oldPoints > 0) {
             var newPoints = timeline_1.Timeline.points.slice(oldPoints);
             timeline_1.Timeline.vega.data("points").insert(newPoints);
@@ -77,11 +81,9 @@ var timeline;
         // build up three things by walking the list of events:
         //  * a list of points on the graph (in Timeline.points)
         //  * a list of breakpoints for scrubbing (Timeline.breaks)
-        //  * a list of highlightRegion events (in Timeline.highlightRegions)
         //  * the callgraph (in Timeline.graph)
         var breaks = [];
         var points = [];
-        var highlightRegions = [];
         if (timeline_1.Timeline.graph.root == null) {
             timeline_1.Timeline.graph.root = {
                 "name": "root",
@@ -126,8 +128,31 @@ var timeline;
                 breaks.push([p["time"], graph, p]);
             }
         }
-        for (var _a = 0, _b = Data.infeasiblePCInfo; _a < _b.length; _a++) {
-            var ipt = _b[_a];
+        // insert fake finish times into un-closed graph nodes
+        var finish = events[events.length - 1]["metrics"]["time"] - timeline_1.Timeline.firstEvent["time"];
+        var curr = graph;
+        while (curr) {
+            curr["finish"] = finish;
+            curr["value"] = finish - curr["start"];
+            curr = curr.parentPtr;
+        }
+        timeline_1.Timeline.graph.last = graph;
+        for (var _a = 0; _a < points.length; _a++) {
+            var p = points[_a];
+            timeline_1.Timeline.points.push(p);
+        }
+        for (var _b = 0; _b < breaks.length; _b++) {
+            var b = breaks[_b];
+            timeline_1.Timeline.breaks.push(b);
+        }
+    }
+    // ipts stands for infeasible pc times
+    function computeHighlightRegions(ipts) {
+        if (ipts.length == 0)
+            return;
+        var highlightRegions = [];
+        for (var _i = 0; _i < ipts.length; _i++) {
+            var ipt = ipts[_i];
             highlightRegions.push({
                 "time": ipt.start - timeline_1.Timeline.firstEvent["time"],
                 "value": 1,
@@ -139,25 +164,8 @@ var timeline;
                 "type": "infeasible pc" // category of highlight
             });
         }
-        // insert fake finish times into un-closed graph nodes
-        var finish = events[events.length - 1]["metrics"]["time"] - timeline_1.Timeline.firstEvent["time"];
-        var curr = graph;
-        while (curr) {
-            curr["finish"] = finish;
-            curr["value"] = finish - curr["start"];
-            curr = curr.parentPtr;
-        }
-        timeline_1.Timeline.graph.last = graph;
-        for (var _c = 0; _c < points.length; _c++) {
-            var p = points[_c];
-            timeline_1.Timeline.points.push(p);
-        }
-        for (var _d = 0; _d < breaks.length; _d++) {
-            var b = breaks[_d];
-            timeline_1.Timeline.breaks.push(b);
-        }
-        for (var _e = 0; _e < highlightRegions.length; _e++) {
-            var h = highlightRegions[_e];
+        for (var _a = 0; _a < highlightRegions.length; _a++) {
+            var h = highlightRegions[_a];
             timeline_1.Timeline.highlightRegions.push(h);
         }
     }

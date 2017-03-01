@@ -21,16 +21,16 @@ function dataOnload(initCb, updateCb) {
                 for (let e of data.events) Data.events.push(e);
                 for (let ipt of data.infeasiblePCInfo) Data.infeasiblePCInfo.push(ipt);
                 if (init) {
-                    updateCb(data.events);
+                    updateCb(data.events, data.infeasiblePCInfo);
                 } else {
-                    initCb(data.events);
+                    initCb(data.events, data.infeasiblePCInfo);
                     init = true;
                 }
             }
         } else {
             let scr = document.createElement("script");
             scr.onload = () => {
-                initCb(Data.events);
+                initCb(Data.events, Data.infeasiblePCInfo);
             }
             scr.src = "data.json";
             document.head.appendChild(scr);

@@ -24,7 +24,8 @@ namespace timeline {
         flameGraph: null
     }
 
-    export function init(events) {
+    // ipts stands for infeasible pc times
+    export function init(events, ipts) {
         // update the profile source info
         document.getElementById("name").innerHTML = "Timeline: " + escapeHtml(Data.metadata.name);
         document.getElementById("source").innerHTML = escapeHtml(Data.metadata.source);
@@ -34,6 +35,7 @@ namespace timeline {
 
         // Prepare data for the timeline and flame graph
         computeTimelineData(events);
+        computeHighlightRegions(ipts);
 
         // Render the flame graph
         renderFlameGraph();
@@ -44,10 +46,12 @@ namespace timeline {
         window.addEventListener("resize", windowResizeCallback);
     }
 
-    export function update(events) {
+    // ipts stands for infeasible pc times
+    export function update(events, ipts) {
         let oldPoints = Timeline.points.length;
         let oldRegions = Timeline.highlightRegions.length;
         computeTimelineData(events);
+        computeHighlightRegions(ipts);
         if (Timeline.points.length - oldPoints > 0) {
             let newPoints = Timeline.points.slice(oldPoints);
             Timeline.vega.data("points").insert(newPoints);
@@ -91,11 +95,9 @@ namespace timeline {
         // build up three things by walking the list of events:
         //  * a list of points on the graph (in Timeline.points)
         //  * a list of breakpoints for scrubbing (Timeline.breaks)
-        //  * a list of highlightRegion events (in Timeline.highlightRegions)
         //  * the callgraph (in Timeline.graph)
         let breaks = [];
         let points = [];
-        let highlightRegions = [];
         if (Timeline.graph.root == null) {
             Timeline.graph.root = {
                 "name": "root",
@@ -138,19 +140,6 @@ namespace timeline {
             }
         }
 
-        for (let ipt of Data.infeasiblePCInfo) {
-            highlightRegions.push({
-                "time": ipt.start - Timeline.firstEvent["time"],
-                "value": 1, // 1 means "start highlight"
-                "type": "infeasible pc" // category of highlight
-            });
-            highlightRegions.push({
-                "time": ipt.end - Timeline.firstEvent["time"],
-                "value": 0, // 0 means "end highlight"
-                "type": "infeasible pc" // category of highlight
-            });
-        }
-
         // insert fake finish times into un-closed graph nodes
         let finish = events[events.length-1]["metrics"]["time"] - Timeline.firstEvent["time"];
         let curr = graph;
@@ -163,6 +152,26 @@ namespace timeline {
         Timeline.graph.last = graph;
         for (let p of points) Timeline.points.push(p);
         for (let b of breaks) Timeline.breaks.push(b);
+    }
+
+    // ipts stands for infeasible pc times
+    function computeHighlightRegions(ipts) {
+        if (ipts.length == 0) return;
+
+        let highlightRegions = [];
+        for (let ipt of ipts) {
+            highlightRegions.push({
+                "time": ipt.start - Timeline.firstEvent["time"],
+                "value": 1, // 1 means "start highlight"
+                "type": "infeasible pc" // category of highlight
+            });
+            highlightRegions.push({
+                "time": ipt.end - Timeline.firstEvent["time"],
+                "value": 0, // 0 means "end highlight"
+                "type": "infeasible pc" // category of highlight
+            });
+        }
+
         for (let h of highlightRegions) Timeline.highlightRegions.push(h);
     }
 
