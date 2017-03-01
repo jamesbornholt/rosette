@@ -160,14 +160,6 @@
                     ;(printf "generator restart: ~v\n" generator-restart)
                     ;(set! generator-restart (add1 generator-restart))
                     (make-solver-gen)]
-                   [(zero? (random 1000)) ; randomly 0.1% of the time
-                    (gen-shutdown gen)
-                    ;(printf "random restart:    ~v\n" generator-restart)
-                    ;(set! generator-restart (add1 generator-restart))
-                    (define new-gen (make-solver-gen))
-                    (for ([pc (in-list (reverse feas-pcs))])
-                      (gen-push new-gen pc))
-                    new-gen]
                    [else
                     gen]))
            ;; The stack is feasible.
