@@ -23,10 +23,8 @@
        (inc! self 'union-count 1)
        (inc! self 'union-size union-size)]
       [(list 'push-pc new-pc)
-       (inc! self 'pc 1)
        (pc-push! new-pc (get-current-metrics #:reporter self))]
       [(list 'pop-pc)
-       (dec! self 'pc 1)
        (pc-pop! (get-current-metrics #:reporter self))]
       [_ void])))
 
@@ -39,7 +37,7 @@
 
 
 ; The metrics we use in profiles
-(struct metrics (term-count merge-count union-count union-size pc-size cpu real gc time)
+(struct metrics (term-count merge-count union-count union-size cpu real gc time)
   #:transparent)
 
 (define (get-current-metrics [cpu 0] [real 0] [gc 0] #:reporter [reporter (current-reporter)])
@@ -48,5 +46,4 @@
              (hash-ref mets 'merge-count)
              (hash-ref mets 'union-count)
              (hash-ref mets 'union-size)
-             (hash-ref mets 'pc)
              cpu real gc (current-inexact-milliseconds))))
