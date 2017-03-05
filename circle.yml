@@ -1,19 +1,15 @@
 machine:
   environment:
     RACKET_DIR: "$HOME/racket"
-    RACKET_URL: "https://mirror.racket-lang.org/installers/6.6/racket-6.6-x86_64-linux.sh"
+    RACKET_VERSION: "6.8"
     PATH: "${RACKET_DIR}/bin:$PATH"
 
 dependencies:
   override:
-    - if [[ ! -e "$RACKET_DIR/bin/racket" ]]; then
-        rm -rf $RACKET_DIR;
-        curl -s -L -o racket.sh $RACKET_URL;
-        sh ./racket.sh --in-place --dest $RACKET_DIR;
-      else echo "using racket from cache"; fi
-    - raco pkg install --auto
-  cache_directories:
-    - "~/racket"
+    - git clone https://github.com/greghendershott/travis-racket.git ~/travis-racket
+    - cat ~/travis-racket/install-racket.sh | bash
+    - raco pkg install --no-setup --auto
+    - raco setup -Dl rosette
 
 test:
   override:
