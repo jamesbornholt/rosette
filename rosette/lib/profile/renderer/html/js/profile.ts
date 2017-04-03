@@ -39,16 +39,30 @@ namespace profile {
     
     function initData() {
         Profile.graph = eventsToGraph(Data["events"]);
-        // walk the graph and build inclusive, exclusive metrics
+        // walk the graph and build inclusive metrics
         let worklist = [Profile.graph];
         let columns = {};
         while (worklist.length > 0) {
             let node = worklist.pop();
-            Profile.calls.push(node);
-            for (let m in node["metrics"]) {
-                columns[m] = true;
+            node["delta"] = {};
+            for (let m in node["finish"]) {
+                if (node["start"].hasOwnProperty(m)) {
+                    node["delta"][m] = node["finish"][m] - node["start"][m];
+                    columns[m] = true;
+                }
             }
+            Profile.calls.push(node);
             worklist.push(...node["children"].reverse());  // traverse depth-first in start-time order
+        }
+        Profile.columns = Object.keys(columns).sort();
+        // walk the graph and build exclusive metrics
+        for (let call of Profile.calls) {
+            for (let m of Profile.columns) {
+                let key = m + " (excl)";
+                let childSum = call["children"].reduce((a, x) => a + x["delta"][m], 0);
+                call["delta"][key] = call["delta"][m] - childSum;
+                columns[key] = true;
+            }
         }
         Profile.columns = Object.keys(columns).sort();
     }
@@ -76,7 +90,7 @@ namespace profile {
             makeCell(formatNum(node["start"]["time"] - minTime), tr);
             makeCell(formatNum(node["finish"]["time"] - minTime), tr);
             for (let m of Profile.columns) {
-                let val = node["metrics"].hasOwnProperty(m) ? node["metrics"][m] : 0;
+                let val = node["delta"].hasOwnProperty(m) ? node["delta"][m] : 0;
                 makeCell(formatNum(val), tr);
             }
             body.insertAdjacentElement("beforeend", tr);

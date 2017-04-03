@@ -27,16 +27,35 @@ var profile;
     profile.init = init;
     function initData() {
         profile.Profile.graph = eventsToGraph(Data["events"]);
-        // walk the graph and build inclusive, exclusive metrics
+        // walk the graph and build inclusive metrics
         var worklist = [profile.Profile.graph];
         var columns = {};
         while (worklist.length > 0) {
             var node = worklist.pop();
-            profile.Profile.calls.push(node);
-            for (var m in node["metrics"]) {
-                columns[m] = true;
+            node["delta"] = {};
+            for (var m in node["finish"]) {
+                if (node["start"].hasOwnProperty(m)) {
+                    node["delta"][m] = node["finish"][m] - node["start"][m];
+                    columns[m] = true;
+                }
             }
+            profile.Profile.calls.push(node);
             worklist.push.apply(worklist, node["children"].reverse()); // traverse depth-first in start-time order
+        }
+        profile.Profile.columns = Object.keys(columns).sort();
+        // walk the graph and build exclusive metrics
+        for (var _i = 0, _a = profile.Profile.calls; _i < _a.length; _i++) {
+            var call = _a[_i];
+            var _loop_1 = function (m) {
+                var key = m + " (excl)";
+                var childSum = call["children"].reduce(function (a, x) { return a + x["delta"][m]; }, 0);
+                call["delta"][key] = call["delta"][m] - childSum;
+                columns[key] = true;
+            };
+            for (var _b = 0, _c = profile.Profile.columns; _b < _c.length; _b++) {
+                var m = _c[_b];
+                _loop_1(m);
+            }
         }
         profile.Profile.columns = Object.keys(columns).sort();
     }
@@ -65,7 +84,7 @@ var profile;
             makeCell(formatNum(node["finish"]["time"] - minTime), tr);
             for (var _d = 0, _e = profile.Profile.columns; _d < _e.length; _d++) {
                 var m = _e[_d];
-                var val = node["metrics"].hasOwnProperty(m) ? node["metrics"][m] : 0;
+                var val = node["delta"].hasOwnProperty(m) ? node["delta"][m] : 0;
                 makeCell(formatNum(val), tr);
             }
             body.insertAdjacentElement("beforeend", tr);
