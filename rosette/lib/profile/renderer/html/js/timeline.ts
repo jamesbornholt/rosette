@@ -91,6 +91,27 @@ namespace timeline {
             }
             return ret;
         }
+        let computeDelta = (p1: Object, p2: Object) => {
+            let ret = {};
+            for (let k in p1) {
+                if (p2.hasOwnProperty(k)) {
+                    ret[k] = p2[k] - p1[k];
+                }
+            }
+            return ret;
+        }
+        let computeExcl = (children: Array<Object>, incl: Object) => {
+            let ret = {};
+            for (let k in incl) {
+                ret[k] = incl[k]
+            };
+            for (let c of children) {
+                for (let k in incl) {
+                    ret[k] -= c["incl"].hasOwnProperty(k) ? c["incl"][k] : 0;
+                }
+            }
+            return ret;
+        }
 
         // build up three things by walking the list of events:
         //  * a list of points on the graph (in Timeline.points)
@@ -130,6 +151,8 @@ namespace timeline {
                 graph["finish"] = p["time"];
                 graph["value"] = p["time"] - graph["start"];
                 graph["exit"] = p;
+                graph["incl"] = computeDelta(graph["enter"], graph["exit"]);
+                graph["excl"] = computeExcl(graph["children"], graph["incl"]);
                 points.push(p);
                 breaks.push([p["time"], graph, p]);
                 graph = graph.parentPtr;
@@ -472,15 +495,23 @@ namespace timeline {
     function renderFlameGraph() {
         let rootStart = Timeline.graph.root["start"];
         let rootFinish = Timeline.graph.root["finish"];
+        let rootTime = rootFinish - rootStart;
         let width = Timeline.flameGraph ? Timeline.flameGraph.size()[0] : 1200;
-        let minTime = (rootFinish - rootStart) / width;
+        let minTime = rootTime / width;
         let rec = (node) => {
             let children = node["children"].filter((n) => n["finish"]-n["start"] > minTime).map(rec);
+            let dt = node.hasOwnProperty("excl") ? node["excl"]["time"] : node["finish"] - node["start"];
+            let val = Math.pow(dt / rootTime, 0.25);
+            let r = 200 - Math.round(100 * val);
+            let g = 200 - Math.round(100 * val)
+            let b = 232;
+            let color = `rgb(${r}, ${g}, ${b})`;
             return {
                 "name": node["name"],
                 "start": node["start"],
                 "finish": node["finish"],
                 "value": node["value"],
+                "color": color,
                 "children": children
             };
         };

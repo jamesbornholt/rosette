@@ -136,11 +136,14 @@ d3.flameGraph = (selector, root, debug = false) ->
       @_cellHeight  = 20
       @_margin      = { top: 0, right: 0, bottom: 0, left: 0 }
       @_color       = (d) ->
-        val = hash(d.name)
-        r = 200 + Math.round(55 * val)
-        g = 0 + Math.round(230 * (1 - val))
-        b = 0 + Math.round(55 * (1 - val))
-        "rgb(#{r}, #{g}, #{b})"
+        if d.hasOwnProperty("color")
+          d['color']
+        else
+          val = hash(d.name)
+          r = 200 + Math.round(55 * val)
+          g = 0 + Math.round(230 * (1 - val))
+          b = 0 + Math.round(55 * (1 - val))
+          "rgb(#{r}, #{g}, #{b})"
       @_tooltipEnabled = true
       @_zoomEnabled = true
       @_tooltipPlugin = d3.tip() if @_tooltipEnabled and d3.tip

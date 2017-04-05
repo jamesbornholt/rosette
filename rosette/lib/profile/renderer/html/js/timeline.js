@@ -78,6 +78,29 @@ var timeline;
             }
             return ret;
         };
+        var computeDelta = function (p1, p2) {
+            var ret = {};
+            for (var k in p1) {
+                if (p2.hasOwnProperty(k)) {
+                    ret[k] = p2[k] - p1[k];
+                }
+            }
+            return ret;
+        };
+        var computeExcl = function (children, incl) {
+            var ret = {};
+            for (var k in incl) {
+                ret[k] = incl[k];
+            }
+            ;
+            for (var _i = 0, children_1 = children; _i < children_1.length; _i++) {
+                var c = children_1[_i];
+                for (var k in incl) {
+                    ret[k] -= c["incl"].hasOwnProperty(k) ? c["incl"][k] : 0;
+                }
+            }
+            return ret;
+        };
         // build up three things by walking the list of events:
         //  * a list of points on the graph (in Timeline.points)
         //  * a list of breakpoints for scrubbing (Timeline.breaks)
@@ -118,6 +141,8 @@ var timeline;
                 graph["finish"] = p["time"];
                 graph["value"] = p["time"] - graph["start"];
                 graph["exit"] = p;
+                graph["incl"] = computeDelta(graph["enter"], graph["exit"]);
+                graph["excl"] = computeExcl(graph["children"], graph["incl"]);
                 points.push(p);
                 breaks.push([p["time"], graph, p]);
                 graph = graph.parentPtr;
@@ -456,15 +481,23 @@ var timeline;
     function renderFlameGraph() {
         var rootStart = timeline_1.Timeline.graph.root["start"];
         var rootFinish = timeline_1.Timeline.graph.root["finish"];
+        var rootTime = rootFinish - rootStart;
         var width = timeline_1.Timeline.flameGraph ? timeline_1.Timeline.flameGraph.size()[0] : 1200;
-        var minTime = (rootFinish - rootStart) / width;
+        var minTime = rootTime / width;
         var rec = function (node) {
             var children = node["children"].filter(function (n) { return n["finish"] - n["start"] > minTime; }).map(rec);
+            var dt = node.hasOwnProperty("excl") ? node["excl"]["time"] : node["finish"] - node["start"];
+            var val = Math.pow(dt / rootTime, 0.25);
+            var r = 200 - Math.round(100 * val);
+            var g = 200 - Math.round(100 * val);
+            var b = 232;
+            var color = "rgb(" + r + ", " + g + ", " + b + ")";
             return {
                 "name": node["name"],
                 "start": node["start"],
                 "finish": node["finish"],
                 "value": node["value"],
+                "color": color,
                 "children": children
             };
         };
