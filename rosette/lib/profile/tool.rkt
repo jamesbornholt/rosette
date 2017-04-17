@@ -1,7 +1,7 @@
 #lang racket
 
-(require "record.rkt" "reporter.rkt"
-         "pc-event.rkt" "infeasible-pc-stats.rkt"
+(require "data.rkt" "record.rkt" "reporter.rkt"
+         "infeasible-pc-stats.rkt"
          (submod "infeasible-pc-stats.rkt" print-solving-stats)
          "renderer/renderer.rkt" "renderer/renderer-infeasible-pc.rkt"
          "renderer/html.rkt")
@@ -19,13 +19,11 @@
                              #:source [source-stx #f]
                              #:name [name "Profile"])
   (define profile (make-profile-state))
-  (define reporter (make-profiler-reporter))
+  (define reporter (make-profiler-reporter profile))
   (define renderer (renderer% source-stx name))
-  (define pc-events (make-pc-event-reporter))
   (start-renderer renderer profile reporter)
   (define-values (prof ret)
-    (parameterize ([current-pc-events pc-events])
-      (run-profile-thunk thunk profile reporter)))
+    (run-profile-thunk thunk profile reporter))
   (done-running renderer)
   (cond
     [(and (compute-infeasible-pcs?) (renderer/infeasible-pc? renderer))
@@ -35,7 +33,7 @@
       (parameterize ([record-solving-stats (new-solving-stats)])
         (begin0
           (time (compute-infeasible-pc-stats
-                 (get-pc-events pc-events)
+                 prof
                  (get-infeasible-pc-callback renderer)))
           (print-solving-stats))))]
     [else

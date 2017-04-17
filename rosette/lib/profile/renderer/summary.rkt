@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../record.rkt" "../graph.rkt" "../reporter.rkt"
+(require "../data.rkt" "../record.rkt" "../graph.rkt" "../reporter.rkt"
          "util/key.rkt" "renderer.rkt")
 (provide make-summary-renderer)
 

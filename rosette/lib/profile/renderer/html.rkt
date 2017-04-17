@@ -1,11 +1,11 @@
 #lang racket
 
-(require "../record.rkt" "../feature.rkt" "../graph.rkt" "../reporter.rkt"
+(require "../data.rkt" "../record.rkt" "../feature.rkt" "../graph.rkt" "../reporter.rkt"
          "../infeasible-pc-stats.rkt"
          "renderer.rkt" "renderer-infeasible-pc.rkt"
          "util/key.rkt" "util/srcloc.rkt"
          racket/date json racket/runtime-path racket/hash net/sendurl)
-(provide make-html-renderer filter-events render-event
+(provide make-html-renderer prune-short-events renderable-event? render-event
          render-infeasible-pc-time)
 
 ; Source of the HTML template
@@ -82,7 +82,7 @@
 ;; duration is longer than min% percent of the total execution time.
 ;; Any unmatched pairs (created when the event stream is incomplete) will be
 ;; passed through unmodified.
-(define (filter-events events [min% 0.001])
+(define (prune-short-events events [min% 0.001])
   ; determine the minimum time for an event to be included
   (define (event->time evt)
     (match evt
@@ -127,6 +127,8 @@
 
 
 ;; Render an event to a jsexpr? dictionary
+(define (renderable-event? event)
+  (not (profile-event-pc? event)))
 (define (render-event event [key procedure-name])
   (match event
     [(profile-event-enter loc proc in met)
@@ -185,9 +187,11 @@
   (write-json metadata out)
   (fprintf out ";\n")
   (define events (reverse (unbox (profile-state-events state))))
-  (define filtered-events (filter-events events (html-renderer-options-threshold opts)))
+  (define the-events
+    (prune-short-events (filter renderable-event? events)
+                        (html-renderer-options-threshold opts)))
   (fprintf out "Data.events = ")
-  (write-json (map render-event filtered-events) out)
+  (write-json (map render-event the-events) out)
   (fprintf out ";\n")
 
   (fprintf out "Data.infeasiblePCInfo = ")

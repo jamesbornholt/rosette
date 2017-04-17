@@ -1,10 +1,10 @@
 #lang racket
 
-(require "../record.rkt" "../reporter.rkt"
+(require "../data.rkt" "../record.rkt" "../reporter.rkt"
          "renderer.rkt" "renderer-infeasible-pc.rkt"
          "util/key.rkt" "util/srcloc.rkt"
          (only-in "html.rkt"
-                  filter-events render-event
+                  prune-short-events renderable-event? render-event
                   render-infeasible-pc-time)
          net/rfc6455 net/sendurl
          racket/date json racket/runtime-path racket/hash)
@@ -125,7 +125,9 @@
           (reverse
            (unbox/replace! infeas-pc-info-box '())))
         (define filtered-events
-          (if (null? events) events (filter-events events threshold)))
+          (if (null? events) 
+              events 
+              (prune-short-events (filter renderable-event? events) threshold)))
         (define msg
           (jsexpr->bytes
            (hash 'events (map render-event filtered-events)

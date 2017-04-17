@@ -1,7 +1,7 @@
 #lang racket
 
 (require racket/hash racket/struct
-         "record.rkt" "reporter.rkt")
+         "data.rkt" "record.rkt" "reporter.rkt")
 (provide (except-out (all-defined-out) diff-metrics))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -56,7 +56,8 @@
        (set-profile-data-outputs! data out)
        (set-profile-data-finish!  data met)
        (set-profile-node-children! node (reverse (profile-node-children node)))
-       (set! node (profile-node-parent node))]))
+       (set! node (profile-node-parent node))]
+      [_ void]))
   node)
 
 

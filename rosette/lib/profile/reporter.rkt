@@ -1,16 +1,17 @@
 #lang racket
 
-(require rosette/base/core/reporter racket/hash "pc-event.rkt")
+(require rosette/base/core/reporter "data.rkt" "util.rkt")
 (provide (struct-out profiler-reporter) (struct-out metrics) make-profiler-reporter get-current-metrics)
 
 ; The profiler reporter keeps a cumulative count of several metrics, and reports
 ; them when requested to insert into a profile node.
-(define (make-profiler-reporter)
+(define (make-profiler-reporter profile)
   (profiler-reporter
+   profile
    (make-hash
     (map (curryr cons 0) '(term-count merge-count union-count union-size pc)))))
 
-(struct profiler-reporter (metrics)
+(struct profiler-reporter (profile metrics)
   #:transparent
   #:property prop:procedure
   (lambda (self . rest)
@@ -23,9 +24,13 @@
        (inc! self 'union-count 1)
        (inc! self 'union-size union-size)]
       [(list 'push-pc new-pc)
-       (pc-push! new-pc (get-current-metrics #:reporter self))]
+       (let* ([b (profile-state-events (profiler-reporter-profile self))]
+              [new (profile-event-pc-push new-pc (get-current-metrics #:reporter self))])
+         (cons-box-atomic! b new))]
       [(list 'pop-pc)
-       (pc-pop! (get-current-metrics #:reporter self))]
+       (let* ([b (profile-state-events (profiler-reporter-profile self))]
+              [new (profile-event-pc-pop (get-current-metrics #:reporter self))])
+         (cons-box-atomic! b new))]
       [_ void])))
 
 (define-syntax-rule (inc! reporter key val)

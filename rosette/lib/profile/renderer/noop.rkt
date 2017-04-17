@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../record.rkt" "renderer.rkt")
+(require "../data.rkt" "../record.rkt" "renderer.rkt")
 (provide make-noop-renderer)
 
 ; The noop renderer does nothing!

@@ -1,7 +1,7 @@
 #lang racket
 
 (require rosette/base/core/reporter racket/hash
-         "feature.rkt" "reporter.rkt")
+         "data.rkt" "feature.rkt" "reporter.rkt")
 (provide (all-defined-out))
 
 
@@ -19,30 +19,13 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Profiler data structures
-
-;; A profile consists of a mutable box events, which contains a list of
-;; profile-event? records.
-(struct profile-state (events))
-
-(struct profile-event ())
-(struct profile-event-enter (location procedure inputs metrics))
-(struct profile-event-exit  (outputs metrics))
-(struct profile-event-sample (metrics))
-
-;; Returns a new profile
-(define (make-profile-state)
-  (profile-state (box '())))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Profiler run-time state
 
 ;; A parameter that holds the current profile / call stack.
 (define current-profile (make-parameter (make-profile-state)))
 
 ;; A default reporter
-(current-reporter (make-profiler-reporter))
+(current-reporter (make-profiler-reporter (current-profile)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

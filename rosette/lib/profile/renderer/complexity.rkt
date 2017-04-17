@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../record.rkt" "../feature.rkt" "../graph.rkt" "../reporter.rkt"
+(require "../data.rkt" "../record.rkt" "../feature.rkt" "../graph.rkt" "../reporter.rkt"
          "renderer.rkt" 
          "util/stats.rkt" "util/key.rkt")
 (provide make-complexity-renderer)

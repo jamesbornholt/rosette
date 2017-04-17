@@ -9,7 +9,7 @@
          (only-in rosette/base/form/control @and)
          (only-in rosette/solver/solution unsat unsat?)
          (only-in rosette/query/form solve solve+)
-         "pc-event.rkt"
+         "data.rkt"
          "reporter.rkt")
 
 ;; ------------------------------------------------------------------------
@@ -137,8 +137,9 @@
 
 ;; compute-infeasible-pc-stats :
 ;; (Listof PCEvent) InfeasiblePCCallback -> InfeasiblePCInfo
-(define (compute-infeasible-pc-stats events cb)
+(define (compute-infeasible-pc-stats prof cb)
   (define gen (make-solver-gen))
+  (define events (reverse (unbox (profile-state-events prof))))
   (compute-infeasible-pc-stats/acc events cb gen (pc-stack-feasible '()) '()))
 
 ;; compute-infeasible-pc-stats/acc :
@@ -151,7 +152,7 @@
      (reverse acc)]
     [(cons e es)
      (match e
-       [(pc-push-event pc metrics)
+       [(profile-event-pc-push pc metrics)
         (match stack
           [(pc-stack-feasible feas-pcs)
            (define new-gen
@@ -188,7 +189,7 @@
             gen
             (pc-stack-infeasible feas-pcs start-time (add1 depth))
             acc)])]
-       [(pc-pop-event metrics)
+       [(profile-event-pc-pop metrics)
         (match stack
           [(pc-stack-feasible feas-pcs)
            ;; the stack is feasible
@@ -224,7 +225,8 @@
                cb
                gen
                (pc-stack-infeasible feas-pcs start-time (sub1 depth))
-               acc)])])])]))
+               acc)])])]
+       [_ (compute-infeasible-pc-stats/acc es cb gen stack acc)])]))
 
 ;; pc-infeasible? : SolverGen SymBool -> ConcreteBool
 (define (pc-infeasible? gen pc)
