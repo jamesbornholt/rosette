@@ -17,6 +17,9 @@
 (struct profile-event-pc       profile-event     ())
 (struct profile-event-pc-push  profile-event-pc  (pc metrics))
 (struct profile-event-pc-pop   profile-event-pc  (metrics))
+(struct profile-event-solve    profile-event     (metrics))
+(struct profile-event-solve-start  profile-event-solve ())
+(struct profile-event-solve-finish profile-event-solve ())
 
 ;; Returns a new profile
 (define (make-profile-state)

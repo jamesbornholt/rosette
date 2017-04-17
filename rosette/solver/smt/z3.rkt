@@ -8,7 +8,8 @@
          (only-in "../../base/core/term.rkt" term term? term-type)
          (only-in "../../base/core/bool.rkt" @boolean?)
          (only-in "../../base/core/bitvector.rkt" bitvector? bv?)
-         (only-in "../../base/core/real.rkt" @integer? @real?))
+         (only-in "../../base/core/real.rkt" @integer? @real?)
+         "../../base/core/reporter.rkt")
 
 (provide (rename-out [make-z3 z3]) z3?)
 
@@ -81,13 +82,16 @@
    (define (solver-check self)
      (match-define (z3 server (app unique asserts) (app unique mins) (app unique maxs) env _) self)
      (cond [(ormap false? asserts) (unsat)]
-           [else (server-write
+           [else ((current-reporter) 'solve-start)
+                 (server-write
                   server
                   (begin (encode env asserts mins maxs)
                          (check-sat)
                          (get-model)))
                  (solver-clear-stacks! self)
-                 (server-read server (decode env))]))
+                 (begin0
+                   (server-read server (decode env))
+                   ((current-reporter) 'solve-finish))]))
    
    (define (solver-debug self)
      (match-define (z3 server (app unique asserts) _ _ _ _) self)

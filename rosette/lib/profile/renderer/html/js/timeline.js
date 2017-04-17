@@ -24,7 +24,7 @@ var timeline;
         document.title = "Timeline: " + Data.metadata.name;
         // Prepare data for the timeline and flame graph
         computeTimelineData(events);
-        computeHighlightRegions(ipts);
+        computeHighlightRegions(events, ipts);
         // Render the flame graph
         renderFlameGraph();
         // Render the timeline
@@ -37,7 +37,7 @@ var timeline;
         var oldPoints = timeline_1.Timeline.points.length;
         var oldRegions = timeline_1.Timeline.highlightRegions.length;
         computeTimelineData(events);
-        computeHighlightRegions(ipts);
+        computeHighlightRegions(events, ipts);
         if (timeline_1.Timeline.points.length - oldPoints > 0) {
             var newPoints = timeline_1.Timeline.points.slice(oldPoints);
             timeline_1.Timeline.vega.data("points").insert(newPoints);
@@ -172,25 +172,42 @@ var timeline;
         }
     }
     // ipts stands for infeasible pc times
-    function computeHighlightRegions(ipts) {
-        if (ipts.length == 0)
+    function computeHighlightRegions(events, ipts) {
+        if (events.length == 0 && ipts.length == 0)
             return;
         var highlightRegions = [];
         for (var _i = 0, ipts_1 = ipts; _i < ipts_1.length; _i++) {
             var ipt = ipts_1[_i];
             highlightRegions.push({
-                "time": ipt.start - timeline_1.Timeline.firstEvent["time"],
+                "time": ipt["start"] - timeline_1.Timeline.firstEvent["time"],
                 "value": 1,
                 "type": "infeasible pc" // category of highlight
             });
             highlightRegions.push({
-                "time": ipt.end - timeline_1.Timeline.firstEvent["time"],
+                "time": ipt["end"] - timeline_1.Timeline.firstEvent["time"],
                 "value": 0,
                 "type": "infeasible pc" // category of highlight
             });
         }
-        for (var _a = 0, highlightRegions_1 = highlightRegions; _a < highlightRegions_1.length; _a++) {
-            var h = highlightRegions_1[_a];
+        for (var _a = 0, events_2 = events; _a < events_2.length; _a++) {
+            var e = events_2[_a];
+            if (e["type"] == "SOLVE_START") {
+                highlightRegions.push({
+                    "time": e["metrics"]["time"] - timeline_1.Timeline.firstEvent["time"],
+                    "value": 1,
+                    "type": "solve"
+                });
+            }
+            else if (e["type"] == "SOLVE_FINISH") {
+                highlightRegions.push({
+                    "time": e["metrics"]["time"] - timeline_1.Timeline.firstEvent["time"],
+                    "value": 0,
+                    "type": "solve"
+                });
+            }
+        }
+        for (var _b = 0, highlightRegions_1 = highlightRegions; _b < highlightRegions_1.length; _b++) {
+            var h = highlightRegions_1[_b];
             timeline_1.Timeline.highlightRegions.push(h);
         }
     }
@@ -320,7 +337,7 @@ var timeline;
                     "offset": 0,
                     "properties": {
                         "labels": { "fontSize": { "value": 12 } },
-                        "symbols": { "stroke": { "value": "transparent" }, "fillOpacity": { "value": 0.3 } }
+                        "symbols": { "stroke": { "value": "transparent" }, "fillOpacity": { "value": 0.2 } }
                     }
                 }],
             "marks": [{
@@ -364,7 +381,7 @@ var timeline;
                                     "y2": { "scale": "highlight", "value": 0 },
                                     "interpolate": { "value": "step-after" },
                                     "fill": { "scale": "highlight-color", "field": "type" },
-                                    "fillOpacity": { "value": 0.3 }
+                                    "fillOpacity": { "value": 0.2 }
                                 }
                             }
                         }]

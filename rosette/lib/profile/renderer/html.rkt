@@ -144,6 +144,12 @@
     [(profile-event-sample met)
      (hash 'type "SAMPLE"
            'metrics (metrics->jsexpr met))]
+    [(profile-event-solve-start met)
+     (hash 'type "SOLVE_START"
+           'metrics (metrics->jsexpr met))]
+    [(profile-event-solve-finish met)
+     (hash 'type "SOLVE_FINISH"
+           'metrics (metrics->jsexpr met))]
     [_ (error 'render-event "unknown event ~v" event)]))
 
 ;; render-infeasible-pc-time : InfeasiblePCTime -> JSExpr

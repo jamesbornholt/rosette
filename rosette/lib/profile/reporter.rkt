@@ -31,6 +31,14 @@
        (let* ([b (profile-state-events (profiler-reporter-profile self))]
               [new (profile-event-pc-pop (get-current-metrics #:reporter self))])
          (cons-box-atomic! b new))]
+      [(list 'solve-start)
+       (let* ([b (profile-state-events (profiler-reporter-profile self))]
+              [new (profile-event-solve-start (get-current-metrics #:reporter self))])
+         (cons-box-atomic! b new))]
+      [(list 'solve-finish)
+       (let* ([b (profile-state-events (profiler-reporter-profile self))]
+              [new (profile-event-solve-finish (get-current-metrics #:reporter self))])
+         (cons-box-atomic! b new))]
       [_ void])))
 
 (define-syntax-rule (inc! reporter key val)
