@@ -15,7 +15,7 @@ before_install:
   - export PATH="${RACKET_DIR}/bin:${PATH}"
 
 install: 
-  - raco pkg install
+  - raco pkg install --auto
 
 script:
   - raco test 
