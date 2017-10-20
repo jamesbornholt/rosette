@@ -4,14 +4,30 @@ sudo: false
 env:
   global:
     - RACKET_DIR=~/racket
-    - RACKET_URL="https://mirror.racket-lang.org/installers/6.9/racket-6.9-x86_64-linux.sh"
+  matrix:
+    - RACKET_VERSION=6.1
+    - RACKET_VERSION=6.1.1
+    - RACKET_VERSION=6.2
+    - RACKET_VERSION=6.3
+    - RACKET_VERSION=6.4
+    - RACKET_VERSION=6.5
+    - RACKET_VERSION=6.6
+    - RACKET_VERSION=6.7
+    - RACKET_VERSION=6.8
+    - RACKET_VERSION=6.9
+    - RACKET_VERSION=6.10
+    - RACKET_VERSION=6.10.1
+    - RACKET_VERSION=HEAD
+    - RACKET_VERSION=RELEASE
+
+matrix:
+  allow_failures:
+    - env: RACKET_VERSION=HEAD
+    - env: RACKET_VERSION=RELEASE
 
 before_install:
-  - if [[ ! -e "$RACKET_DIR/bin/racket" ]]; then
-      rm -rf $RACKET_DIR;
-      curl -L -o racket.sh $RACKET_URL;
-      sh ./racket.sh --in-place --dest $RACKET_DIR;
-    else echo "using racket from cache"; fi
+  - git clone https://github.com/greghendershott/travis-racket.git
+  - cat travis-racket/install-racket.sh | bash # pipe to bash not sh!
   - export PATH="${RACKET_DIR}/bin:${PATH}"
 
 install:
@@ -24,6 +40,3 @@ script:
   - time raco make test/all-sdsl-tests.rkt
   - raco test test/all-sdsl-tests.rkt
 
-cache:
-  directories:
-    - $RACKET_DIR
