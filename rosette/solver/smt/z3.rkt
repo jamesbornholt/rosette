@@ -52,7 +52,7 @@
    (define (solver-clear self) 
      (solver-clear-stacks! self)
      (solver-clear-env! self)
-     (server-write (z3-server self) (reset-default-options)))
+     (reset-default-options (z3-server self)))
    
    (define (solver-shutdown self)
      (solver-clear self)
@@ -93,7 +93,7 @@
      (match-define (z3 server (app unique asserts) _ _ _ _) self)
      (cond [(ormap false? asserts) (unsat (list #f))]
            [else (solver-clear-env! self)
-                 (server-write (z3-server self) (reset-core-options))
+                 (reset-core-options (z3-server self))
                  (server-write
                   server
                   (begin (encode-for-proof (z3-env self) asserts)
@@ -101,18 +101,20 @@
                          (get-unsat-core)))
                  (server-read server (decode (z3-env self)))]))])
 
-(define (reset-default-options)
-  (reset)
-  (set-option ':produce-unsat-cores 'false)
-  (set-option ':auto-config 'true)
-  (set-option ':smt.relevancy 2)
-  (set-option ':smt.mbqi.max_iterations 10000000))
+(define (reset-default-options server)
+  (server-write server
+    (reset)
+    (set-option ':produce-unsat-cores 'false)
+    (set-option ':auto-config 'true)
+    (set-option ':smt.relevancy 2)
+    (set-option ':smt.mbqi.max_iterations 10000000)))
 
-(define (reset-core-options)
-  (reset)
-  (set-option ':produce-unsat-cores 'true)
-  (set-option ':auto-config 'false)
-  (set-option ':smt.relevancy 0))
+(define (reset-core-options server)
+  (server-write server
+    (reset)
+    (set-option ':produce-unsat-cores 'true)
+    (set-option ':auto-config 'false)
+    (set-option ':smt.relevancy 0)))
 
 (define (numeric-terms ts caller)
   (for/list ([t ts] #:unless (or (real? t) (bv? t)))

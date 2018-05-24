@@ -1,6 +1,7 @@
 #lang racket
 
-(require racket/syntax (only-in racket [< racket/<] [- racket/-] [and racket/and]))
+(require racket/syntax (only-in racket [< racket/<] [- racket/-] [and racket/and])
+         (only-in "server.rkt" printf/current-server))
 
 (provide (except-out (all-defined-out) quantified define-ops printf-smt))
 
@@ -40,12 +41,12 @@
 (define-syntax-rule (printf-smt arg ...)
   (begin 
     ;(fprintf (current-error-port) arg ...)(fprintf (current-error-port) "\n")
-    (printf arg ...)))
+    (printf/current-server arg ...)))
 
 ; Commands
-(define (set-option opt val) (printf-smt "(set-option ~a ~a)" opt val))
+(define (set-option opt val) (printf-smt "(set-option ~a ~a)\n" opt val))
 
-(define (set-logic l)    (printf-smt "(set-logic ~a)" l))
+(define (set-logic l)    (printf-smt "(set-logic ~a)\n" l))
 (define (check-sat)      (printf-smt "(check-sat)\n"))
 (define (get-model)      (printf-smt "(get-model)\n"))
 (define (get-unsat-core) (printf-smt "(get-unsat-core)\n"))
@@ -56,24 +57,24 @@
 (define (pop [n 1])      (printf-smt "(pop ~a)\n" n))
 
 (define assert 
-  (case-lambda [(e)     (printf-smt "(assert ~a)" e)]
-               [(e id)  (printf-smt "(assert (! ~a :named ~a))" e id)]))
+  (case-lambda [(e)     (printf-smt "(assert ~a)\n" e)]
+               [(e id)  (printf-smt "(assert (! ~a :named ~a))\n" e id)]))
 
-(define (minimize t)    (printf-smt "(minimize ~a)" t))
-(define (maximize t)    (printf-smt "(maximize ~a)" t))
+(define (minimize t)    (printf-smt "(minimize ~a)\n" t))
+(define (maximize t)    (printf-smt "(maximize ~a)\n" t))
 
 ; Declarations and definitions
 (define (declare-const id type)
-  (printf-smt "(declare-const ~a ~a)" id type))
+  (printf-smt "(declare-const ~a ~a)\n" id type))
 
 (define (declare-fun id domain range)
-  (printf-smt "(declare-fun ~a ~a ~a)" id domain range))
+  (printf-smt "(declare-fun ~a ~a ~a)\n" id domain range))
                      
 (define (define-const id type body)
-  (printf-smt "(define-fun ~a () ~a ~a)" id type body))
+  (printf-smt "(define-fun ~a () ~a ~a)\n" id type body))
 
 (define (define-fun id args type body)
-  (printf-smt "(define-fun ~a ~a ~a ~a)" id args type body))
+  (printf-smt "(define-fun ~a ~a ~a ~a)\n" id args type body))
 
 ; Applications of uninterpreted functions.
 (define (app f . args)
