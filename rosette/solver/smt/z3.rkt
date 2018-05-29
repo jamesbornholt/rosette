@@ -84,10 +84,9 @@
            [else (server-write
                   server
                   (begin (encode env asserts mins maxs)
-                         (check-sat)
-                         (get-model)))
+                         (check-sat)))
                  (solver-clear-stacks! self)
-                 (server-read server (decode env))]))
+                 (read-solution server env)]))
    
    (define (solver-debug self)
      (match-define (z3 server (app unique asserts) _ _ _ _) self)
@@ -97,9 +96,8 @@
                  (server-write
                   server
                   (begin (encode-for-proof (z3-env self) asserts)
-                         (check-sat)
-                         (get-unsat-core)))
-                 (server-read server (decode (z3-env self)))]))])
+                         (check-sat)))
+                 (read-solution server (z3-env self) #:unsat-core? #t)]))])
 
 (define (reset-default-options server)
   (server-write server
@@ -130,4 +128,37 @@
 (define (solver-clear-env! self)
   (set-z3-env! self (env))
   (set-z3-level! self '()))
-  
+
+; Reads the SMT solution from the server.
+; The solution consists of 'sat or 'unsat, followed by  
+; followed by a suitably formatted s-expression.  The 
+; output of this procedure is a hashtable from constant 
+; identifiers to their SMTLib values (if the solution is 'sat);
+; a non-empty list of assertion identifiers that form an
+; unsatisfiable core (if the solution is 'unsat and a 
+; core was extracted); #f (if the solution is 
+; 'unsat and no core was extracted); or 'unknown otherwise.
+(define (read-solution server env #:unsat-core? [unsat-core? #f])
+  (decode
+   (parameterize ([current-readtable (make-readtable #f #\# #\a #f)]) ; read BV literals as symbols
+     (match (server-read server (read))
+       [(== 'sat)
+        (server-write server (get-model))
+        (let loop ()
+          (match (server-read server (read))
+            [(list (== 'objectives) _ ...) (loop)]
+            [(list (== 'model) def ...)
+             (for/hash ([d def] #:when (and (pair? d) (equal? (car d) 'define-fun)))
+               (values (cadr d) d))]
+            [other (error 'read-solution "expected model, given ~a" other)]))]
+       [(== 'unsat)
+        (if unsat-core?
+            (begin
+              (server-write server (get-unsat-core))
+              (match (server-read server (read))
+                [(list (? symbol? name) ...) name]
+                [other (error 'read-solution "expected unsat core, given ~a" other)]))
+            'unsat)]
+       [(== 'unknown) 'unknown]
+       [other (error 'read-solution "unrecognized solver output: ~a" other)]))
+   env))
