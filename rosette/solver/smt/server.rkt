@@ -18,7 +18,9 @@
 ; A server manages the creation, use, and shutdown of external processes.  
 ; The path field specifies the absolute path to the program to be called 
 ; in an external process, and the opts field specifies the list of options / arguments 
-; with which to call the process. 
+; with which to call the process. The init field is a procedure that takes as
+; input the server struct, and initializes the corresponding process by
+; interacting with its input and output ports.
 ; 
 ; The custodian, process, stdout, stdin, and stderr fields store the custodian, 
 ; process handle, standard output, standard input, and standard error for the 
@@ -26,7 +28,7 @@
 ; server is initialized A server can be initialized and shutdown any number of times.  
 ; Calling initialize on a server that has already been initialized has no effect.
 (struct server 
-  (path opts 
+  (path opts init
    [custodian #:auto #:mutable]
    [process   #:auto #:mutable] 
    [stdout    #:auto #:mutable] 
@@ -59,7 +61,8 @@
                    [current-subprocess-custodian-mode 'kill])
       (define-values (p out in err) 
         (apply subprocess #f #f #f (server-path s) (server-opts s)))
-      (set-server-values! s (current-custodian) p out in err (open-output-nowhere))))
+      (set-server-values! s (current-custodian) p out in err (open-output-nowhere))
+      ((server-init s) s)))
   s)
 
 ; Initialize the server's log output if required

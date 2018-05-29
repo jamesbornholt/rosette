@@ -27,7 +27,7 @@
             (printf "warning: could not find z3 executable at ~a\n"
                     (path->string (simplify-path (path->directory-path z3-path))))
             z3-path)))))
-  (z3 (server real-z3-path z3-opts) '() '() '() (env) '()))
+  (z3 (server real-z3-path z3-opts set-default-options) '() '() '() (env) '()))
   
 (struct z3 (server asserts mins maxs env level)
   #:mutable
@@ -52,7 +52,8 @@
    (define (solver-clear self) 
      (solver-clear-stacks! self)
      (solver-clear-env! self)
-     (reset-default-options (z3-server self)))
+     (server-write (z3-server self) (reset))
+     (set-default-options (z3-server self)))
    
    (define (solver-shutdown self)
      (solver-clear self)
@@ -92,24 +93,23 @@
      (match-define (z3 server (app unique asserts) _ _ _ _) self)
      (cond [(ormap false? asserts) (unsat (list #f))]
            [else (solver-clear-env! self)
-                 (reset-core-options (z3-server self))
+                 (server-write (z3-server self) (reset))
+                 (set-core-options (z3-server self))
                  (server-write
                   server
                   (begin (encode-for-proof (z3-env self) asserts)
                          (check-sat)))
                  (read-solution server (z3-env self) #:unsat-core? #t)]))])
 
-(define (reset-default-options server)
+(define (set-default-options server)
   (server-write server
-    (reset)
     (set-option ':produce-unsat-cores 'false)
     (set-option ':auto-config 'true)
     (set-option ':smt.relevancy 2)
     (set-option ':smt.mbqi.max_iterations 10000000)))
 
-(define (reset-core-options server)
+(define (set-core-options server)
   (server-write server
-    (reset)
     (set-option ':produce-unsat-cores 'true)
     (set-option ':auto-config 'false)
     (set-option ':smt.relevancy 0)))
