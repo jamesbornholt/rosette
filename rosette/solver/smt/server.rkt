@@ -66,7 +66,7 @@
 (define (server-initialize-log s)
   (unless (file-stream-port? (server-log s))
     (define log (make-temporary-file "rosette~a.smt2"))
-    (eprintf "Outputing SMT to file: ~a\n" (path->string log))
+    (eprintf "Outputting SMT to file: ~a\n" (path->string log))
     (set-server-log! s (open-output-file log #:exists 'truncate)))
   (server-log s))
 
@@ -85,8 +85,7 @@
 (define-syntax-rule (printf/current-server expr ...)
   (begin
     (when (output-smt)
-      (fprintf (server-initialize-log (current-server)) expr ...)
-      (eprintf expr ...))
+      (fprintf (server-initialize-log (current-server)) expr ...))
     (fprintf (server-stdin (current-server)) expr ...)))
 
 ; Evaluates the given expression with current-input-port 
