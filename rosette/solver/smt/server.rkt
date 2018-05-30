@@ -1,6 +1,6 @@
 #lang racket
 
-(require racket/runtime-path)
+(require racket/runtime-path racket/file)
 
 (provide server server-start server-running? server-shutdown 
          server-write server-read server-error
@@ -11,9 +11,9 @@
 ; If true, log all SMT output to a temporary file
 (define output-smt
   (make-parameter #f (lambda (on?)
-                       (unless (boolean? on?)
-                         (raise-argument-error 'output-smt2 "boolean" on?))
-                       on?)))
+                       (unless (or (boolean? on?) (path-string? on?))
+                         (raise-argument-error 'output-smt2 "boolean? or path-string?" on?))
+                       (if (path-string? on?) (expand-user-path on?) on?))))
 
 ; A server manages the creation, use, and shutdown of external processes.  
 ; The path field specifies the absolute path to the program to be called 
@@ -68,7 +68,10 @@
 ; Initialize the server's log output if required
 (define (server-initialize-log s)
   (unless (file-stream-port? (server-log s))
-    (define log (make-temporary-file "rosette~a.smt2"))
+    (when (path-string? (output-smt))
+      (make-directory* (output-smt)))
+    (define dir (if (path-string? (output-smt)) (output-smt) #f))
+    (define log (make-temporary-file "rosette~a.smt2" #f dir))
     (eprintf "Outputting SMT to file: ~a\n" (path->string log))
     (set-server-log! s (open-output-file log #:exists 'truncate)))
   (server-log s))

@@ -129,12 +129,15 @@ if needed.  That is, the solver should behave as though its state was merely cle
 (via @racket[solver-clear]) after a shutdown call.  
 }
 
-@defparam[output-smt on? boolean?]{
-  When the @racket[output-smt] parameter is @racket[#t],
+@defparam[output-smt on? (or/c boolean? path-string?)]{
+  When the @racket[output-smt] parameter is not @racket[#f],
   Rosette will log the SMT encoding of all solver queries to temporary files.
   A new temporary file is created for each solver process Rosette spawns.
   Note that a single solver-aided query may spawn multiple solver processes,
   and Rosette may reuse a solver process across several solver-aided queries.
+  When @racket[output-smt] is @racket[#t], the temporary files are created
+  in the system's temporary directory; otherwise,
+  the temporary files are created in the given path (which must be a directory).
   The path to each temporary file is printed to @racket[current-error-port]
   when it is first created.
 }
