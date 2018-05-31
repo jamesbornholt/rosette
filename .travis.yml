@@ -25,7 +25,7 @@ before_install:
 
 install:
   - raco pkg install
-  - wget -q -O bin/cplex ${CPLEX_URL}
+  - wget -q -O bin/cplex $CPLEX_URL
   - chmod +x bin/cplex
 
 script:
