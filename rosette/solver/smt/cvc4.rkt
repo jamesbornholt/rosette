@@ -10,24 +10,27 @@
          (only-in "../../base/core/bitvector.rkt" bitvector? bv?)
          (only-in "../../base/core/real.rkt" @integer? @real?))
 
-(provide (rename-out [make-cvc4 cvc4]) cvc4?)
+(provide (rename-out [make-cvc4 cvc4]) cvc4? cvc4-available?)
 
 (define-runtime-path cvc4-path (build-path ".." ".." ".." "bin" "cvc4"))
 (define cvc4-opts '("-L" "smt2" "-q" "-m" "-i" "--continued-execution" "--bv-div-zero-const"))
 
-(define (make-cvc4)
-  (define real-cvc4-path
-    ;; Check for 'cvc4' and 'cvc4.exe' executables, else print a warning
-    (if (file-exists? cvc4-path)
+(define (find-cvc4)
+  (if (file-exists? cvc4-path)
       cvc4-path
       (let ([cvc4.exe-path (path-replace-suffix cvc4-path ".exe")])
         (if (file-exists? cvc4.exe-path)
           cvc4.exe-path
-          (unless (getenv "PLT_PKG_BUILD_SERVICE")
-            (printf "warning: could not find cvc4 executable at ~a\n"
-                    (path->string (simplify-path (path->directory-path cvc4-path))))
-            cvc4-path)))))
-  (cvc4 (server real-cvc4-path cvc4-opts set-default-options) '() '() '() (env) '()))
+          #f))))
+
+(define (cvc4-available?)
+  (not (false? (find-cvc4))))
+
+(define (make-cvc4)
+  (define real-cvc4-path (find-cvc4))
+  (if (and (false? real-cvc4-path) (not (getenv "PLT_PKG_BUILD_SERVICE")))
+      (error 'cvc4 "cvc4 binary is not available (expected to be at ~a)" (path->string (simplify-path cvc4-path)))
+      (cvc4 (server real-cvc4-path cvc4-opts set-default-options) '() '() '() (env) '())))
   
 (struct cvc4 (server asserts mins maxs env level)
   #:mutable
@@ -35,6 +38,9 @@
   [(define (write-proc self port mode) (fprintf port "#<cvc4>"))]
   #:methods gen:solver
   [
+   (define (solver-constructor self)
+     make-cvc4)
+
    (define (solver-assert self bools)
      (set-cvc4-asserts! self 
       (append (cvc4-asserts self)
@@ -45,13 +51,11 @@
 
    (define (solver-minimize self nums)
      (unless (null? nums)
-       (error 'solver-minimize "cvc4 optimization isn't supported"))
-     #;(set-cvc4-mins! self (append (cvc4-mins self) (numeric-terms nums 'solver-minimize))))
+       (error 'solver-minimize "cvc4 optimization isn't supported")))
    
    (define (solver-maximize self nums)
      (unless (null? nums)
-       (error 'solver-maximize "cvc4 optimization isn't supported"))
-     #;(set-cvc4-maxs! self (append (cvc4-maxs self) (numeric-terms nums 'solver-maximize))))
+       (error 'solver-maximize "cvc4 optimization isn't supported")))
    
    (define (solver-clear self)
      (solver-shutdown self))
@@ -92,25 +96,10 @@
                  (read-solution server env)]))
    
    (define (solver-debug self)
-     (error 'solver-debug "cvc4 debug not supported")
-     (match-define (cvc4 server (app unique asserts) _ _ _ _) self)
-     (cond [(ormap false? asserts) (unsat (list #f))]
-           [else (solver-clear-env! self)
-                 (server-write (cvc4-server self) (reset))
-                 #;(set-core-options (cvc4-server self))
-                 (server-write
-                  server
-                  (begin (encode-for-proof (cvc4-env self) asserts)
-                         (check-sat)))
-                 (read-solution server (cvc4-env self) #:unsat-core? #t)]))])
+     (error 'solver-debug "cvc4 debug not supported"))])
 
 (define (set-default-options server)
-  void
-  #;(server-write server
-    (set-option ':produce-unsat-cores 'false)
-    (set-option ':auto-config 'true)
-    (set-option ':smt.relevancy 2)
-    (set-option ':smt.mbqi.max_iterations 10000000)))
+  void)
 
 (define (numeric-terms ts caller)
   (for/list ([t ts] #:unless (or (real? t) (bv? t)))

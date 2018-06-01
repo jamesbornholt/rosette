@@ -2,7 +2,7 @@
 
 (require rackunit rackunit/text-ui racket/generator
          rosette/solver/solution 
-         rosette/lib/roseunit rosette/solver/smt/z3 
+         rosette/lib/roseunit rosette/solver/smt/boolector
          racket/fixnum 
          rosette/base/core/term
          rosette/base/core/bool
@@ -846,7 +846,8 @@
   (test-suite+
    "Tests for extract in rosette/base/bitvector.rkt"
    (check-extract-simplifications)
-   (check-extract-semantics)))
+   (unless (boolector? (solver))
+     (check-extract-semantics))))
 
 (define tests:zero-extend
   (test-suite+
@@ -863,17 +864,20 @@
 (define tests:bitvector->integer
   (test-suite+
    "Tests for bitvector->integer in rosette/base/bitvector.rkt"
-   (check-bv->*-semantics @bitvector->integer)))
+   (unless (boolector? (solver))
+     (check-bv->*-semantics @bitvector->integer))))
 
 (define tests:bitvector->natural
   (test-suite+
    "Tests for bitvector->natural in rosette/base/bitvector.rkt"
-   (check-bv->*-semantics @bitvector->natural)))
+   (unless (boolector? (solver))
+     (check-bv->*-semantics @bitvector->natural))))
 
 (define tests:integer->bitvector
   (test-suite+
    "Tests for integer->bitvector in rosette/base/bitvector.rkt"
-   (check-integer->bitvector-semantics)))
+   (unless (boolector? (solver))
+     (check-integer->bitvector-semantics))))
 
 (define tests:lifted-operators
   (test-suite+

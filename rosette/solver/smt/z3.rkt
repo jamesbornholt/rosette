@@ -35,6 +35,9 @@
   [(define (write-proc self port mode) (fprintf port "#<z3>"))]
   #:methods gen:solver
   [
+   (define (solver-constructor self)
+     make-z3)
+   
    (define (solver-assert self bools)
      (set-z3-asserts! self 
       (append (z3-asserts self)

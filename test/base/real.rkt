@@ -19,14 +19,17 @@
 (define maxval 4)
 (define maxval+1 5)
 
-
-(define-syntax-rule (check-valid? (op e ...) expected)
-  (let ([actual (op e ...)])
-    (check-equal? actual expected) 
-    ;(printf "ASSERTS: ~a\n" (asserts))
-    (define preconditions (asserts))
-    (clear-asserts!)
-    (check-pred unsat? (apply solve (! (@equal? (expression op e ...) expected)) preconditions))))
+(define-syntax check-valid?
+  (syntax-rules ()
+    [(_ (op e ...) expected)
+     (check-valid? (op e ...) expected [unsat?])]
+    [(_ (op e ...) expected [pred? ...])
+     (let ([actual (op e ...)])
+      (check-equal? actual expected) 
+      (define preconditions (asserts))
+      (clear-asserts!)
+      (define pred (lambda (x) (or (pred? x) ...)))
+      (check-pred pred (apply solve (! (@equal? (expression op e ...) expected)) preconditions)))]))
 
 (define-syntax-rule (test-valid? ([var sym] ...) (op e ...) expected)
   (let ([actual (op e ...)])
@@ -287,8 +290,8 @@
   (check-valid? (op x 1.0) 0)
   (check-valid? (op x -1.0) 0)
   (check-valid? (op x x) 0)
-  (check-valid? (op x (@- x)) 0)
-  (check-valid? (op (@- x) x) 0)
+  (check-valid? (op x (@- x)) 0 [unsat? unknown?])
+  (check-valid? (op (@- x) x) 0 [unsat? unknown?])
   (check-valid? (op (ite a 4 6) 3) 
                 (ite a (op 4 3) (op 6 3)))
   (check-valid? (op 18 (ite a 4 6)) 

@@ -10,24 +10,27 @@
          (only-in "../../base/core/bitvector.rkt" bitvector? bv? bv-value)
          (only-in "../../base/core/real.rkt" @integer? @real?))
 
-(provide (rename-out [make-boolector boolector]) boolector?)
+(provide (rename-out [make-boolector boolector]) boolector? boolector-available?)
 
 (define-runtime-path boolector-path (build-path ".." ".." ".." "bin" "boolector"))
 (define boolector-opts '("-m" "--smt2-model" "-i"))
 
-(define (make-boolector)
-  (define real-boolector-path
-    ;; Check for 'boolector' and 'boolector.exe' executables, else print a warning
-    (if (file-exists? boolector-path)
+(define (find-boolector)
+  (if (file-exists? boolector-path)
       boolector-path
       (let ([boolector.exe-path (path-replace-suffix boolector-path ".exe")])
         (if (file-exists? boolector.exe-path)
           boolector.exe-path
-          (unless (getenv "PLT_PKG_BUILD_SERVICE")
-            (printf "warning: could not find boolector executable at ~a\n"
-                    (path->string (simplify-path (path->directory-path boolector-path))))
-            boolector-path)))))
-  (boolector (server real-boolector-path boolector-opts set-default-options) '() '() '() (env) '()))
+          #f))))
+
+(define (boolector-available?)
+  (not (false? (find-boolector))))
+
+(define (make-boolector)
+  (define real-boolector-path (find-boolector))
+  (if (and (false? real-boolector-path) (not (getenv "PLT_PKG_BUILD_SERVICE")))
+      (error 'boolector "boolector binary is not available (expected to be at ~a)" (path->string (simplify-path boolector-path)))
+      (boolector (server real-boolector-path boolector-opts set-default-options) '() '() '() (env) '())))
   
 (struct boolector (server asserts mins maxs env level)
   #:mutable
@@ -35,6 +38,8 @@
   [(define (write-proc self port mode) (fprintf port "#<boolector>"))]
   #:methods gen:solver
   [
+   (define (solver-constructor self)
+     make-boolector)
    (define (solver-assert self bools)
      (set-boolector-asserts! self 
       (append (boolector-asserts self)
