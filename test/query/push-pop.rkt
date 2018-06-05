@@ -63,4 +63,5 @@
   
   ))
 
-(time (run-tests push-pop-tests))
+(make-test-runner
+  (time (run-tests push-pop-tests)))

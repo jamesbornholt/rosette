@@ -176,8 +176,9 @@
    (current-bitwidth #f)
    (check-uninterpreted)))
 
-;(time (run-tests tests:basic))
-;(time (run-tests tests:finitized))
-;(time (run-tests tests:solving))
-;(time (run-tests tests:eval))
-(time (run-tests tests:uninterpreted))
+(make-test-runner
+  (time (run-tests tests:basic))
+  (time (run-tests tests:finitized))
+  (time (run-tests tests:solving))
+  (time (run-tests tests:eval))
+  (time (run-tests tests:uninterpreted)))

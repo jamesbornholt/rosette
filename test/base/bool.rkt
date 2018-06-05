@@ -49,4 +49,5 @@
    (check-equal? (<=> a b) (<=> b a))
    (check-false (boolean? (<=> a b) ))))
 
-(time (run-tests bool-tests))
+(make-test-runner
+  (time (run-tests bool-tests)))

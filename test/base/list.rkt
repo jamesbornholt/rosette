@@ -114,5 +114,5 @@
    (check-flatten)
    ))
 
-(time (run-tests list-tests))
-
+(make-test-runner
+  (time (run-tests list-tests)))

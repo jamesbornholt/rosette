@@ -37,5 +37,5 @@
     
     ))
 
-
-(time (run-tests basic-tests))
+(make-test-runner
+  (time (run-tests basic-tests)))

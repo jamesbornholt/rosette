@@ -81,6 +81,7 @@
                                            (+ (h1 x) smaller)))))
     ))
 
-(time (run-tests basic-tests))
-(time (run-tests recursive-hole-tests))
-(time (run-tests imported-hole-tests))
+(make-test-runner
+  (time (run-tests basic-tests))
+  (time (run-tests recursive-hole-tests))
+  (time (run-tests imported-hole-tests)))

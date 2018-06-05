@@ -101,6 +101,7 @@
    (current-bitwidth #f)
    (check-concretized-for/all)))
 
-(time (run-tests tests:basic))
-(time (run-tests tests:exhaustive))
-(time (run-tests tests:concretized))
+(make-test-runner
+  (time (run-tests tests:basic))
+  (time (run-tests tests:exhaustive))
+  (time (run-tests tests:concretized)))

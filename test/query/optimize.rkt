@@ -33,4 +33,5 @@
                     (sat (hash r 3.0 q 4.0)) >=)
     ))
 
-(time (run-tests basic-tests))
+(make-test-runner
+  (time (run-tests basic-tests)))

@@ -7,7 +7,8 @@
                   current-bitwidth term-cache current-oracle oracle with-asserts-only
                   solution? sat? unsat?))
 
-(provide run-all-tests test-groups test-suite+ test-sat test-unsat check-sol check-sat check-unsat)    
+(provide run-all-tests test-groups make-test-runner test-suite+ 
+         test-sat test-unsat check-sol check-sat check-unsat)    
 
 ; Groups tests into N modules with names id ..., each 
 ; of which requires the specified modules and submodules.
@@ -43,6 +44,25 @@
              (require (only-in rosette/safe clear-state!))
              (clear-state!)) ...
             (require 'id) ...))))))
+
+; Wrap the given bodies into a procedure "all-tests",
+; provide that procedure,
+; and create a test submodule that invokes it.
+(define-syntax (make-test-runner stx)
+  (syntax-case stx ()
+    [(_ #:name name expr ...)
+     (syntax/loc stx
+       (begin
+         (define (name)
+           expr ...)
+         (provide name)
+         (module+ test
+           (name))))]
+    [(_ expr ...)
+     (let ([name (datum->syntax stx 'all-tests)])
+       (quasisyntax/loc stx
+         (make-test-runner #:name #,name expr ...)))]))
+     
 
 ; Makes sure that a test suite clears all Rosette state after it terminates.
 (define-syntax test-suite+

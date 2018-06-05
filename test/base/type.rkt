@@ -75,4 +75,5 @@
    (least-common-supertype-tests)
    (subtype?-tests)))
 
-(time (run-tests type-tests))
+(make-test-runner
+  (time (run-tests type-tests)))

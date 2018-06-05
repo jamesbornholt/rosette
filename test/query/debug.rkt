@@ -18,4 +18,5 @@
    (check-equal? (length (core sol)) 2)
    (check-exn exn:fail? (thunk (debug [integer?] (assert (= 1 (x+1 0))))))))
 
-(time (run-tests basic-tests))
+(make-test-runner
+  (time (run-tests basic-tests)))

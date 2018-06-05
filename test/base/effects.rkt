@@ -300,7 +300,9 @@
          (check-equal? z (@box v)))))
 ))
 
-(time (run-tests minimized))
-(time (run-tests tests))
-(time (run-tests struct-tests))
-(time (run-tests vector-tests))
+(make-test-runner
+  (time (run-tests minimized))
+  (time (run-tests tests))
+  (time (run-tests struct-tests))
+  (time (run-tests vector-tests)))
+

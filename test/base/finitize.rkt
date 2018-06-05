@@ -166,14 +166,14 @@
    (check-binary-op @/ xr yr zr #t)
    ))
 
-   
-(time (run-tests tests:pure-bitvector-terms))
-(time (run-tests tests:casts))
-(time (run-tests tests:real-unary-terms))
-(time (run-tests tests:real-comparison-terms))
-(time (run-tests tests:real-binary-terms))
-
-(solver-shutdown (solver))
+(make-test-runner
+  (time (run-tests tests:pure-bitvector-terms))
+  (time (run-tests tests:casts))
+  (time (run-tests tests:real-unary-terms))
+  (time (run-tests tests:real-comparison-terms))
+  (time (run-tests tests:real-binary-terms))
+  
+  (solver-shutdown (solver)))
 
 
 

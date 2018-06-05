@@ -63,6 +63,7 @@
     (current-bitwidth 3)
     (check-solve+ (= xr (bitvector->integer yb)) (bveq yb (bv -8 4)))
  )) 
-                     
-(time (run-tests basic-tests))
-(time (run-tests finitized-tests))
+
+(make-test-runner             
+  (time (run-tests basic-tests))
+  (time (run-tests finitized-tests)))

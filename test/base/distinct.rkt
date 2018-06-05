@@ -113,9 +113,10 @@
    (check-sat (test 32))
    (check-sat (test 33))))
 
-(time (run-tests tests:bool))
-(time (run-tests tests:real))
-(time (run-tests tests:real-finitized))
-(time (run-tests tests:bitvector))
-(time (run-tests tests:mixed))
-(time (run-tests tests:regression))
+(make-test-runner
+  (time (run-tests tests:bool))
+  (time (run-tests tests:real))
+  (time (run-tests tests:real-finitized))
+  (time (run-tests tests:bitvector))
+  (time (run-tests tests:mixed))
+  (time (run-tests tests:regression)))

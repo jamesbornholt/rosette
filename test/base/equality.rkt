@@ -318,4 +318,5 @@
    (cyclic-tests)
    ))
 
-(time (run-tests equality-tests))
+(make-test-runner
+  (time (run-tests equality-tests)))

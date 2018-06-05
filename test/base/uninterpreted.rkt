@@ -135,6 +135,7 @@
    "UF tests for lifted applications"
    (check-types)))
 
-(time (run-tests tests:basic))
-(time (run-tests tests:finitized))
-(time (run-tests tests:lifted))
+(make-test-runner
+  (time (run-tests tests:basic))
+  (time (run-tests tests:finitized))
+  (time (run-tests tests:lifted)))

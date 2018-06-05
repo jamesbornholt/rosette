@@ -106,5 +106,6 @@
    (list-merge-tests)
    (procedure-merge-tests)))
 
-(time (run-tests merge-tests))
+(make-test-runner
+  (time (run-tests merge-tests)))
 
