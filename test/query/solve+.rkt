@@ -11,7 +11,6 @@
 (define consts (set a b c xi yi zi xr yr zr xb yb zb))
 
 (define (check-solve+ . bools)
-  (define original-consts (apply set (symbolics (hash-values (term-cache)))))
   (define gen (solve+))
   (define-values (head tail) (split-at bools (sub1 (length bools))))
   ; Check that all solutions prior to last are sat.
@@ -28,7 +27,7 @@
   (check-exn exn:fail? (thunk (gen 'shutdown)))
   ; Check that term cache is not polluted with finitizaton values -- no
   ; fresh constants should be left in the term cache
-  (check subset? (apply set (symbolics (hash-values (term-cache)))) original-consts))
+  (check subset? (apply set (symbolics (hash-values (term-cache)))) consts))
 
 (define basic-tests
   (test-suite+ "Solve+ tests with no (effective) finitization."

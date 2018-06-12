@@ -44,7 +44,7 @@
              (require path)
              (require (only-in rosette/safe clear-state!))
              (clear-state!)) ...
-            (require 'id) ...))))))
+           (require 'id) ...))))))
      
 
 ; Makes sure that a test suite clears all Rosette state after it terminates.
@@ -67,31 +67,39 @@
                                      [term-cache (hash-copy (term-cache))]
                                      [current-oracle (oracle (current-oracle))])
                         test ...)))])
-           (set-box! discovered-tests (append (unbox discovered-tests) (list (cons features ts))))
-           ts))]))
+           (let ([rts (rosette-test-suite features ts (hash-copy (term-cache)) (current-bitwidth) (oracle (current-oracle)))])
+             (set-box! discovered-tests (append (unbox discovered-tests) (list rts)))
+             ts)))]))
 
 
 ; Tests discovered by instantiating test-suite+.
-; Each element of the list is a pair of a feature list and a test-suite.
+; Each element of the list is a rosette-test-suite?.
 ; A test should only be run if the current-solver satisfies the test's feature list.
 (define discovered-tests (box '()))
+(struct rosette-test-suite (features ts term-cache bitwidth oracle))
 
 
 ; Run all discovered tests that the given list of features satisfies.
 ; Only tests that actually require features are run.
 (define (run-solver-specific-tests [features '()])
-  (for ([f/t (in-list (unbox discovered-tests))])
-    (match-define (cons feats ts) f/t)
+  (for ([rts (in-list (unbox discovered-tests))])
+    (match-define (rosette-test-suite feats ts tc bw o) rts)
     (when (and (not (null? feats)) (for/and ([f feats]) (member f features)))
-      (time (run-tests ts)))))
+      (parameterize ([term-cache tc]
+                     [current-bitwidth bw]
+                     [current-oracle o])
+        (time (run-tests ts))))))
 
 ; The same as run-all-discovered-tests, but only for tests
 ; that require no features.
 (define (run-generic-tests)
-  (for ([f/t (in-list (unbox discovered-tests))])
-    (match-define (cons feats ts) f/t)
+  (for ([rts (in-list (unbox discovered-tests))])
+    (match-define (rosette-test-suite feats ts tc bw o) rts)
     (when (null? feats)
-      (time (run-tests ts)))))
+      (parameterize ([term-cache tc]
+                     [current-bitwidth bw]
+                     [current-oracle o])
+        (time (run-tests ts))))))
 
     
 (define-syntax-rule (check-sol pred test)
