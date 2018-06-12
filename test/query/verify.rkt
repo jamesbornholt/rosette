@@ -45,6 +45,6 @@
                                #:guarantee (assert (and (= (+ (* 2 n) 1) 0) (not (= n 0))))))
     ))
 
-(make-test-runner
+(module+ test
   (time (run-tests verify-tests))
   (time (run-tests short-circuit-tests)))

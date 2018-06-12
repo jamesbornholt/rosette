@@ -117,6 +117,7 @@
 (define tests:basic
   (test-suite+
    "UF tests with no finitization"
+   #:features '(qf_uf qf_bv qf_lia qf_lra)
    (current-bitwidth #f)
    (check-boolean?)
    (check-bitvector?)
@@ -135,7 +136,7 @@
    "UF tests for lifted applications"
    (check-types)))
 
-(make-test-runner
+(module+ test
   (time (run-tests tests:basic))
   (time (run-tests tests:finitized))
   (time (run-tests tests:lifted)))

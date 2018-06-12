@@ -1,14 +1,15 @@
 #lang racket
 
 ; Utilities for testing Rosette programs.
-(require rackunit)
+(require rackunit rackunit/text-ui)
 (require (only-in rosette 
                   clear-state!
                   current-bitwidth term-cache current-oracle oracle with-asserts-only
                   solution? sat? unsat?))
+(require (for-syntax syntax/parse))
 
-(provide run-all-tests test-groups make-test-runner test-suite+ 
-         test-sat test-unsat check-sol check-sat check-unsat)    
+(provide run-all-tests test-groups test-suite+ run-generic-tests run-solver-specific-tests
+         test-sat test-unsat check-sol check-sat check-unsat)
 
 ; Groups tests into N modules with names id ..., each 
 ; of which requires the specified modules and submodules.
@@ -44,45 +45,54 @@
              (require (only-in rosette/safe clear-state!))
              (clear-state!)) ...
             (require 'id) ...))))))
-
-; Wrap the given bodies into a procedure "all-tests",
-; provide that procedure,
-; and create a test submodule that invokes it.
-(define-syntax (make-test-runner stx)
-  (syntax-case stx ()
-    [(_ #:name name expr ...)
-     (syntax/loc stx
-       (begin
-         (define (name)
-           expr ...)
-         (provide name)
-         (module+ test
-           (name))))]
-    [(_ expr ...)
-     (let ([name (datum->syntax stx 'all-tests)])
-       (quasisyntax/loc stx
-         (make-test-runner #:name #,name expr ...)))]))
      
 
 ; Makes sure that a test suite clears all Rosette state after it terminates.
-(define-syntax test-suite+
-  (syntax-rules ()
-    [(_ name #:before before #:after after test ...)
-     (test-suite 
-      name
-      #:before (thunk (printf "~a\n" name) (before)) 
-      #:after after
-      (with-asserts-only
-       (parameterize ([current-bitwidth (current-bitwidth)]
-                      [term-cache (hash-copy (term-cache))]
-                      [current-oracle (oracle (current-oracle))])
-         test ...)))]
-    [(_ name #:before before test ...)
-     (test-suite+ name #:before before #:after void test ...)]
-    [(_ name #:after after test ...)
-     (test-suite+ name #:before void #:after after test ...)]
-    [(_ name test ...)
-     (test-suite+ name #:before void #:after void test ...)]))
+(define-syntax (test-suite+ stx)
+  (syntax-parse stx
+    [(_ name:expr
+        (~optional (~seq #:features features:expr))
+        (~optional (~seq #:before before:expr))
+        (~optional (~seq #:after after:expr))
+        test:expr ...)
+     (with-syntax ([features (or (attribute features) #''())]
+                   [before (or (attribute before) #'void)]
+                   [after (or (attribute after) #'void)])
+       #'(let ([ts (test-suite
+                    name
+                    #:before (thunk (printf "~a\n" name) (before))
+                    #:after after
+                    (with-asserts-only
+                      (parameterize ([current-bitwidth (current-bitwidth)]
+                                     [term-cache (hash-copy (term-cache))]
+                                     [current-oracle (oracle (current-oracle))])
+                        test ...)))])
+           (set-box! discovered-tests (append (unbox discovered-tests) (list (cons features ts))))
+           ts))]))
+
+
+; Tests discovered by instantiating test-suite+.
+; Each element of the list is a pair of a feature list and a test-suite.
+; A test should only be run if the current-solver satisfies the test's feature list.
+(define discovered-tests (box '()))
+
+
+; Run all discovered tests that the given list of features satisfies.
+; Only tests that actually require features are run.
+(define (run-solver-specific-tests [features '()])
+  (for ([f/t (in-list (unbox discovered-tests))])
+    (match-define (cons feats ts) f/t)
+    (when (and (not (null? feats)) (for/and ([f feats]) (member f features)))
+      (time (run-tests ts)))))
+
+; The same as run-all-discovered-tests, but only for tests
+; that require no features.
+(define (run-generic-tests)
+  (for ([f/t (in-list (unbox discovered-tests))])
+    (match-define (cons feats ts) f/t)
+    (when (null? feats)
+      (time (run-tests ts)))))
+
     
 (define-syntax-rule (check-sol pred test)
   (let ([sol test])

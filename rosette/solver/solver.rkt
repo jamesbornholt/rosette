@@ -6,7 +6,7 @@
          solver-assert solver-push solver-pop solver-clear
          solver-minimize solver-maximize
          solver-check solver-debug 
-         solver-shutdown solver-constructor)
+         solver-shutdown solver-constructor solver-features)
 
 ; The generic solver interface specifies the set of procedures that 
 ; should be provided by a Rosette solver. These include 
@@ -48,6 +48,9 @@
 ;
 ; The solver-constructor procedure returns the constructor procedure for a
 ; solver instance, which can be used to create new solvers of the same type.
+;
+; The solver-theories procedure returns a list of symbol?s specifying the
+; SMT features (logics, optimization, etc) a solver supports.
 (define-generics solver
   [solver-assert solver bools]
   [solver-push solver]
@@ -58,4 +61,5 @@
   [solver-check solver]
   [solver-debug solver]
   [solver-shutdown solver]
-  [solver-constructor solver])
+  [solver-constructor solver]
+  [solver-features solver])

@@ -13,6 +13,7 @@
 
 (define push-pop-tests
   (test-suite+ "Tests for the push / pop interface."
+   #:features '(qf_lia)
          
   (define solver (current-solver))
   (check-exn exn:fail? (thunk (solver-pop solver)))
@@ -63,5 +64,5 @@
   
   ))
 
-(make-test-runner
+(module+ test
   (time (run-tests push-pop-tests)))

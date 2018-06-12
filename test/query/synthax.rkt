@@ -81,7 +81,7 @@
                                            (+ (h1 x) smaller)))))
     ))
 
-(make-test-runner
+(module+ test
   (time (run-tests basic-tests))
   (time (run-tests recursive-hole-tests))
   (time (run-tests imported-hole-tests)))

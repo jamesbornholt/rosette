@@ -40,6 +40,10 @@
   [
    (define (solver-constructor self)
      make-cvc4)
+   
+   (define (solver-features self)
+     ; cvc4 model generation is borked for quantifiers
+     '(qf_bv qf_uf qf_lia qf_nia qf_lra qf_nra #;quantifiers))
 
    (define (solver-assert self bools)
      (set-cvc4-asserts! self 

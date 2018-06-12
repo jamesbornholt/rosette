@@ -3,7 +3,7 @@
 @(require (for-label 
            rosette/solver/solver rosette/solver/solution 
            (only-in rosette/query/debug debug)
-           rosette/solver/smt/z3 
+           rosette/solver/smt/z3 rosette/solver/smt/cvc4 rosette/solver/smt/boolector
            rosette/base/form/define rosette/query/query rosette/query/core
            rosette/base/core/term (only-in rosette/base/base bv?)
            (only-in rosette/base/core/safe assert) 
@@ -20,13 +20,17 @@
                    rosette/query/eval
                    rosette/solver/solver
                    rosette/solver/solution
-                   rosette/solver/smt/z3                   
+                   rosette/solver/smt/z3
+                   rosette/solver/smt/cvc4
+                   rosette/solver/smt/boolector
                    #:use-sources 
                    (rosette/query/finitize
                     rosette/query/eval
                     rosette/solver/solver
                     rosette/solver/solution
-                    rosette/solver/smt/z3)]
+                    rosette/solver/smt/z3
+                    rosette/solver/smt/cvc4
+                    rosette/solver/smt/boolector)]
 
 A @deftech{solver} is an automatic reasoning engine, used to answer 
 @seclink["sec:queries"]{queries} about Rosette programs.  The result of
@@ -66,8 +70,10 @@ optimizing the resulting solution (if any) with respect to the provided objectiv
   @racket[solver-minimize],
   @racket[solver-maximize],
   @racket[solver-check],
-  @racket[solver-debug], and
-  @racket[solver-shutdown].
+  @racket[solver-debug],
+  @racket[solver-shutdown],
+  @racket[solver-constructor], and
+  @racket[solver-features].
   A solver may support a subset of this interface, which loosely follows
   the @hyperlink["http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.5-r2015-06-28.pdf"]{SMTLib solver interface}.
 
@@ -129,6 +135,30 @@ if needed.  That is, the solver should behave as though its state was merely cle
 (via @racket[solver-clear]) after a shutdown call.  
 }
 
+@defproc[(solver-constructor [solver solver?]) procedure?]{
+Returns a procedure that can be invoked to construct additional
+instances of the same solver type as @racket[solver].
+}
+
+@defproc[(solver-features [solver solver?]) (listof symbol?)]{
+Returns the list of features supported by the solver.
+The possible features, which correspond roughly to SMTLib @emph{logics},
+extended with some additional options, are:
+
+@itemize[
+@item{@racket['qf_bv] (quantifier-free fixed-width bitvectors)}
+@item{@racket['qf_uf] (quantifier-free uninterpreted functions and equality)}
+@item{@racket['qf_lia] (quantifier-free linear integer arithmetic)}
+@item{@racket['qf_nia] (quantifier-free non-linear integer arithmetic)}
+@item{@racket['qf_lra] (quantifier-free linear real arithmetic)}
+@item{@racket['qf_nra] (quantifier-free non-linear real arithmetic)}
+@item{@racket['quantifiers] (quantified versions of the supported quantifier-free logics)}
+@item{@racket['optimize] (support for objective function optimization)}
+@item{@racket['unsat-cores] (unsatisfiable core generation)}
+]
+
+}
+
 @defparam[output-smt on? (or/c boolean? path-string?)]{
   When the @racket[output-smt] parameter is not @racket[#f],
   Rosette will log the SMT encoding of all solver queries to temporary files.
@@ -142,10 +172,30 @@ if needed.  That is, the solver should behave as though its state was merely cle
   when it is first created.
 }
 
+
 @defmodule[rosette/solver/smt/z3 #:no-declare]
 
 @defproc[(z3) solver?]{
 Returns a @racket[solver?] wrapper for the @hyperlink["https://github.com/Z3Prover/z3/"]{Z3} solver from Microsoft Research.}
+
+
+@defmodule[rosette/solver/smt/cvc4 #:no-declare]
+
+@defproc[(cvc4) solver?]{
+Returns a @racket[solver?] wrapper for the @hyperlink["http://cvc4.cs.stanford.edu/web/"]{CVC4} solver from NYU and UIowa.}
+
+@defproc[(cvc4-available?) boolean?]{
+Returns true if the CVC4 solver is available for use (i.e., a @tt{cvc4} binary is installed in Rosette's @tt{bin} directory).}
+
+
+@defmodule[rosette/solver/smt/boolector #:no-declare]
+
+@defproc[(boolector) solver?]{
+Returns a @racket[solver?] wrapper for the @hyperlink["http://fmv.jku.at/boolector/"]{Boolector} solver from JKU.}
+
+@defproc[(boolector-available?) boolean?]{
+Returns true if the Boolector solver is available for use (i.e., a @tt{boolector} binary is installed in Rosette's @tt{bin} directory).}
+
 
 @section{Solutions}
 

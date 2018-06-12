@@ -689,41 +689,48 @@
 (define tests:bv
   (test-suite+
    "Tests for bv in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-equal? (bv minval) (bv maxval+1))
    (check-equal? (bv (sub1 minval)) (bv (sub1 maxval+1)))))
 
 (define tests:bveq
   (test-suite+
    "Tests for bveq rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-bveq-simplifications)))
 
 (define tests:bvslt
   (test-suite+
    "Tests for bvslt rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-bvslt-simplifications)
    (check-cmp-semantics @bvslt)))
 
 (define tests:bvsle
   (test-suite+
    "Tests for bvsle rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-bvsle-simplifications)
    (check-cmp-semantics @bvsle)))
 
 (define tests:bvult
   (test-suite+
    "Tests for bvult rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-bvult-simplifications)
    (check-cmp-semantics @bvult)))
 
 (define tests:bvule
   (test-suite+
    "Tests for bvule rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-bvule-simplifications)
    (check-cmp-semantics @bvule)))
 
 (define tests:bvnot
   (test-suite+
    "Tests for bvnot in rosette/base/bitvector.rkt"   
+   #:features '(qf_bv)
    (check-exn exn:fail? (thunk (@bvnot 1)))
    (check-equal? (@bvnot (@bvnot x)) x)
    (check-equal? (@bvnot (bv -1)) (bv 0))
@@ -733,52 +740,61 @@
 (define tests:bvor
   (test-suite+
    "Tests for bvor in rosette/base/bitvector.rkt"   
+   #:features '(qf_bv)
    (check-bitwise-simplifications @bvor @bvand (bv 0))
    (check-semantics @bvor)))
    
 (define tests:bvand
   (test-suite+
    "Tests for bvand in rosette/base/bitvector.rkt"   
+   #:features '(qf_bv)
    (check-bitwise-simplifications @bvand @bvor (bv -1))
    (check-semantics @bvand)))
 
 (define tests:bvand/bvor/bvnot
   (test-suite+
    "Tests for bvand/bvor/bvnot in rosette/base/bitvector.rkt"   
+   #:features '(qf_bv)
    (check-pe (list (naive @bvnot) (naive* @bvand) (naive* @bvor)))))
 
 (define tests:bvxor
   (test-suite+
    "Tests for bvxor in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-nary @bvxor (bv 0) x y z)
    (check-semantics @bvxor)))
 
 (define tests:bvxor/bvnot
   (test-suite+
    "Tests for bvxor/bvnot rosette/base/bitvector.rkt"   
+   #:features '(qf_bv)
    (check-pe (list (naive @bvnot) (naive* @bvxor)) (list (bv 0) (bv 5)))))
 
 (define tests:bvshl
   (test-suite+
    "Tests for bvshl in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-shift-simplifications @bvshl)
    (check-semantics @bvshl)))
 
 (define tests:bvlshr
   (test-suite+
    "Tests for bvlshr in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-shift-simplifications @bvlshr)
    (check-semantics @bvlshr)))
 
 (define tests:bvashr
   (test-suite+
    "Tests for bvashr in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-bvashr-simplifications)
    (check-semantics @bvashr)))
 
 (define tests:bvneg
   (test-suite+
    "Tests for bvneg in rosette/base/bitvector.rkt"   
+   #:features '(qf_bv)
    (check-exn exn:fail? (thunk (@bvneg 1)))
    (check-equal? (@bvneg (@bvneg x)) x)
    (check-semantics @bvneg)))
@@ -786,65 +802,76 @@
 (define tests:bvadd
   (test-suite+
    "Tests for bvadd in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-bvadd-simplifications)
    (check-semantics @bvadd)))
 
 (define tests:bvadd/bvneg
   (test-suite+
    "Tests for bvadd/bvneg in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-pe (list (naive @bvneg) (naive* @bvadd)) (list (bv 0) (bv 5)))
    (check-pe (list (naive* @bvadd)) (list (bv -1) (bv 2)))))
 
 (define tests:bvsub
   (test-suite+
    "Tests for bvsub in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-semantics @bvsub)))
 
 (define tests:bvmul
   (test-suite+
    "Tests for bvmul in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-bvmul-simplifications)
    (check-semantics @bvmul)))
 
 (define tests:bvudiv
   (test-suite+
    "Tests for bvudiv in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-bvudiv-simplifications)
    (check-semantics @bvudiv)))
 
 (define tests:bvsdiv
   (test-suite+
    "Tests for bvsdiv in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-bvsdiv-simplifications)
    (check-semantics @bvsdiv)))
 
 (define tests:bvurem
   (test-suite+
    "Tests for bvurem in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-bvurem-simplifications)
    (check-semantics @bvurem)))
 
 (define tests:bvsrem
   (test-suite+
    "Tests for bvsrem in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-bvsrem-simplifications)
    (check-semantics @bvsrem)))
 
 (define tests:bvsmod
   (test-suite+
    "Tests for bvsmod in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-signed-remainder-simplifications @bvsmod)
    (check-semantics @bvsmod)))
 
 (define tests:concat
   (test-suite+
    "Tests for concat in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-concat-simplifications)
    (check-concat-semantics)))
 
 (define tests:extract
   (test-suite+
    "Tests for extract in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-extract-simplifications)
    (unless (boolector? (solver))
      (check-extract-semantics))))
@@ -852,36 +879,39 @@
 (define tests:zero-extend
   (test-suite+
    "Tests for zero-extend in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-extend-simplifications @zero-extend)
    (check-extend-semantics @zero-extend)))
 
 (define tests:sign-extend
   (test-suite+
    "Tests for sign-extend in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-extend-simplifications @sign-extend)
    (check-extend-semantics @sign-extend)))
 
 (define tests:bitvector->integer
   (test-suite+
    "Tests for bitvector->integer in rosette/base/bitvector.rkt"
-   (unless (boolector? (solver))
-     (check-bv->*-semantics @bitvector->integer))))
+   #:features '(qf_bv qf_lia)
+   (check-bv->*-semantics @bitvector->integer)))
 
 (define tests:bitvector->natural
   (test-suite+
    "Tests for bitvector->natural in rosette/base/bitvector.rkt"
-   (unless (boolector? (solver))
-     (check-bv->*-semantics @bitvector->natural))))
+   #:features '(qf_bv qf_lia)
+   (check-bv->*-semantics @bitvector->natural)))
 
 (define tests:integer->bitvector
   (test-suite+
    "Tests for integer->bitvector in rosette/base/bitvector.rkt"
-   (unless (boolector? (solver))
-     (check-integer->bitvector-semantics))))
+   #:features '(qf_bv qf_lia)
+   (check-integer->bitvector-semantics)))
 
 (define tests:lifted-operators
   (test-suite+
    "Tests for lifted operations in rosette/base/bitvector.rkt"
+   #:features '(qf_bv)
    (check-lifted-bv-type)
    (check-lifted-unary)
    (check-lifted-binary)
@@ -893,7 +923,7 @@
    (check-lifted-bv->*)
    ))
 
-(make-test-runner
+(module+ test
   (time (run-tests tests:bv))
   (time (run-tests tests:bveq))
   (time (run-tests tests:bvslt))

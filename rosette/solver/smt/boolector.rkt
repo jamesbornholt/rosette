@@ -40,6 +40,10 @@
   [
    (define (solver-constructor self)
      make-boolector)
+   
+   (define (solver-features self)
+     '(qf_bv qf_uf))
+   
    (define (solver-assert self bools)
      (set-boolector-asserts! self 
       (append (boolector-asserts self)

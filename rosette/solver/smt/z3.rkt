@@ -38,6 +38,9 @@
    (define (solver-constructor self)
      make-z3)
    
+   (define (solver-features self)
+     '(qf_bv qf_uf qf_lia qf_nia qf_lra qf_nra quantifiers optimize unsat-cores))
+   
    (define (solver-assert self bools)
      (set-z3-asserts! self 
       (append (z3-asserts self)

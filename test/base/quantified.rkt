@@ -161,22 +161,25 @@
 (define tests:solving
   (test-suite+
    "Tests for solving quantified formulas"
+   #:features '(qf_lia quantifiers)
    (current-bitwidth #f)
    (check-solve)))
 
 (define tests:eval
   (test-suite+
    "Tests for evaluating quantified formulas"
+   #:features '(qf_bv qf_lia quantifiers)
    (current-bitwidth #f)
    (check-eval)))
 
 (define tests:uninterpreted
   (test-suite+
    "Tests for solving quantified formulas in the presence of uninterpreted functions"
+   #:features '(qf_uf qf_lia quantifiers)
    (current-bitwidth #f)
    (check-uninterpreted)))
 
-(make-test-runner
+(module+ test
   (time (run-tests tests:basic))
   (time (run-tests tests:finitized))
   (time (run-tests tests:solving))

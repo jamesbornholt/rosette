@@ -29,6 +29,7 @@
 (define bool-tests
   (test-suite+ 
    "Tests for rosette/base/bool.rkt" 
+   #:features '()
    
    (check-equal? (! (! a)) a)
    (check-equal? (! #t) #f)
@@ -49,5 +50,5 @@
    (check-equal? (<=> a b) (<=> b a))
    (check-false (boolean? (<=> a b) ))))
 
-(make-test-runner
+(module+ test
   (time (run-tests bool-tests)))

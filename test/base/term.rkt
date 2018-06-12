@@ -51,5 +51,5 @@
    (check-cached @= x y)
    (check-cached @< x y)))
 
-(make-test-runner
+(module+ test
   (time (run-tests value-tests)))

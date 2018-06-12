@@ -503,6 +503,7 @@
 (define tests:=
   (test-suite+
    "Tests for = in rosette/base/real.rkt"
+   #:features '(qf_lia qf_lra)
    (check-=-simplifications)
    (check-cmp-semantics @= xi yi)
    (check-cmp-semantics @= xr yr)))
@@ -510,6 +511,7 @@
 (define tests:<
   (test-suite+
    "Tests for < in rosette/base/real.rkt"
+   #:features '(qf_lia qf_lra)
    (check-cmp-simplifications @< @>)
    (check-cmp-semantics @< xi yi)
    (check-cmp-semantics @< xr yr)))
@@ -517,6 +519,7 @@
 (define tests:<=
   (test-suite+
    "Tests for <= in rosette/base/real.rkt"
+   #:features '(qf_lia qf_lra)
    (check-cmp-simplifications @<= @>=)
    (check-cmp-semantics @<= xi yi)
    (check-cmp-semantics @<= xr yr)))
@@ -524,6 +527,7 @@
 (define tests:+
   (test-suite+
    "Tests for + in rosette/base/real.rkt"
+   #:features '(qf_lia qf_lra)
    (check-+-simplifications xi yi zi)
    (check-+-simplifications xr yr zr)
    (check-semantics @+ xi yi zi)
@@ -532,6 +536,7 @@
 (define tests:-
   (test-suite+
    "Tests for - in rosette/base/real.rkt"
+   #:features '(qf_lia qf_lra)
    (check---simplifications xi yi zi)
    (check---simplifications xr yr zr)
    (check-semantics @- xi yi zi)
@@ -540,6 +545,7 @@
 (define tests:*
   (test-suite+
    "Tests for * in rosette/base/real.rkt"
+   #:features '(qf_nia qf_nra)
    (check-*-simplifications xi yi zi)
    (check-*-simplifications xr yr zr)
    (check-*-real-simplifications)
@@ -549,6 +555,7 @@
 (define tests:/
   (test-suite+
    "Tests for / in rosette/base/real.rkt"
+   #:features '(qf_nia qf_nra)
    (check-division-simplifications @/ xr yr zr (/ 2 10))
    (check-semantics @/ xr yr zr (lambda (x) (not (zero? x))))
    ))
@@ -556,24 +563,28 @@
 (define tests:quotient
   (test-suite+
    "Tests for quotient in rosette/base/real.rkt"
+   #:features '(qf_nia qf_nra)
    (check-quotient-simplifications)
    (check-semantics @quotient xi yi zi (lambda (x) (not (zero? x))))))
 
 (define tests:remainder
   (test-suite+
    "Tests for remainder in rosette/base/real.rkt"
+   #:features '(qf_nia qf_nra)
    (check-remainder-simplifications @remainder)
    (check-semantics @remainder xi yi zi (lambda (x) (not (zero? x))))))
 
 (define tests:modulo
   (test-suite+
    "Tests for modulo in rosette/base/real.rkt"
+   #:features '(qf_nia qf_nra)
    (check-remainder-simplifications @modulo)
    (check-semantics @modulo xi yi zi (lambda (x) (not (zero? x))))))
 
 (define tests:abs
   (test-suite+
    "Tests for abs in rosette/base/real.rkt"
+   #:features '(qf_nia qf_nra)
    (check-abs-simplifications xi)
    (check-abs-simplifications xr)
    (check-semantics @abs xi yi zi)
@@ -582,16 +593,19 @@
 (define tests:int?
   (test-suite+
    "Tests for int? in rosette/base/real.rkt"
+   #:features '(qf_nia qf_nra)
    (check-int?-semantics)))
 
 (define tests:integer->real
   (test-suite+
    "Tests for integer->real in rosette/base/real.rkt"
+   #:features '(qf_nia qf_nra)
    (check-integer->real-semantics)))
 
 (define tests:real->integer
   (test-suite+
    "Tests for real->integer in rosette/base/real.rkt"
+   #:features '(qf_nia qf_nra)
    (check-real->integer-semantics)))
 
 (define tests:lifted
@@ -602,7 +616,7 @@
    (check-lifted-nary)
    ))
 
-(make-test-runner
+(module+ test
   (time (run-tests tests:real?))
   (time (run-tests tests:integer?))
   (time (run-tests tests:=))

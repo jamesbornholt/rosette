@@ -282,7 +282,7 @@
 (define equality-tests
   (test-suite+ 
    "Tests for rosette/base/equality.rkt"
-   
+   #:features '(qf_uf)
    ; eq? and equal? behave the same on transparent immutable values
    (primitive-equality-tests @eq?)
    (primitive-equality-tests @equal?)
@@ -318,5 +318,5 @@
    (cyclic-tests)
    ))
 
-(make-test-runner
+(module+ test
   (time (run-tests equality-tests)))

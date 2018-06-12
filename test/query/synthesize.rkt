@@ -37,5 +37,5 @@
     
     ))
 
-(make-test-runner
+(module+ test
   (time (run-tests basic-tests)))

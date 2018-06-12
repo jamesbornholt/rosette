@@ -300,7 +300,7 @@
          (check-equal? z (@box v)))))
 ))
 
-(make-test-runner
+(module+ test
   (time (run-tests minimized))
   (time (run-tests tests))
   (time (run-tests struct-tests))

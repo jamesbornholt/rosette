@@ -166,7 +166,7 @@
    (check-binary-op @/ xr yr zr #t)
    ))
 
-(make-test-runner
+(module+ test
   (time (run-tests tests:pure-bitvector-terms))
   (time (run-tests tests:casts))
   (time (run-tests tests:real-unary-terms))
