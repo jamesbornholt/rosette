@@ -39,7 +39,6 @@ install:
   - raco pkg install
 
 script:
-  - raco test
   - time raco make test/all-rosette-tests.rkt
   - raco test test/all-rosette-tests.rkt
   - time raco make test/all-sdsl-tests.rkt
