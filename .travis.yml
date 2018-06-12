@@ -27,6 +27,8 @@ before_install:
   - if [ "$ALL_SOLVERS" == "1" ]; then
       mkdir bin;
       wget $CVC4_URL -q -O bin/cvc4;
+      chmod +x bin/cvc4;
+      echo "(declare-fun x () Bool)(assert x)(check-sat)" | bin/cvc4 -L smt2;
       wget $BOOLECTOR_URL -q -O boolector.tar.bz2;
       tar xjf boolector.tar.bz2;
       make -C boolector-*;
