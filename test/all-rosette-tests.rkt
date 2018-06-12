@@ -8,7 +8,7 @@
 
 
 (require "base/effects.rkt"
-         "base/type.rkt" 
+         "base/type.rkt"
          "base/term.rkt"
          "base/bool.rkt"
          "base/merge.rkt"
@@ -16,7 +16,7 @@
          "base/vector.rkt"
          "base/forall.rkt"
          "base/ord-dict.rkt"
-         "base/bitvector.rkt" 
+         "base/bitvector.rkt"
          "base/equality.rkt"
          "base/uninterpreted.rkt"
          "base/real.rkt"
