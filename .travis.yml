@@ -25,6 +25,7 @@ before_install:
   - cat travis-racket/install-racket.sh | bash # pipe to bash not sh!
   - export PATH="${RACKET_DIR}/bin:${PATH}"
   - if [ "$ALL_SOLVERS" == "1" ]; then
+      mkdir bin;
       wget $CVC4_URL -q -O bin/cvc4;
       wget $BOOLECTOR_URL -q -O boolector.tar.bz2;
       tar xjf boolector.tar.bz2;
