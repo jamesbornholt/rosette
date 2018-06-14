@@ -5,10 +5,12 @@
          "../solver.rkt" "../solution.rkt" 
          (only-in racket [remove-duplicates unique])
          (only-in "smtlib2.rkt" reset set-option check-sat get-model get-unsat-core push pop)
-         (only-in "../../base/core/term.rkt" term term? term-type constant?)
-         (only-in "../../base/core/bool.rkt" @boolean?)
-         (only-in "../../base/core/bitvector.rkt" bitvector? bv? bv-value)
-         (only-in "../../base/core/real.rkt" @integer? @real?))
+         (only-in "../../base/core/term.rkt" term term? term-type constant? expression constant)
+         (only-in "../../base/core/bool.rkt" @boolean? @forall @exists)
+         (only-in "../../base/core/bitvector.rkt" bitvector? bv? bv-value @extract @sign-extend @zero-extend)
+         (only-in "../../base/core/real.rkt" @integer? @real?)
+         (only-in "../../base/core/function.rkt" function-domain function-range function?)
+         (only-in "../../base/core/type.rkt" type-of))
 
 (provide (rename-out [make-boolector boolector]) boolector? boolector-available?)
 
@@ -50,17 +52,16 @@
               (for/list ([b bools] #:unless (equal? b #t))
                 (unless (or (boolean? b) (and (term? b) (equal? @boolean? (term-type b))))
                   (error 'assert "expected a boolean value, given ~s" b))
+                (boolector-typecheck b)
                 b))))
 
    (define (solver-minimize self nums)
      (unless (null? nums)
-       (error 'solver-minimize "boolector optimization isn't supported"))
-     #;(set-boolector-mins! self (append (boolector-mins self) (numeric-terms nums 'solver-minimize))))
+       (error 'solver-minimize "boolector does not support optimization")))
    
    (define (solver-maximize self nums)
      (unless (null? nums)
-       (error 'solver-maximize "boolector optimization isn't supported"))
-     #;(set-boolector-maxs! self (append (boolector-maxs self) (numeric-terms nums 'solver-maximize))))
+       (error 'solver-maximize "boolector does not support optimization")))
    
    (define (solver-clear self)
      (solver-shutdown self))
@@ -101,25 +102,10 @@
                  (read-solution server env)]))
    
    (define (solver-debug self)
-     (error 'solver-debug "boolector debug not supported")
-     (match-define (boolector server (app unique asserts) _ _ _ _) self)
-     (cond [(ormap false? asserts) (unsat (list #f))]
-           [else (solver-clear-env! self)
-                 (server-write (boolector-server self) (reset))
-                 #;(set-core-options (boolector-server self))
-                 (server-write
-                  server
-                  (begin (encode-for-proof (boolector-env self) asserts)
-                         (check-sat)))
-                 (read-solution server (boolector-env self) #:unsat-core? #t)]))])
+     (error 'solver-debug "boolector debug not supported"))])
 
 (define (set-default-options server)
-  void
-  #;(server-write server
-    (set-option ':produce-unsat-cores 'false)
-    (set-option ':auto-config 'true)
-    (set-option ':smt.relevancy 2)
-    (set-option ':smt.mbqi.max_iterations 10000000)))
+  void)
 
 (define (numeric-terms ts caller)
   (for/list ([t ts] #:unless (or (real? t) (bv? t)))
@@ -135,6 +121,32 @@
 (define (solver-clear-env! self)
   (set-boolector-env! self (env))
   (set-boolector-level! self '()))
+
+(define (boolector-typecheck v)
+  (define (valid-type? t)
+    (or (equal? t @boolean?)
+        (bitvector? t)
+        (and (function? t)
+             (for/and ([d (in-list (function-domain t))]) (valid-type? d))
+             (valid-type? (function-range t)))))
+  (cond
+    [(term? v)
+     (unless (valid-type? (type-of v))
+       (error 'boolector "boolector does not support values of type ~v (value: ~v)" (type-of v) v))
+     (match v
+       [(expression (or (== @forall) (== @exists)) vars body)
+        (error 'boolector "boolector does not support quantified formulas (value: ~v)" v)]
+       [(expression (== @extract) i j e)
+        (boolector-typecheck e)]
+       [(expression (or (== @sign-extend) (== @zero-extend)) v t)
+        (boolector-typecheck v)]
+       [(expression op es ...)
+        (map boolector-typecheck es)]
+       [_ #t])]
+    [else
+     (unless (or (boolean? v) (bv? v))
+       (error 'boolector "boolector does not support value (expected boolean? or bv?): ~v" v))]))
+
 
 ; Reads the SMT solution from the server.
 ; The solution consists of 'sat or 'unsat, followed by  

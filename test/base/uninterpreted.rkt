@@ -116,14 +116,18 @@
 
 (define tests:basic
   (test-suite+
-   "UF tests with no finitization"
-   #:features '(qf_uf qf_bv qf_lia qf_lra)
+   "UF basic tests"
+   #:features '(qf_uf qf_bv)
    (current-bitwidth #f)
    (check-boolean?)
-   (check-bitvector?)
-   (check-int-real)
-   ))
+   (check-bitvector?)))
 
+(define tests:unfinitized
+  (test-suite+
+   "UF tests without finitization"
+   #:features '(qf_uf qf_lia qf_lra)
+   (current-bitwidth #f)
+   (check-int-real)))
 
 (define tests:finitized
   (test-suite+
@@ -138,5 +142,6 @@
 
 (module+ test
   (time (run-tests tests:basic))
+  (time (run-tests tests:unfinitized))
   (time (run-tests tests:finitized))
   (time (run-tests tests:lifted)))
