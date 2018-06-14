@@ -5,12 +5,13 @@
          "../solver.rkt" "../solution.rkt" 
          (only-in racket [remove-duplicates unique])
          (only-in "smtlib2.rkt" reset set-option check-sat get-model get-unsat-core push pop)
-         (only-in "../../base/core/term.rkt" term term? term-type constant? expression constant)
+         (only-in "../../base/core/term.rkt" term term? term-type constant? expression constant term-cache)
          (only-in "../../base/core/bool.rkt" @boolean? @forall @exists)
-         (only-in "../../base/core/bitvector.rkt" bitvector? bv? bv-value @extract @sign-extend @zero-extend)
+         (only-in "../../base/core/bitvector.rkt" bitvector bitvector? bv? bv bv-value @extract @sign-extend @zero-extend @bveq)
          (only-in "../../base/core/real.rkt" @integer? @real?)
-         (only-in "../../base/core/function.rkt" function-domain function-range function?)
-         (only-in "../../base/core/type.rkt" type-of))
+         (only-in "../../base/core/function.rkt" function-domain function-range function? function fv)
+         (only-in "../../base/core/type.rkt" type-of)
+         (only-in "../../base/form/control.rkt" @if))
 
 (provide (rename-out [make-boolector boolector]) boolector? boolector-available?)
 
@@ -181,10 +182,63 @@
               'unsat)]
          [(== 'unknown) 'unknown]
          [other (error 'read-solution "unrecognized solver output: ~a" other)]))
-     env))
-  ; fix up booleans being mapped to 1-bit bitvectors
+     (fake-env-types env)))
+  (fixup-model m))
+
+
+; Boolector interprets booleans as 1-bit bitvectors.
+; We need to temporarily makes this same transformation in the types
+; in an environment before passing it to `decode`, so that decoded
+; uninterpreted functions perform the right type casts and checks
+; (i.e., they check their inputs are 1-bit BVs instead of booleans).
+; Then, once the model has been decoded, we need to undo this transformation,
+; so that the final model matches its expected Rosette types.
+
+; A fake-function? proxies an original function?,
+; but with booleans in the original function's type
+; replaced with 1-bit bitvectors.
+(struct fake-function function (original) #:transparent)
+
+; Rewrite an env to replace all constant declarations of type function?
+; to equivalent fake-function?s that replace booleans with 1-bit bitvectors.
+(define (fake-env-types env)
+  (parameterize ([term-cache (hash-copy (term-cache))])  ; don't pollute the cache with fake constants
+    (for/hash ([(decl id) (in-dict env)])
+      (values
+       (match decl
+         [(constant val (function domain range))
+          (if (or (member @boolean? domain) (eq? @boolean? range))
+              (constant (gensym)
+                        (fake-function (for/list ([a (in-list domain)])
+                                         (if (eq? @boolean? a) (bitvector 1) a))
+                                       (if (eq? @boolean? range) (bitvector 1) range)
+                                       decl))
+              decl)]
+         [_ decl])
+       id))))
+
+; Replace all values with type fake-function? in a model with their
+; original types, wrapping their procedures in a cast from booleans to
+; 1-bit bitvectors.
+(define (fixup-model m)
   (match m
     [(model dict)
      (sat (for/hash ([(var val) (in-dict dict)])
-            (values var (if (equal? (term-type var) @boolean?) (not (= (bv-value val) 0)) val))))]
+            (match (type-of var)
+              [(== @boolean?) (values var (not (= (bv-value val) 0)))]
+               [(fake-function _ _ original)
+                (match-define (function domain range) (type-of original))
+                (match val
+                  [(fv type proc)
+                   (define inner
+                     (lambda args
+                       (apply proc
+                              (for/list ([a (in-list args)][t (in-list domain)])
+                                (if (eq? t @boolean?) (@if a (bv 1 1) (bv 0 1)) a)))))
+                   (define outer
+                     (if (eq? range @boolean?)
+                         (lambda args (@bveq (apply inner args) (bv 1 1)))
+                         inner))
+                   (values original (fv (type-of original) outer))])]
+              [_ (values var val)])))]
     [_ m]))
