@@ -15,23 +15,22 @@
 (define-runtime-path cvc4-path (build-path ".." ".." ".." "bin" "cvc4"))
 (define cvc4-opts '("-L" "smt2" "-q" "-m" "-i" "--continued-execution" "--bv-div-zero-const"))
 
-(define (find-cvc4)
-  (if (file-exists? cvc4-path)
-      cvc4-path
-      (let ([cvc4.exe-path (path-replace-suffix cvc4-path ".exe")])
-        (if (file-exists? cvc4.exe-path)
-          cvc4.exe-path
-          #f))))
+(define (find-cvc4 [path #f])
+  (cond
+    [(and (path-string? path) (file-exists? path)) path]
+    [(file-exists? cvc4-path) cvc4-path]
+    [(find-executable-path "cvc4") => identity]
+    [else #f]))
 
 (define (cvc4-available?)
-  (not (false? (find-cvc4))))
+  (not (false? (find-cvc4 #f))))
 
-(define (make-cvc4)
-  (define real-cvc4-path (find-cvc4))
+(define (make-cvc4 #:path [path #f])
+  (define real-cvc4-path (find-cvc4 path))
   (if (and (false? real-cvc4-path) (not (getenv "PLT_PKG_BUILD_SERVICE")))
-      (error 'cvc4 "cvc4 binary is not available (expected to be at ~a)" (path->string (simplify-path cvc4-path)))
+      (error 'cvc4 "cvc4 binary is not available (expected to be at ~a); try passing the #:path argument to (cvc4)" (path->string (simplify-path cvc4-path)))
       (cvc4 (server real-cvc4-path cvc4-opts set-default-options) '() '() '() (env) '())))
-  
+
 (struct cvc4 (server asserts mins maxs env level)
   #:mutable
   #:methods gen:custom-write

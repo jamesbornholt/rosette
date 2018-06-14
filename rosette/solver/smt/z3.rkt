@@ -15,18 +15,18 @@
 (define-runtime-path z3-path (build-path ".." ".." ".." "bin" "z3"))
 (define z3-opts '("-smt2" "-in"))
 
-(define (make-z3)
-  (define real-z3-path
-    ;; Check for 'z3' and 'z3.exe' executables, else print a warning
-    (if (file-exists? z3-path)
-      z3-path
-      (let ([z3.exe-path (path-replace-suffix z3-path ".exe")])
-        (if (file-exists? z3.exe-path)
-          z3.exe-path
-          (unless (getenv "PLT_PKG_BUILD_SERVICE")
-            (printf "warning: could not find z3 executable at ~a\n"
-                    (path->string (simplify-path (path->directory-path z3-path))))
-            z3-path)))))
+(define (find-z3 [path #f])
+  (cond
+    [(and (path-string? path) (file-exists? path)) path]
+    [(file-exists? z3-path) z3-path]
+    [(file-exists? (path-replace-suffix z3-path ".exe")) (path-replace-suffix z3-path ".exe")]
+    [(find-executable-path "z3") => identity]
+    [else #f]))
+
+(define (make-z3 #:path [path #f])
+  (define real-z3-path (find-z3 path))
+  (when (and (false? real-z3-path) (not (getenv "PLT_PKG_BUILD_SERVICE")))
+    (printf "warning: could not find z3 executable at ~a\n" (path->string (simplify-path z3-path))))
   (z3 (server real-z3-path z3-opts set-default-options) '() '() '() (env) '()))
   
 (struct z3 (server asserts mins maxs env level)

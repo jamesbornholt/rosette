@@ -160,7 +160,7 @@ extended with some additional options, are:
 }
 
 @defparam[output-smt on? (or/c boolean? path-string?)]{
-  When the @racket[output-smt] parameter is not @racket[#f],
+  When the @racket[output-smt] parameter is @racket[#t] or a @racket[path-string?],
   Rosette will log the SMT encoding of all solver queries to temporary files.
   A new temporary file is created for each solver process Rosette spawns.
   Note that a single solver-aided query may spawn multiple solver processes,
@@ -169,32 +169,49 @@ extended with some additional options, are:
   in the system's temporary directory; otherwise,
   the temporary files are created in the given path (which must be a directory).
   The path to each temporary file is printed to @racket[current-error-port]
-  when it is first created.
+  when it is first created. Default value is @racket[#f].
 }
 
 
 @defmodule[rosette/solver/smt/z3 #:no-declare]
 
-@defproc[(z3) solver?]{
-Returns a @racket[solver?] wrapper for the @hyperlink["https://github.com/Z3Prover/z3/"]{Z3} solver from Microsoft Research.}
+@defproc*[([(z3 [#:path path (or/c path-string? #f) #f]) solver?]
+           [(z3? [v any/c]) boolean?])]{
+Returns a @racket[solver?] wrapper for the @hyperlink["https://github.com/Z3Prover/z3/"]{Z3} solver from Microsoft Research.
+Rosette automatically installs a version of Z3;
+the optional @racket[path] argument overrides this version with a path to a new Z3 binary.}
 
 
 @defmodule[rosette/solver/smt/cvc4 #:no-declare]
 
-@defproc[(cvc4) solver?]{
-Returns a @racket[solver?] wrapper for the @hyperlink["http://cvc4.cs.stanford.edu/web/"]{CVC4} solver from NYU and UIowa.}
+@defproc*[([(cvc4 [#:path path (or/c path-string? #f) #f]) solver?]
+           [(cvc4? [v any/c]) boolean?])]{
+Returns a @racket[solver?] wrapper for the @hyperlink["http://cvc4.cs.stanford.edu/web/"]{CVC4} solver from NYU and UIowa.
+
+To use this solver, download and install CVC4,
+and either add the @tt{cvc4} executable to your @tt{PATH}
+or pass the path to the executable as the optional @racket[path] argument.}
 
 @defproc[(cvc4-available?) boolean?]{
-Returns true if the CVC4 solver is available for use (i.e., a @tt{cvc4} binary is installed in Rosette's @tt{bin} directory).}
+Returns true if the CVC4 solver is available for use (i.e., Rosette can locate a @tt{cvc4} binary).
+If this returns @racket[#f], @racket[(cvc4)] will not succeed
+without its optional @racket[path] argument.}
 
 
 @defmodule[rosette/solver/smt/boolector #:no-declare]
 
-@defproc[(boolector) solver?]{
-Returns a @racket[solver?] wrapper for the @hyperlink["http://fmv.jku.at/boolector/"]{Boolector} solver from JKU.}
+@defproc*[([(boolector [#:path path (or/c path-string? #f) #f]) solver?]
+           [(boolector? [v any/c]) boolean?])]{
+Returns a @racket[solver?] wrapper for the @hyperlink["http://fmv.jku.at/boolector/"]{Boolector} solver from JKU.
+
+To use this solver, download and install Boolector,
+and either add the @tt{boolector} executable to your @tt{PATH}
+or pass the path to the executable as the optional @racket[path] argument.}
 
 @defproc[(boolector-available?) boolean?]{
-Returns true if the Boolector solver is available for use (i.e., a @tt{boolector} binary is installed in Rosette's @tt{bin} directory).}
+Returns true if the Boolector solver is available for use (i.e., Rosette can locate a @tt{boolector} binary).
+If this returns @racket[#f], @racket[(boolector)] will not succeed
+without its optional @racket[path] argument.}
 
 
 @section{Solutions}

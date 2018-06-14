@@ -18,21 +18,20 @@
 (define-runtime-path boolector-path (build-path ".." ".." ".." "bin" "boolector"))
 (define boolector-opts '("-m" "--smt2-model" "-i"))
 
-(define (find-boolector)
-  (if (file-exists? boolector-path)
-      boolector-path
-      (let ([boolector.exe-path (path-replace-suffix boolector-path ".exe")])
-        (if (file-exists? boolector.exe-path)
-          boolector.exe-path
-          #f))))
+(define (find-boolector [path #f])
+  (cond
+    [(and (path-string? path) (file-exists? path)) path]
+    [(file-exists? boolector-path) boolector-path]
+    [(find-executable-path "boolector") => identity]
+    [else #f]))
 
 (define (boolector-available?)
-  (not (false? (find-boolector))))
+  (not (false? (find-boolector #f))))
 
-(define (make-boolector)
-  (define real-boolector-path (find-boolector))
+(define (make-boolector #:path [path #f])
+  (define real-boolector-path (find-boolector path))
   (if (and (false? real-boolector-path) (not (getenv "PLT_PKG_BUILD_SERVICE")))
-      (error 'boolector "boolector binary is not available (expected to be at ~a)" (path->string (simplify-path boolector-path)))
+      (error 'boolector "boolector binary is not available (expected to be at ~a); try passing the #:path argument to (boolector)" (path->string (simplify-path boolector-path)))
       (boolector (server real-boolector-path boolector-opts set-default-options) '() '() '() (env) '())))
   
 (struct boolector (server asserts mins maxs env level)
