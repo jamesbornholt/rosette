@@ -37,7 +37,6 @@
           (if (equal? (system-type) 'windows) #o777 #o755))))))
 
 
-;; Currently unused, but will be useful if Rosette is using a stable z3 release
 (define (get-z3-url)
   (match (list (system-type) (system-type 'word))
     ['(unix 64)
@@ -46,11 +45,11 @@
       "z3-4.7.1-x64-ubuntu-14.04/bin/z3")]
     [`(macosx ,_)
      (values
-      "https://github.com/emina/rosette/releases/download/v2.0/z3-d89c39cb-x64-osx-10.11.zip"
-      "z3")]
+      "https://github.com/Z3Prover/z3/releases/download/z3-4.7.1/z3-4.7.1-x64-osx-10.11.6.zip"
+      "z3-4.7.1-x64-osx-10.11.6/bin/z3")]
     ['(windows 64)
      (values
-      "https://github.com/emina/rosette/releases/download/v2.0/z3-d89c39cb-x64-win.zip"
-      "z3")]
+      "https://github.com/Z3Prover/z3/releases/download/z3-4.7.1/z3-4.7.1-x64-win.zip"
+      "z3-4.7.1-x64-win/bin/z3.exe")]
     [any
      (raise-user-error 'get-z3-url "Unknown system type '~a'" any)]))
