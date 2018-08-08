@@ -49,13 +49,13 @@
      ; Test whether an unsigned integer is of the form 2^n. ~ 1.6 sec.
      (test-fragment (p18* x) 
                     #:implements p18
-                    #:library (bvlib [{bvand bvredor} 2] [{bvsub bvnot bv1} 1]))
+                    #:library (bvlib [{bvand bvredor} 2] [{bvsub bv1 bvnot} 1]))
      
      ; x where m is mask which identifies field B and k 
      ; is number of bits from end of A to start of B. ~ 3.5 sec.
      (test-fragment (p19* x m k) 
                     #:implements p19
-                    #:library (bvlib [{bvlshr bvshl bvand} 1] [{bvxor} 3]))
+                    #:library (bvlib [{bvand bvlshr bvshl} 1] [{bvxor} 3]))
      
      )))
 
