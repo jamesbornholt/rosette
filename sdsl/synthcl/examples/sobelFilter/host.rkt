@@ -162,7 +162,7 @@
   (synth #:forall [(: int width in (range 4 5))
                    (: int height in (range 4 5))
                    (: int[(* width height pixelSize)] inputImage)]
-         #:bitwidth 12
+         #:bitwidth 9
          #:ensure (check (sobelFilterVectorHost "sobelFilterVectorKernelSketch" inputImage width height pixelSize)
                          (sobelFilter inputImage width height pixelSize)
                          (* width height pixelSize))))

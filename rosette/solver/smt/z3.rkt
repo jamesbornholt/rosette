@@ -19,7 +19,9 @@
   (hash ':produce-unsat-cores 'false
         ':auto-config 'true
         ':smt.relevancy 2
-        ':smt.mbqi.max_iterations 10000000))
+        ':smt.mbqi.max_iterations 10000000
+        ':sat.ate 'false
+        ':sat.asymm_branch 'false))
 
 (define (make-z3 [solver #f] #:options [options (hash)] #:logic [logic #f] #:path [path #f])
   (define config
